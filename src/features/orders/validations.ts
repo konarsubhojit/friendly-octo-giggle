@@ -6,6 +6,11 @@ import {
   hasMoneyPrecision,
 } from '@/lib/validations/primitives'
 import { PaymentReferenceSchema } from '@/lib/validations/payment'
+import {
+  RETURN_EVIDENCE_MAX,
+  RETURN_EVIDENCE_MIN,
+  RETURN_REASONS,
+} from '@/lib/constants/returns'
 
 export const StructuredAddressSchema = z.object({
   addressLine1: z
@@ -134,7 +139,80 @@ export const ReleaseReservationSchema = z.object({
     .default('admin_manual_release'),
 })
 
+/**
+ * Payload for a customer-initiated damaged-item return claim.
+ *
+ * `evidenceIds` is required, not optional: the published policy requires
+ * photographic evidence before any damage claim is reviewed, so a claim
+ * without it cannot be actioned and must not be accepted. The ids reference
+ * `ReturnEvidence` rows uploaded beforehand and still orphaned.
+ */
+export const CreateReturnRequestSchema = z.object({
+  reason: z.enum(RETURN_REASONS),
+  customerNote: z
+    .string()
+    .trim()
+    .max(1000, 'Note must be under 1000 characters')
+    .optional(),
+  items: z
+    .array(
+      z.object({
+        orderItemId: z.string().regex(SHORT_ID_REGEX, 'Invalid order item id'),
+        quantity: z
+          .number()
+          .int('Quantity must be a whole number')
+          .positive('Quantity must be at least 1'),
+      })
+    )
+    .min(1, 'Select at least one item to return')
+    .max(50, 'Too many items in one return')
+    // Two entries for one line would each pass the availability check on their
+    // own and together exceed the quantity ordered — which the refund
+    // calculator would price before the unique index aborted the insert.
+    .refine(
+      (items) =>
+        new Set(items.map((item) => item.orderItemId)).size === items.length,
+      'Each item may appear only once'
+    ),
+  evidenceIds: z
+    .array(z.string().regex(SHORT_ID_REGEX, 'Invalid evidence id'))
+    .min(RETURN_EVIDENCE_MIN, 'At least one photo of the damage is required')
+    .max(RETURN_EVIDENCE_MAX, `At most ${RETURN_EVIDENCE_MAX} photos`),
+})
+
+/**
+ * Administrator action on a return.
+ *
+ * `receive` and `refund` are distinct: receiving moves inventory and needs
+ * `orders:returns`, refunding moves money and needs `orders:refund`. Keeping
+ * them apart is also what lets a gateway-rejected refund be retried instead of
+ * stranding the return.
+ */
+export const DecideReturnSchema = z.discriminatedUnion('action', [
+  z.object({
+    action: z.literal('approve'),
+    decisionReason: z
+      .string()
+      .trim()
+      .min(1, 'A reason is required')
+      .max(500, 'Reason must be under 500 characters'),
+  }),
+  z.object({
+    action: z.literal('reject'),
+    decisionReason: z
+      .string()
+      .trim()
+      .min(1, 'A reason is required')
+      .max(500, 'Reason must be under 500 characters'),
+  }),
+  z.object({ action: z.literal('receive') }),
+  z.object({ action: z.literal('refund') }),
+  z.object({ action: z.literal('settle') }),
+])
+
 export type OrderStatusType = z.infer<typeof OrderStatusEnum>
 export type ReleaseReservationInput = z.infer<typeof ReleaseReservationSchema>
 export type CreateOrderInput = z.infer<typeof CreateOrderSchema>
 export type RefundOrderInput = z.infer<typeof RefundOrderSchema>
+export type CreateReturnRequestInput = z.infer<typeof CreateReturnRequestSchema>
+export type DecideReturnInput = z.infer<typeof DecideReturnSchema>

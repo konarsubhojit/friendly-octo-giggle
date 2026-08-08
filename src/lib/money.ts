@@ -92,6 +92,77 @@ export const multiplyMoney = (amount: number, quantity: number): number => {
 }
 
 /**
+ * Split an amount across weighted shares so that the parts sum back to the
+ * original exactly.
+ *
+ * Rounding each share independently does not conserve the total: a ₹10.00
+ * discount across three equal lines yields 3 × ₹3.33 = ₹9.99, quietly losing a
+ * paisa. This uses largest-remainder allocation over integer minor units —
+ * each share takes its floor, then the leftover minor units go one apiece to
+ * the shares with the largest fractional parts. Ties break by ascending index,
+ * so the same input always produces the same split.
+ *
+ * `sum(allocateMoney(total, weights)) === roundMoney(total)` holds for every
+ * input, which is what lets a partial refund reconcile against the amount
+ * originally captured.
+ *
+ * Weights need not sum to anything in particular; only their ratios matter.
+ * When every weight is zero there is no proportional signal, so the remainder
+ * rule alone distributes the total from the first share onward.
+ */
+export const allocateMoney = (
+  total: number,
+  weights: readonly number[]
+): number[] => {
+  if (weights.length === 0) return []
+
+  const totalMinor = toMinorUnits(total)
+  if (totalMinor < 0) {
+    throw new MoneyRangeError('Allocation total must not be negative')
+  }
+
+  const rawWeights = weights.map((weight) => {
+    const value = toMinorUnits(weight)
+    if (value < 0) {
+      throw new MoneyRangeError('Allocation weights must not be negative')
+    }
+    return value
+  })
+
+  // With no proportional signal, fall back to an even split rather than
+  // leaving the remainder loop unable to place more than one minor unit per
+  // share — which would silently allocate far less than the total.
+  const rawSum = rawWeights.reduce((sum, value) => sum + value, 0)
+  const weightMinor = rawSum === 0 ? rawWeights.map(() => 1) : rawWeights
+  const weightSum = rawSum === 0 ? weightMinor.length : rawSum
+
+  // Floor each share, tracking the discarded fraction so the leftover minor
+  // units can be handed to the shares that lost the most to rounding.
+  const shares = weightMinor.map((weight, index) => {
+    const exact = (totalMinor * weight) / weightSum
+    const floor = Math.floor(exact)
+    return { index, floor, remainder: exact - floor }
+  })
+
+  const allocated = shares.reduce((sum, share) => sum + share.floor, 0)
+  let leftover = totalMinor - allocated
+
+  // Largest remainder first; ascending index breaks ties deterministically.
+  const order = [...shares].sort(
+    (a, b) => b.remainder - a.remainder || a.index - b.index
+  )
+
+  const result = shares.map((share) => share.floor)
+  for (const share of order) {
+    if (leftover <= 0) break
+    result[share.index] += 1
+    leftover -= 1
+  }
+
+  return result.map(fromMinorUnits)
+}
+
+/**
  * Apply a non-integer factor (such as an exchange rate) and round the result
  * back to the persisted precision.
  */

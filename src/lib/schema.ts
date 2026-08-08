@@ -14,6 +14,7 @@ import {
   uniqueIndex,
   check,
   primaryKey,
+  type AnyPgColumn,
 } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
 import type { AdapterAccountType } from '@auth/core/adapters'
@@ -22,6 +23,7 @@ import { MONEY_DECIMAL_PLACES } from './money'
 import { PAYMENT_PROVIDERS } from './payments/providers'
 import { SHIPPING_METHODS } from './shipping/methods'
 import { USER_ROLES } from './constants/roles'
+import { RETURN_STATUSES, RETURN_REASONS } from './constants/returns'
 
 // ─── Money columns ───────────────────────────────────────
 // Monetary values are stored as exact decimals (never floating point) so that
@@ -45,6 +47,7 @@ export const emailTypeEnum = pgEnum('EmailType', [
   'order_confirmation',
   'order_status_update',
   'order_refund_update',
+  'return_status_update',
   'abandoned_cart_reminder',
 ])
 
@@ -97,6 +100,10 @@ export const refundStatusEnum = pgEnum('RefundStatus', [
   'PROCESSED',
   'FAILED',
 ])
+
+export const returnStatusEnum = pgEnum('ReturnStatus', RETURN_STATUSES)
+
+export const returnReasonEnum = pgEnum('ReturnReason', RETURN_REASONS)
 
 export const discountTypeEnum = pgEnum('DiscountType', [
   'PERCENTAGE',
@@ -573,6 +580,12 @@ export const orders = pgTable(
      * cancellation followed by a refund can never credit the same item twice.
      */
     stockRestoredAt: timestamp('stockRestoredAt', { mode: 'date' }),
+    /**
+     * When the order reached `DELIVERED`. The return window is measured from
+     * this, not from `createdAt` or `updatedAt` — `updatedAt` shifts on any
+     * later mutation and so cannot serve as a delivery date.
+     */
+    deliveredAt: timestamp('deliveredAt', { mode: 'date' }),
     trackingNumber: text('trackingNumber'),
     shippingProvider: text('shippingProvider'),
     createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
@@ -583,6 +596,7 @@ export const orders = pgTable(
     index('Order_status_idx').on(t.status),
     index('Order_createdAt_idx').on(t.createdAt),
     index('Order_paymentStatus_idx').on(t.paymentStatus),
+    index('Order_deliveredAt_idx').on(t.deliveredAt),
     unique('Order_paymentTransactionId_key').on(t.paymentTransactionId),
     unique('Order_checkoutRequestId_key').on(t.checkoutRequestId),
   ]
@@ -674,10 +688,19 @@ export const refunds = pgTable(
       .notNull()
       .references(() => orders.id, { onDelete: 'cascade' }),
     provider: paymentProviderEnum('provider').notNull(),
-    /** Gateway payment the refund was issued against. */
-    paymentTransactionId: text('paymentTransactionId').notNull(),
+    /**
+     * Gateway payment the refund was issued against.
+     *
+     * Nullable because Cash on Delivery captures nothing at checkout, so a
+     * COD refund has no gateway transaction to reverse and is settled by hand.
+     * Only gateway-webhook reconciliation reads this column, and those
+     * webhooks never fire for COD.
+     */
+    paymentTransactionId: text('paymentTransactionId'),
     /** Gateway refund id; null until the gateway accepts the refund. */
     gatewayRefundId: text('gatewayRefundId'),
+    /** Return that caused this refund; null for admin-initiated refunds. */
+    returnRequestId: varchar('returnRequestId', { length: 7 }),
     amount: money('amount').notNull(),
     status: refundStatusEnum('status').default('PENDING').notNull(),
     /** Operator-supplied reason, surfaced in exports and audit logs. */
@@ -696,7 +719,161 @@ export const refunds = pgTable(
     index('Refund_orderId_idx').on(t.orderId),
     index('Refund_status_idx').on(t.status),
     index('Refund_createdAt_idx').on(t.createdAt),
+    index('Refund_returnRequestId_idx').on(t.returnRequestId),
     uniqueIndex('Refund_gatewayRefundId_key').on(t.gatewayRefundId),
+  ]
+)
+
+/**
+ * One row per customer-initiated damaged-item return claim against one order.
+ *
+ * Two nullable columns carry the idempotency guards that keep inventory and
+ * money correct under retries:
+ *
+ * - `stockRestoredAt` is claimed by a guarded `UPDATE ... WHERE
+ *   "stockRestoredAt" IS NULL`, so restock happens exactly once per return.
+ *   The order-level `Order.stockRestoredAt` cannot serve here: it is a single
+ *   all-or-nothing flag, and a partial return must not consume it.
+ * - `refundId` is UNIQUE, so a return can never generate a second refund even
+ *   if two administrators act concurrently.
+ */
+export const returnRequests = pgTable(
+  'ReturnRequest',
+  {
+    id: varchar('id', { length: 7 })
+      .primaryKey()
+      .$defaultFn(() => generateShortId()),
+    orderId: varchar('orderId', { length: 10 })
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    /**
+     * Denormalised from `Order.userId` so the ownership check on every read
+     * and mutation is a single indexed equality rather than a join. Written
+     * once at creation and never updated.
+     */
+    userId: text('userId')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    status: returnStatusEnum('status').default('REQUESTED').notNull(),
+    reason: returnReasonEnum('reason').notNull(),
+    customerNote: text('customerNote'),
+    /** Required on both approve and reject; shown to the customer. */
+    decisionReason: text('decisionReason'),
+    decidedById: text('decidedById').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    decidedAt: timestamp('decidedAt', { mode: 'date' }),
+    receivedById: text('receivedById').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    receivedAt: timestamp('receivedAt', { mode: 'date' }),
+    /** Restock idempotency claim. */
+    stockRestoredAt: timestamp('stockRestoredAt', { mode: 'date' }),
+    /** Refund idempotency claim; unique so one return yields one refund. */
+    refundId: varchar('refundId', { length: 7 }).references(
+      (): AnyPgColumn => refunds.id,
+      { onDelete: 'set null' }
+    ),
+    /**
+     * Total frozen at request time, never recomputed. A later price change or
+     * coupon expiry must not alter the amount owed for goods already agreed.
+     */
+    refundAmount: money('refundAmount').default(0).notNull(),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
+  },
+  (t) => [
+    index('ReturnRequest_orderId_idx').on(t.orderId),
+    index('ReturnRequest_userId_idx').on(t.userId),
+    index('ReturnRequest_status_idx').on(t.status),
+    index('ReturnRequest_status_createdAt_idx').on(t.status, t.createdAt),
+    uniqueIndex('ReturnRequest_refundId_key').on(t.refundId),
+    check(
+      'ReturnRequest_refundAmount_non_negative',
+      sql`${t.refundAmount} >= 0`
+    ),
+  ]
+)
+
+/**
+ * A requested quantity of one order item.
+ *
+ * `variantId` is snapshotted rather than re-resolved through `OrderItem` at
+ * receive time, so restock is a pure function of the return's own rows and
+ * needs no join inside the transaction holding the restock claim.
+ */
+export const returnItems = pgTable(
+  'ReturnItem',
+  {
+    id: varchar('id', { length: 7 })
+      .primaryKey()
+      .$defaultFn(() => generateShortId()),
+    returnRequestId: varchar('returnRequestId', { length: 7 })
+      .notNull()
+      .references(() => returnRequests.id, { onDelete: 'cascade' }),
+    orderItemId: varchar('orderItemId', { length: 7 })
+      .notNull()
+      .references(() => orderItems.id, { onDelete: 'cascade' }),
+    variantId: varchar('variantId', { length: 7 })
+      .notNull()
+      .references(() => productVariants.id),
+    quantity: integer('quantity').notNull(),
+    /** Net of this line's share of any order-level discount. */
+    refundableAmount: money('refundableAmount').notNull(),
+  },
+  (t) => [
+    index('ReturnItem_returnRequestId_idx').on(t.returnRequestId),
+    index('ReturnItem_orderItemId_idx').on(t.orderItemId),
+    uniqueIndex('ReturnItem_returnRequestId_orderItemId_key').on(
+      t.returnRequestId,
+      t.orderItemId
+    ),
+    check('ReturnItem_quantity_positive', sql`${t.quantity} > 0`),
+    check(
+      'ReturnItem_refundableAmount_non_negative',
+      sql`${t.refundableAmount} >= 0`
+    ),
+  ]
+)
+
+/**
+ * An uploaded evidence image, created orphaned and attached on submission.
+ *
+ * `returnRequestId` is nullable because the customer uploads images *before*
+ * the return exists — a NOT NULL foreign key would make that sequence
+ * impossible. `userId` and `orderId` carry ownership and scope during the
+ * orphaned window, and are what make the per-order upload cap queryable
+ * without a parent row to join through.
+ *
+ * Images only. The policy also requires a short video; that is collected over
+ * Instagram DM and correlated by return id, so no video ever lands here.
+ */
+export const returnEvidence = pgTable(
+  'ReturnEvidence',
+  {
+    id: varchar('id', { length: 7 })
+      .primaryKey()
+      .$defaultFn(() => generateShortId()),
+    returnRequestId: varchar('returnRequestId', { length: 7 }).references(
+      () => returnRequests.id,
+      { onDelete: 'cascade' }
+    ),
+    userId: text('userId')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    orderId: varchar('orderId', { length: 10 })
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    /** Blob-provider origin, never the application origin. */
+    url: text('url').notNull(),
+    pathname: text('pathname').notNull(),
+    contentType: text('contentType'),
+    provider: text('provider').notNull(),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+  },
+  (t) => [
+    index('ReturnEvidence_returnRequestId_idx').on(t.returnRequestId),
+    index('ReturnEvidence_userId_orderId_idx').on(t.userId, t.orderId),
   ]
 )
 
@@ -1182,6 +1359,7 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
   }),
   items: many(orderItems),
   refunds: many(refunds),
+  returns: many(returnRequests),
 }))
 
 export const refundsRelations = relations(refunds, ({ one }) => ({
@@ -1189,6 +1367,64 @@ export const refundsRelations = relations(refunds, ({ one }) => ({
   initiatedBy: one(users, {
     fields: [refunds.initiatedById],
     references: [users.id],
+  }),
+}))
+
+export const returnRequestsRelations = relations(
+  returnRequests,
+  ({ one, many }) => ({
+    order: one(orders, {
+      fields: [returnRequests.orderId],
+      references: [orders.id],
+    }),
+    user: one(users, {
+      fields: [returnRequests.userId],
+      references: [users.id],
+    }),
+    decidedBy: one(users, {
+      fields: [returnRequests.decidedById],
+      references: [users.id],
+    }),
+    receivedBy: one(users, {
+      fields: [returnRequests.receivedById],
+      references: [users.id],
+    }),
+    refund: one(refunds, {
+      fields: [returnRequests.refundId],
+      references: [refunds.id],
+    }),
+    items: many(returnItems),
+    evidence: many(returnEvidence),
+  })
+)
+
+export const returnItemsRelations = relations(returnItems, ({ one }) => ({
+  returnRequest: one(returnRequests, {
+    fields: [returnItems.returnRequestId],
+    references: [returnRequests.id],
+  }),
+  orderItem: one(orderItems, {
+    fields: [returnItems.orderItemId],
+    references: [orderItems.id],
+  }),
+  variant: one(productVariants, {
+    fields: [returnItems.variantId],
+    references: [productVariants.id],
+  }),
+}))
+
+export const returnEvidenceRelations = relations(returnEvidence, ({ one }) => ({
+  returnRequest: one(returnRequests, {
+    fields: [returnEvidence.returnRequestId],
+    references: [returnRequests.id],
+  }),
+  user: one(users, {
+    fields: [returnEvidence.userId],
+    references: [users.id],
+  }),
+  order: one(orders, {
+    fields: [returnEvidence.orderId],
+    references: [orders.id],
   }),
 }))
 

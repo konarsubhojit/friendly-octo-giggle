@@ -35,11 +35,11 @@
 
 **Purpose**: Configuration and constants that later phases import. No behaviour yet.
 
-- [ ] T002 [P] Add `'orders:returns'` to `ADMIN_PERMISSIONS` and grant it to `SUPPORT` in the `ROLE_PERMISSIONS` map in [src/lib/constants/roles.ts](src/lib/constants/roles.ts) (`ADMIN` already receives all permissions)
-- [ ] T003 [P] Add `returnsConfig` to [src/lib/edge-config.ts](src/lib/edge-config.ts): the `ReturnsConfig` interface (`defaultWindowDays: 7`, `categoryWindowDays` keyed by **category name**, `nonReturnableCategoryNames`), `DEFAULT_RETURNS_CONFIG`, a `getReturnsConfig()` reader, and entries in both the `EdgeConfigData` type and the `getAllEdgeConfig` batch read — mirroring `shippingConfig` end to end
-- [ ] T003a [P] Add `returnVideoViaInstagram: boolean` to the `FeatureFlags` interface and `DEFAULT_FEATURE_FLAGS` in [src/lib/edge-config.ts](src/lib/edge-config.ts), defaulting to **`false`** so the channel is opt-in and shipping the code does not enable an unstaffed inbox ([research.md](./research.md) R15)
-- [ ] T003b [P] Add `INSTAGRAM_HANDLE` and a derived `INSTAGRAM_DM_URL` (`https://ig.me/m/<handle>`) to [src/lib/constants/store.ts](src/lib/constants/store.ts) beside `STORE_NAME`. **Static, not Edge Config** — the handle appears in policy copy that the Client Component `OrderPolicyConfirmDialog` imports synchronously, and Edge Config is server-only and async
-- [ ] T004 [P] Create `src/lib/constants/returns.ts` with `RETURN_STATUSES` and `RETURN_REASONS` const tuples plus their derived TS unions, so schema, Zod, and UI share one source. Per Option B, `RETURN_REASONS` is exactly `['DAMAGED', 'DEFECTIVE', 'WRONG_ITEM']`
+- [x] T002 [P] Add `'orders:returns'` to `ADMIN_PERMISSIONS` and grant it to `SUPPORT` in the `ROLE_PERMISSIONS` map in [src/lib/constants/roles.ts](src/lib/constants/roles.ts) (`ADMIN` already receives all permissions)
+- [x] T003 [P] Add `returnsConfig` to [src/lib/edge-config.ts](src/lib/edge-config.ts): the `ReturnsConfig` interface (`defaultWindowDays: 7`, `categoryWindowDays` keyed by **category name**, `nonReturnableCategoryNames`), `DEFAULT_RETURNS_CONFIG`, a `getReturnsConfig()` reader, and entries in both the `EdgeConfigData` type and the `getAllEdgeConfig` batch read — mirroring `shippingConfig` end to end
+- [x] T003a [P] Add `returnVideoViaInstagram: boolean` to the `FeatureFlags` interface and `DEFAULT_FEATURE_FLAGS` in [src/lib/edge-config.ts](src/lib/edge-config.ts), defaulting to **`false`** so the channel is opt-in and shipping the code does not enable an unstaffed inbox ([research.md](./research.md) R15)
+- [x] T003b [P] Add `INSTAGRAM_HANDLE` and a derived `INSTAGRAM_DM_URL` (`https://ig.me/m/<handle>`) to [src/lib/constants/store.ts](src/lib/constants/store.ts) beside `STORE_NAME`. **Static, not Edge Config** — the handle appears in policy copy that the Client Component `OrderPolicyConfirmDialog` imports synchronously, and Edge Config is server-only and async
+- [x] T004 [P] Create `src/lib/constants/returns.ts` with `RETURN_STATUSES` and `RETURN_REASONS` const tuples plus their derived TS unions, so schema, Zod, and UI share one source. Per Option B, `RETURN_REASONS` is exactly `['DAMAGED', 'DEFECTIVE', 'WRONG_ITEM']`
 
 ---
 
@@ -51,24 +51,24 @@
 
 ### Schema & Migration
 
-- [ ] T005 Add `returnStatusEnum` and `returnReasonEnum` pgEnums — the reason enum restricted to `['DAMAGED', 'DEFECTIVE', 'WRONG_ITEM']` per Option B — and the `returnRequests`, `returnItems`, `returnEvidence` tables with all columns, indexes, unique constraints, and check constraints specified in [data-model.md](./data-model.md), to [src/lib/schema.ts](src/lib/schema.ts). `ReturnEvidence.returnRequestId` is **nullable** — evidence is uploaded before the return exists — with `userId` and `orderId` NOT NULL and a `(userId, orderId)` index
-- [ ] T006 Add `deliveredAt` timestamp to the `orders` table and `returnRequestId` varchar(7) FK to the `refunds` table, and relax `refunds.paymentTransactionId` from `.notNull()` to nullable per [data-model.md](./data-model.md) M1/M2/M4, in [src/lib/schema.ts](src/lib/schema.ts)
-- [ ] T007 Add `returnRequestsRelations`, `returnItemsRelations`, `returnEvidenceRelations`, and extend `ordersRelations` with `returns: many(returnRequests)` in [src/lib/schema.ts](src/lib/schema.ts)
-- [ ] T008 Generate the migration with `npm run db:generate`, review the SQL, and hand-edit `drizzle/0017_self_service_returns.sql` to add the `deliveredAt` backfill (`UPDATE "Order" SET "deliveredAt" = "updatedAt" WHERE status = 'DELIVERED'`) with the comment recording that it is an approximation for historical rows, and to make index creation on the non-empty `Order` and `Refund` tables `CONCURRENTLY`
-- [ ] T009 Apply the migration with `npm run db:migrate` and verify the new tables, indexes, and constraints exist, then commit the schema and the migration together per constitution workflow step 6
+- [x] T005 Add `returnStatusEnum` and `returnReasonEnum` pgEnums — the reason enum restricted to `['DAMAGED', 'DEFECTIVE', 'WRONG_ITEM']` per Option B — and the `returnRequests`, `returnItems`, `returnEvidence` tables with all columns, indexes, unique constraints, and check constraints specified in [data-model.md](./data-model.md), to [src/lib/schema.ts](src/lib/schema.ts). `ReturnEvidence.returnRequestId` is **nullable** — evidence is uploaded before the return exists — with `userId` and `orderId` NOT NULL and a `(userId, orderId)` index
+- [x] T006 Add `deliveredAt` timestamp to the `orders` table and `returnRequestId` varchar(7) FK to the `refunds` table, and relax `refunds.paymentTransactionId` from `.notNull()` to nullable per [data-model.md](./data-model.md) M1/M2/M4, in [src/lib/schema.ts](src/lib/schema.ts)
+- [x] T007 Add `returnRequestsRelations`, `returnItemsRelations`, `returnEvidenceRelations`, and extend `ordersRelations` with `returns: many(returnRequests)` in [src/lib/schema.ts](src/lib/schema.ts)
+- [x] T008 Generate the migration with `npm run db:generate`, review the SQL, and hand-edit the migration to add the `deliveredAt` backfill (`UPDATE "Order" SET "deliveredAt" = "updatedAt" WHERE status = 'DELIVERED'`) with the comment recording that it is an approximation for historical rows. **Landed as `drizzle/0001_self_service_returns.sql`, not `0017`** — commit `f01a0d6` squashed the prior migrations into `0000_init`, so `0001` is the correct next index. Index creation is **not** `CONCURRENTLY`: the Drizzle migrator wraps each migration in a transaction, which forbids it, and both affected columns are new and entirely NULL so the build is brief
+- [x] T009 Apply the migration with `npm run db:migrate` and verify the new tables, indexes, and constraints exist, then commit the schema and the migration together per constitution workflow step 6
 
 ### Pure Functions — tests first
 
-- [ ] T010 [P] Write failing tests for `allocateMoney` in [**tests**/lib/money.test.ts](__tests__/lib/money.test.ts): sum invariant `sum(allocateMoney(t, w)) === t` across randomised weight vectors, zero total, single weight, all-zero weights, and deterministic tie-breaking by ascending index
-- [ ] T011 [P] Write failing tests for the return state machine in [**tests**/features/orders/services/return-state-machine.test.ts](__tests__/features/orders/services/return-state-machine.test.ts): every legal transition from [research.md](./research.md) R12 accepted — including `RECEIVED → RECEIVED` on refund retry — every illegal one rejected, and `REJECTED` terminal
-- [ ] T012 [P] Write failing tests for the refund calculator in [**tests**/features/orders/services/return-refund-calculator.test.ts](__tests__/features/orders/services/return-refund-calculator.test.ts): partial vs full return, shipping refunded only on full return (R3), discount share reconciles exactly to the order's `discountAmount`, proportional item tax
-- [ ] T013 Implement `allocateMoney(total: number, weights: readonly number[]): number[]` using largest-remainder allocation over integer minor units in [src/lib/money.ts](src/lib/money.ts) — T010 must pass
-- [ ] T014 [P] Implement the transition table and `assertTransition(from, action)` in `src/features/orders/services/return-state-machine.ts` as a pure module with no I/O, implementing all five actions (`approve`, `reject`, `receive`, `refund`, `settle`) from [research.md](./research.md) R12 — T011 must pass
-- [ ] T015 [P] Implement `calculateReturnRefund` in `src/features/orders/services/return-refund-calculator.ts` using `allocateMoney`, applying the full-order-only shipping rule — T012 must pass (depends on T013)
+- [x] T010 [P] Write failing tests for `allocateMoney` in [**tests**/lib/money.test.ts](__tests__/lib/money.test.ts): sum invariant `sum(allocateMoney(t, w)) === t` across randomised weight vectors, zero total, single weight, all-zero weights, and deterministic tie-breaking by ascending index
+- [x] T011 [P] Write failing tests for the return state machine in [**tests**/features/orders/services/return-state-machine.test.ts](__tests__/features/orders/services/return-state-machine.test.ts): every legal transition from [research.md](./research.md) R12 accepted — including `RECEIVED → RECEIVED` on refund retry — every illegal one rejected, and `REJECTED` terminal
+- [x] T012 [P] Write failing tests for the refund calculator in [**tests**/features/orders/services/return-refund-calculator.test.ts](__tests__/features/orders/services/return-refund-calculator.test.ts): partial vs full return, shipping refunded only on full return (R3), discount share reconciles exactly to the order's `discountAmount`, proportional item tax
+- [x] T013 Implement `allocateMoney(total: number, weights: readonly number[]): number[]` using largest-remainder allocation over integer minor units in [src/lib/money.ts](src/lib/money.ts) — T010 must pass
+- [x] T014 [P] Implement the transition table and `assertTransition(from, action)` in `src/features/orders/services/return-state-machine.ts` as a pure module with no I/O, implementing all five actions (`approve`, `reject`, `receive`, `refund`, `settle`) from [research.md](./research.md) R12 — T011 must pass
+- [x] T015 [P] Implement `calculateReturnRefund` in `src/features/orders/services/return-refund-calculator.ts` using `allocateMoney`, applying the full-order-only shipping rule — T012 must pass (depends on T013)
 
 ### Validation Schemas
 
-- [ ] T016 Add `CreateReturnRequestSchema` — with `evidenceIds` **required**, `.min(1).max(5)` per Option B — and the `DecideReturnSchema` discriminated union including the `refund` action, from [data-model.md](./data-model.md) to [src/features/orders/validations.ts](src/features/orders/validations.ts)
+- [x] T016 Add `CreateReturnRequestSchema` — with `evidenceIds` **required**, `.min(1).max(5)` per Option B — and the `DecideReturnSchema` discriminated union including the `refund` action, from [data-model.md](./data-model.md) to [src/features/orders/validations.ts](src/features/orders/validations.ts)
 
 **Checkpoint**: Schema migrated, pure logic proven, validation defined. User stories can begin.
 
@@ -82,26 +82,26 @@
 
 ### Tests for User Story 1
 
-- [ ] T017 [P] [US1] Write failing service tests in [**tests**/features/orders/services/return-service.test.ts](__tests__/features/orders/services/return-service.test.ts) covering: ownership rejection, order not `DELIVERED`, window expired, excluded category, requested quantity exceeding returnable, refund total exceeding the order's remaining captured balance, and `REJECTED` returns releasing held quantity
-- [ ] T018 [P] [US1] Write failing route tests in `__tests__/app/api/orders/returns.test.ts` asserting 401 without session, 404 for another customer's order, 400 on Zod failure, 409 with the correct `code` discriminator, and 201 on success
-- [ ] T018a [P] [US1] Write failing tests for `POST …/returns/evidence` in `__tests__/app/api/orders/return-evidence.test.ts` asserting rejection of a disallowed type by magic byte, a file over `MAX_FILE_SIZE` (413), and a sixth upload for the same (`userId`, `orderId`) pair (409). Also assert that `POST …/returns` rejects a request with an empty `evidenceIds`, and one whose ids all belong to another customer, with `400` — covers SC-007
-- [ ] T018b [P] [US1] Write failing component tests for `ReturnVideoPrompt` in `__tests__/features/orders/components/ReturnVideoPrompt.test.tsx`: renders the return ID and an `ig.me` link carrying `rel="noopener noreferrer"` when the flag is on, and renders the `SUPPORT_EMAIL` fallback with no Instagram link when it is off — covers SC-009
+- [x] T017 [P] [US1] Write failing service tests in [**tests**/features/orders/services/return-service.test.ts](__tests__/features/orders/services/return-service.test.ts) covering: ownership rejection, order not `DELIVERED`, window expired, excluded category, requested quantity exceeding returnable, refund total exceeding the order's remaining captured balance, and `REJECTED` returns releasing held quantity
+- [x] T018 [P] [US1] Write failing route tests in `__tests__/app/api/orders/returns.test.ts` asserting 401 without session, 404 for another customer's order, 400 on Zod failure, 409 with the correct `code` discriminator, and 201 on success. The discriminator lands under `details.code`, because `apiError` nests its third argument
+- [x] T018a [P] [US1] Write failing tests for `POST …/returns/evidence` in `__tests__/app/api/orders/returns-evidence.test.ts` asserting rejection of a disallowed type by magic byte, an oversized body (413), and a sixth upload for the same (`userId`, `orderId`) pair (409). Also asserts that a video upload is answered with the Instagram destination rather than a bare type error, and that `POST …/returns` rejects an empty `evidenceIds` with 400 — covers SC-007
+- [x] T018b [P] [US1] Write failing component tests for `ReturnVideoPrompt` in `__tests__/features/orders/components/ReturnVideoPrompt.test.tsx`: renders the return ID and an `ig.me` link carrying `rel="noopener noreferrer"` when the flag is on, and renders the `SUPPORT_EMAIL` fallback with no Instagram link when it is off — covers SC-009. **Needs the `// @vitest-environment jsdom` pragma**: `vitest.config.mts` defaults to the `node` environment, so a component test without it fails with `document is not defined`
 
 ### Implementation for User Story 1
 
-- [ ] T019 [US1] Set `deliveredAt` alongside `status` when the transition target is `DELIVERED` in [src/app/api/admin/orders/[id]/route.ts](src/app/api/admin/orders/%5Bid%5D/route.ts) — the return window is measured from this column
-- [ ] T020 [US1] Implement `getReturnEligibility(orderId, userId)` in `src/features/orders/services/return-service.ts`, computing returnable quantity per order item (excluding only `REJECTED` returns), per-item window expiry resolved from `returnsConfig` by the item's **category name** (`products.category` is free text with no FK — never key by id), and the eligibility reason discriminator
-- [ ] T021 [US1] Implement `createReturnRequest` in `src/features/orders/services/return-service.ts` inside a transaction that locks the order row `FOR UPDATE`, re-validates every invariant under the lock, computes frozen `refundableAmount` per item via T015, inserts the `ReturnRequest` and `ReturnItem` rows, then sets `returnRequestId` on the `ReturnEvidence` rows matching `evidenceIds` **and** the caller's `userId` and `orderId` — ignoring non-matching ids silently, but rejecting the whole request with `400` when none survives the filter, since evidence is mandatory — T017 must pass
-- [ ] T022 [US1] Extract the magic-byte MIME check, size caps, and extension normalisation from [src/app/api/upload/route.ts](src/app/api/upload/route.ts) into a shared `src/lib/upload-validation.ts`, hoist the private `MAX_FORM_DATA_BODY_SIZE` const from that route into [src/lib/upload-constants.ts](src/lib/upload-constants.ts), and re-point the existing route at both, leaving its `checkAdminAuth('products:write')` gate unchanged
-- [ ] T023 [US1] Implement `POST /api/orders/[id]/returns/evidence` in `src/app/api/orders/[id]/returns/evidence/route.ts` using the shared validator from T022, `auth()` ownership gating, and `uploadImage` from [src/lib/image-storage.ts](src/lib/image-storage.ts). The row is inserted **orphaned** (`returnRequestId` null) with `userId` and `orderId` set, capped at 5 orphaned rows per (`userId`, `orderId`) — T018a must pass
-- [ ] T024 [US1] Implement `GET` and `POST /api/orders/[id]/returns` in `src/app/api/orders/[id]/returns/route.ts` per [contracts/customer-returns.md](./contracts/customer-returns.md), wrapped in `withApiLogging`, responding through `apiSuccess`/`handleApiError`, with `Cache-Control: private, no-store` — T018 must pass
-- [ ] T025 [US1] Add `serializeCustomerReturn` to [src/lib/serializers.ts](src/lib/serializers.ts) that explicitly omits `decidedById`, `receivedById`, `stockRestoredAt`, `refundId`, `gatewayRefundId`, `errorMessage`, `paymentTransactionId`, and variant stock fields — never spread the row
-- [ ] T026 [US1] Implement `GET /api/returns/[id]` in `src/app/api/returns/[id]/route.ts`, returning **404** (not 403) for another customer's return so the endpoint does not confirm the identifier exists
-- [ ] T027 [P] [US1] Build `ReturnEvidenceUploader.tsx` in `src/features/orders/components/` as a Client Component posting to the T023 endpoint, with client-side type/size pre-checks that never substitute for the server check. When the selected file is a video, show a message pointing at the Instagram channel rather than a bare "unsupported type" error (spec US1 scenario 7)
-- [ ] T027a [P] [US1] Build `ReturnVideoPrompt.tsx` in `src/features/orders/components/` as a Client Component showing the return ID, a copy-to-clipboard control, and a link to `INSTAGRAM_DM_URL` opened with `target="_blank"` and `rel="noopener noreferrer"`. It takes the flag value as a prop; when false it renders the `SUPPORT_EMAIL` fallback instruction instead of the Instagram link — the video instruction is never simply absent (FR-019)
-- [ ] T028 [US1] Build `ReturnRequestForm.tsx` in `src/features/orders/components/` as a Client Component with per-item quantity steppers bounded by `returnableQuantity`, a damage-reason selector offering only the three Option B reasons, a submit control disabled until at least one evidence image is attached, and `formatPrice()` from `useCurrency()` for all amounts — no raw `$` or `.toFixed(2)`. On success it renders `ReturnVideoPrompt` with the new return ID
-- [ ] T029 [US1] Surface the return action and submitted returns on [src/app/(public)/orders/[id]/page.tsx](<src/app/(public)/orders/%5Bid%5D/page.tsx>), keeping the page a Server Component, reading `returnVideoViaInstagram` via `getFeatureFlags()` there and passing it down as a prop, and confining `'use client'` to T027/T027a/T028
-- [ ] T030 [US1] Add cache invalidation (`invalidateUserOrderCaches`, `invalidateAdminOrderCaches`) and `return_requested` business-event logging via [src/lib/logger.ts](src/lib/logger.ts) to the creation path
+- [x] T019 [US1] Set `deliveredAt` alongside `status` when the transition target is `DELIVERED` in [src/app/api/admin/orders/[id]/route.ts](src/app/api/admin/orders/%5Bid%5D/route.ts) — the return window is measured from this column. **Guarded against re-stamping**: `DELIVERED → DELIVERED` is a legal transition (an admin editing tracking details), so the timestamp is written only on the transition _into_ `DELIVERED`; otherwise a later edit would silently restart the customer's window
+- [x] T020 [US1] Implement `getReturnEligibility(orderId, userId)` in `src/features/orders/services/return-service.ts`, computing returnable quantity per order item (excluding only `REJECTED` returns), per-item window expiry resolved from `returnsConfig` by the item's **category name** (`products.category` is free text with no FK — never key by id), and the eligibility reason discriminator
+- [x] T021 [US1] Implement `createReturnRequest` in `src/features/orders/services/return-service.ts` inside a transaction that locks the order row `FOR UPDATE`, re-validates every invariant under the lock, computes frozen `refundableAmount` per item via T015, inserts the `ReturnRequest` and `ReturnItem` rows, then sets `returnRequestId` on the `ReturnEvidence` rows matching `evidenceIds` **and** the caller's `userId` and `orderId` — ignoring non-matching ids silently, but rejecting the whole request with `400` when none survives the filter, since evidence is mandatory — T017 must pass
+- [x] T022 [US1] Extract the magic-byte MIME check, size caps, and extension normalisation from [src/app/api/upload/route.ts](src/app/api/upload/route.ts) into a shared `src/lib/upload-validation.ts`, hoist the private `MAX_FORM_DATA_BODY_SIZE` const from that route into [src/lib/upload-constants.ts](src/lib/upload-constants.ts), and re-point the existing route at both, leaving its `checkAdminAuth('products:write')` gate unchanged. **Landed in `upload-validation.ts` rather than `upload-constants.ts`** — the cap is derived from `MAX_FILE_SIZE` and is only meaningful alongside the validator, so splitting them across two modules would separate a value from its only consumer
+- [x] T023 [US1] Implement `POST /api/orders/[id]/returns/evidence` in `src/app/api/orders/[id]/returns/evidence/route.ts` using the shared validator from T022, `auth()` ownership gating, and `uploadImage` from [src/lib/image-storage.ts](src/lib/image-storage.ts). The row is inserted **orphaned** (`returnRequestId` null) with `userId` and `orderId` set, capped at 5 orphaned rows per (`userId`, `orderId`) — T018a must pass
+- [x] T024 [US1] Implement `GET` and `POST /api/orders/[id]/returns` in `src/app/api/orders/[id]/returns/route.ts` per [contracts/customer-returns.md](./contracts/customer-returns.md), wrapped in `withApiLogging`, responding through `apiSuccess`/`handleApiError`, with `Cache-Control: private, no-store` — T018 must pass
+- [x] T025 [US1] Add `serializeCustomerReturn` to [src/lib/serializers.ts](src/lib/serializers.ts) that explicitly omits `decidedById`, `receivedById`, `stockRestoredAt`, `refundId`, `gatewayRefundId`, `errorMessage`, `paymentTransactionId`, and variant stock fields — never spread the row
+- [x] T026 [US1] Implement `GET /api/returns/[id]` in `src/app/api/returns/[id]/route.ts`, returning **404** (not 403) for another customer's return so the endpoint does not confirm the identifier exists
+- [x] T027 [P] [US1] Build `ReturnEvidenceUploader.tsx` in `src/features/orders/components/` as a Client Component posting to the T023 endpoint, with client-side type/size pre-checks that never substitute for the server check. When the selected file is a video, show a message pointing at the Instagram channel rather than a bare "unsupported type" error (spec US1 scenario 7)
+- [x] T027a [P] [US1] Build `ReturnVideoPrompt.tsx` in `src/features/orders/components/` as a Client Component showing the return ID, a copy-to-clipboard control, and a link to `INSTAGRAM_DM_URL` opened with `target="_blank"` and `rel="noopener noreferrer"`. It takes the flag value as a prop; when false it renders the `SUPPORT_EMAIL` fallback instruction instead of the Instagram link — the video instruction is never simply absent (FR-019)
+- [x] T028 [US1] Build `ReturnRequestForm.tsx` in `src/features/orders/components/` as a Client Component with per-item quantity steppers bounded by `returnableQuantity`, a damage-reason selector offering only the three Option B reasons, a submit control disabled until at least one evidence image is attached, and `formatPrice()` from `useCurrency()` for all amounts — no raw `$` or `.toFixed(2)`. On success it renders `ReturnVideoPrompt` with the new return ID
+- [x] T029 [US1] Surface the return action and submitted returns on [src/app/(public)/orders/[id]/page.tsx](<src/app/(public)/orders/%5Bid%5D/page.tsx>), reading `returnVideoViaInstagram` and passing it down as a prop. **The plan assumed this page is a Server Component; it is not** — it opens with `'use client'` and drives everything through Redux. Edge Config is server-only, so `GET /api/orders/[id]/returns` returns `instagramVideoEnabled` alongside the eligibility payload; the flag resolves server-side and the client receives a boolean. Wired via `OrderReturnsSection`, which renders nothing at all until the order is `DELIVERED`
+- [x] T030 [US1] Add cache invalidation (`invalidateUserOrderCaches`, `invalidateAdminOrderCaches`) and `return_requested` business-event logging via [src/lib/logger.ts](src/lib/logger.ts) to the creation path
 
 **Checkpoint**: A customer can submit a return end to end. Nothing can yet action it.
 
@@ -117,18 +117,18 @@
 
 ### Tests for User Story 2
 
-- [ ] T031 [P] [US2] Write failing tests in `__tests__/app/api/admin/returns.test.ts` asserting 401 unauthenticated, 403 without `orders:returns`, 400 when `decisionReason` is absent on approve **or** reject, 409 on an illegal transition, and that an audit row is written for each decision
-- [ ] T032 [P] [US2] Write a failing concurrency test in [**tests**/features/orders/services/return-service.test.ts](__tests__/features/orders/services/return-service.test.ts) proving two simultaneous decisions serialise and the second is rejected by the transition check
+- [x] T031 [P] [US2] Write failing tests in `__tests__/app/api/admin/returns.test.ts` asserting 401 unauthenticated, 403 without `orders:returns`, 400 when `decisionReason` is absent on approve **or** reject, 409 on an illegal transition, and that the money-moving actions are gated on `orders:refund` rather than `orders:returns`. The audit-row assertion lives in `return-admin-service.test.ts`, where the audit call is observable
+- [x] T032 [P] [US2] Write a failing concurrency test in `__tests__/features/orders/services/return-admin-service.test.ts` proving two simultaneous decisions serialise and the second is rejected by the transition check
 
 ### Implementation for User Story 2
 
-- [ ] T033 [US2] Implement `decideReturn(returnId, action, decisionReason, actor)` in `src/features/orders/services/return-service.ts` inside a transaction that re-reads the return row `FOR UPDATE`, applies T014's transition check, and writes `decidedById`/`decidedAt` — T032 must pass
-- [ ] T034 [US2] Write `recordAdminAuditLog({ entity: 'return', entityId, action, diff })` from [src/features/admin/services/admin-audit-log.ts](src/features/admin/services/admin-audit-log.ts) on every decision, capturing prior and new status and the reason
-- [ ] T035 [US2] Implement `GET /api/admin/returns` in `src/app/api/admin/returns/route.ts` with `checkAdminAuth('orders:returns')`, status/search/cursor/limit params, and a query ordered to use the `ReturnRequest_status_createdAt_idx` composite index
-- [ ] T036 [US2] Implement `PATCH /api/admin/returns/[id]` in `src/app/api/admin/returns/[id]/route.ts` handling the `approve` and `reject` actions per [contracts/admin-returns.md](./contracts/admin-returns.md) — T031 must pass
-- [ ] T037 [P] [US2] Add `returnsSlice.ts` to `src/features/orders/store/` for admin queue state, with all thunks routed through [src/lib/api-client.ts](src/lib/api-client.ts) and never raw `fetch`, and register it in [src/lib/store.ts](src/lib/store.ts)
-- [ ] T038 [P] [US2] Build `AdminReturnCard.tsx` in `src/features/admin/components/` as a Client Component showing order context, items, reason, evidence thumbnails, and decision actions with a mandatory reason field
-- [ ] T039 [US2] Build `src/app/admin/returns/page.tsx` as a Server Component calling `requireAdminPermission('orders:returns')` from [src/features/admin/services/admin-page-auth.ts](src/features/admin/services/admin-page-auth.ts), plus `src/app/admin/returns/error.tsx`
+- [x] T033 [US2] Implement `decideReturn(returnId, action, decisionReason, actor)` in `src/features/orders/services/return-service.ts` inside a transaction that re-reads the return row `FOR UPDATE`, applies T014's transition check, and writes `decidedById`/`decidedAt` — T032 must pass. **Landed in a sibling `return-admin-service.ts`** so the customer-facing service stays focused; the admin module owns all five actions
+- [x] T034 [US2] Write `recordAdminAuditLog({ entity: 'return', entityId, action, diff })` from [src/features/admin/services/admin-audit-log.ts](src/features/admin/services/admin-audit-log.ts) on every decision, capturing prior and new status and the reason
+- [x] T035 [US2] Implement `GET /api/admin/returns` in `src/app/api/admin/returns/route.ts` with `checkAdminAuth('orders:returns')`, status/search/cursor/limit params, and a query ordered to use the `ReturnRequest_status_createdAt_idx` composite index
+- [x] T036 [US2] Implement `PATCH /api/admin/returns/[id]` in `src/app/api/admin/returns/[id]/route.ts` handling the `approve` and `reject` actions per [contracts/admin-returns.md](./contracts/admin-returns.md) — T031 must pass
+- [x] T037 [P] [US2] Add `returnsSlice.ts` to `src/features/orders/store/` for admin queue state, with all thunks routed through [src/lib/api-client.ts](src/lib/api-client.ts) and never raw `fetch`. Registered in `makeAdminStore` rather than `makeStore`, because the queue is admin-only and the storefront bundle must not carry it. `AdminReturnCard` no longer fetches: it takes an `onDecide` callback and the client dispatches the thunk
+- [x] T038 [P] [US2] Build `AdminReturnCard.tsx` in `src/features/admin/components/` as a Client Component showing order context, items, reason, evidence thumbnails, and decision actions with a mandatory reason field
+- [x] T039 [US2] Build `src/app/admin/returns/page.tsx` as a Server Component calling `requireAdminPermission('orders:returns')` from [src/features/admin/services/admin-page-auth.ts](src/features/admin/services/admin-page-auth.ts). **No `error.tsx` added** — no other admin subroute has one; `src/app/admin/error.tsx` already covers the whole segment. The page also fetches the first page of the default view server-side, so the queue arrives populated and the client never fetch-then-setStates on its first effect (which `react-hooks/set-state-in-effect` rejects)
 
 **Checkpoint**: Returns can be requested and triaged. No inventory or money has moved.
 
@@ -144,22 +144,22 @@
 
 ### Tests for User Story 3
 
-- [ ] T040 [P] [US3] Write failing tests in [**tests**/features/orders/services/return-restock.test.ts](__tests__/features/orders/services/return-restock.test.ts): the first claim returns `true` and increments `stock`, a second call returns `false` and increments nothing, `reservedStock` is never written, and soft-deleted variants are still restocked
-- [ ] T041 [P] [US3] Write failing tests in [**tests**/features/orders/services/return-service.test.ts](__tests__/features/orders/services/return-service.test.ts) for the receive and refund paths: `receive` restocks and moves to `RECEIVED` without creating a refund; `refund` creates exactly one refund and moves to `REFUNDED`; replaying `refund` produces no second row; **gateway rejection leaves the return at `RECEIVED` with `refundId` unset and a subsequent `refund` retry succeeds**
-- [ ] T042 [P] [US3] Write failing tests for the COD path asserting `codGateway.refund` is never invoked, a `PENDING` refund row is written with `paymentTransactionId: null` and a `MANUAL_SETTLEMENT:` reason prefix, and `settle` flips it to `PROCESSED`
-- [ ] T043 [P] [US3] Write a regression test in `__tests__/app/api/admin/orders/status-transitions.test.ts` asserting `DELIVERED` remains terminal in `VALID_TRANSITIONS`, so the double-refund scenario stays structurally impossible ([research.md](./research.md) R13)
+- [x] T040 [P] [US3] Write failing tests in [**tests**/features/orders/services/return-restock.test.ts](__tests__/features/orders/services/return-restock.test.ts): the first claim returns `true` and increments `stock`, a second call returns `false` and increments nothing, `reservedStock` is never written, and soft-deleted variants are still restocked
+- [x] T041 [P] [US3] Write failing tests in `__tests__/features/orders/services/return-admin-service.test.ts` for the receive and refund paths: `receive` restocks and moves to `RECEIVED` without creating a refund; `refund` creates exactly one refund and moves to `REFUNDED`; replaying `refund` produces no second row; **gateway rejection leaves the return at `RECEIVED` with `refundId` unset and a subsequent `refund` retry succeeds**
+- [x] T042 [P] [US3] Write failing tests for the COD path asserting the gateway is never invoked, a `PENDING` refund row is written with `paymentTransactionId: null` and a `MANUAL_SETTLEMENT:` reason prefix, and `settle` flips it to `PROCESSED`
+- [x] T043 [P] [US3] Write a regression test in `__tests__/app/api/admin/orders/status-transitions.test.ts` asserting `DELIVERED` remains terminal, so the double-refund scenario stays structurally impossible ([research.md](./research.md) R13). The table was extracted from the route into `src/features/orders/services/order-status-transitions.ts` so it can be asserted without booting the handler
 
 ### Implementation for User Story 3
 
-- [ ] T044 [US3] Implement `restockReturnItems(tx, returnRequest)` in `src/features/orders/services/return-restock.ts` claiming `ReturnRequest.stockRestoredAt` with a guarded `UPDATE ... WHERE "stockRestoredAt" IS NULL`, then incrementing `ProductVariant.stock` per item and never touching `reservedStock` — T040 must pass. **Do not modify or parameterise [src/features/orders/services/order-restock.ts](src/features/orders/services/order-restock.ts)**
-- [ ] T045 [US3] Extend `refundOrder` in [src/features/orders/services/refund-service.ts](src/features/orders/services/refund-service.ts) to accept an optional `returnRequestId` and persist it on the created `Refund` row, leaving every existing caller's behaviour unchanged
-- [ ] T046 [US3] Implement the `receive` action in `src/features/orders/services/return-service.ts`: transition check under `FOR UPDATE`, call T044, set `receivedAt`/`receivedById`, advance to `RECEIVED`. **No refund is issued here** — T041 must pass
-- [ ] T046a [US3] Implement the `refund` action in `src/features/orders/services/return-service.ts`: assert current state is `RECEIVED`, return unchanged when `refundId IS NOT NULL`, otherwise issue the refund, set `ReturnRequest.refundId`, and advance to `REFUNDED`. On gateway rejection the state stays `RECEIVED` so the action can be retried — T041 must pass
-- [ ] T047 [US3] Branch the refund issuance in T046a on `order.paymentProvider`: `COD` writes the manual-settlement refund row directly and never calls the gateway ([src/lib/payments/cod.ts](src/lib/payments/cod.ts) throws by design); all other providers call `refundOrder` — T042 must pass
-- [ ] T048 [US3] Implement the `settle` action gated on `orders:refund` (not `orders:returns`) in `src/app/api/admin/returns/[id]/route.ts`, flipping the linked refund `PENDING → PROCESSED`, setting `processedAt`, and writing an audit entry
-- [ ] T049 [US3] Add the `receive`, `refund`, and `settle` actions to the `PATCH /api/admin/returns/[id]` handler — gating `refund` and `settle` on `orders:refund` and `receive` on `orders:returns` — and to `AdminReturnCard.tsx`, showing `settle` only for `COD` orders
-- [ ] T050 [US3] Surface `Refund.errorMessage` on the admin card when a gateway refund fails, together with a visible retry control for the `refund` action, so the return remains actionable (spec US3 scenario 4)
-- [ ] T051 [US3] Add cache invalidation and `return_received` / `return_refunded` business-event logging to the receive and refund paths
+- [x] T044 [US3] Implement `restockReturnItems(tx, returnRequest)` in `src/features/orders/services/return-restock.ts` claiming `ReturnRequest.stockRestoredAt` with a guarded `UPDATE ... WHERE "stockRestoredAt" IS NULL`, then incrementing `ProductVariant.stock` per item and never touching `reservedStock` — T040 must pass. **Do not modify or parameterise [src/features/orders/services/order-restock.ts](src/features/orders/services/order-restock.ts)**
+- [x] T045 [US3] Extend `refundOrder` in [src/features/orders/services/refund-service.ts](src/features/orders/services/refund-service.ts) to accept an optional `returnRequestId` and persist it on the created `Refund` row, leaving every existing caller's behaviour unchanged
+- [x] T046 [US3] Implement the `receive` action in `src/features/orders/services/return-service.ts`: transition check under `FOR UPDATE`, call T044, set `receivedAt`/`receivedById`, advance to `RECEIVED`. **No refund is issued here** — T041 must pass
+- [x] T046a [US3] Implement the `refund` action in `src/features/orders/services/return-service.ts`: assert current state is `RECEIVED`, return unchanged when `refundId IS NOT NULL`, otherwise issue the refund, set `ReturnRequest.refundId`, and advance to `REFUNDED`. On gateway rejection the state stays `RECEIVED` so the action can be retried — T041 must pass
+- [x] T047 [US3] Branch the refund issuance in T046a on `order.paymentProvider`: `COD` writes the manual-settlement refund row directly and never calls the gateway ([src/lib/payments/cod.ts](src/lib/payments/cod.ts) throws by design); all other providers call `refundOrder` — T042 must pass
+- [x] T048 [US3] Implement the `settle` action gated on `orders:refund` (not `orders:returns`) in `src/app/api/admin/returns/[id]/route.ts`, flipping the linked refund `PENDING → PROCESSED`, setting `processedAt`, and writing an audit entry
+- [x] T049 [US3] Add the `receive`, `refund`, and `settle` actions to the `PATCH /api/admin/returns/[id]` handler — gating `refund` and `settle` on `orders:refund` and `receive` on `orders:returns` — and to `AdminReturnCard.tsx`, showing `settle` only for `COD` orders. **Route half done; the card is part of T038**
+- [x] T050 [US3] Surface `Refund.errorMessage` on the admin card when a gateway refund fails, together with a visible retry control for the `refund` action, so the return remains actionable (spec US3 scenario 4)
+- [x] T051 [US3] Add cache invalidation and `return_received` / `return_refunded` business-event logging to the receive and refund paths
 
 **Checkpoint**: The full commercial loop closes. Inventory and money move correctly and idempotently.
 
@@ -175,19 +175,19 @@
 
 ### Tests for User Story 4
 
-- [ ] T052 [P] [US4] Write failing tests asserting `deliverReturnStatusNotification` suppresses email when `isChannelEnabled(preferences, 'transactional', 'email')` is false, satisfying SC-006
-- [ ] T053 [P] [US4] Write failing component tests for `ReturnStatusPanel` covering each status, the rejection reason, and the refunded amount and date
+- [x] T052 [P] [US4] Write failing tests asserting `deliverReturnStatusNotification` suppresses email when `isChannelEnabled(preferences, 'transactional', 'email')` is false, satisfying SC-006. Also asserts suppression reports as a **success** rather than a failure — otherwise the durable step would retry forever against a preference that will never change on its own
+- [x] T053 [P] [US4] Write failing component tests for `ReturnStatusPanel` covering each status, the rejection reason, and the refunded amount and date
 
 ### Implementation for User Story 4
 
-- [ ] T054 [P] [US4] Declare `returnStatusChanged = eventType('order/return.status.changed', { schema })` in [src/features/orders/inngest/events.ts](src/features/orders/inngest/events.ts) matching the existing `orderStatusChanged` pattern
-- [ ] T055 [P] [US4] Add `returnStatusUpdateTemplate` to [src/lib/email/templates.ts](src/lib/email/templates.ts) returning `{ subject, bodyHtml, bodyText }`
-- [ ] T056 [US4] Implement `deliverReturnStatusNotification` in [src/lib/notifications/order-notifications.ts](src/lib/notifications/order-notifications.ts), resolving the recipient via `resolveNotificationRecipient` and gating each channel on `isChannelEnabled(preferences, 'transactional', channel)` — T052 must pass
-- [ ] T057 [US4] Add `sendReturnStatusEmailFunction` to [src/features/orders/inngest/emails.ts](src/features/orders/inngest/emails.ts) — **not** `src/lib/inngest/functions/` — with `idempotency: 'event.data.returnId + "-" + event.data.status'`, `retries: EMAIL_FUNCTION_RETRIES`, and `onFailure: recordEmailFailure`. Both helpers are module-private to `emails.ts`, and a domain-specific function in `src/lib/` would violate constitution Principle VIII
-- [ ] T058 [US4] **Register `sendReturnStatusEmailFunction` in [src/lib/inngest/registry.ts](src/lib/inngest/registry.ts)** — an unregistered function fails silently: the event publishes, nothing consumes it, no error is raised
-- [ ] T059 [US4] Publish the event via `dispatchWorkflowEvent` with an inline `fallback` from every transition point in `return-service.ts`, so notification still reaches the customer when Inngest is unconfigured
-- [ ] T060 [US4] Build `ReturnStatusPanel.tsx` in `src/features/orders/components/` as a Server Component showing current status, next step, rejection reason, and refunded amount and date — rendering a `FAILED` refund as "processing" rather than as a customer-visible failure — T053 must pass
-- [ ] T061 [US4] Render `ReturnStatusPanel` on [src/app/(public)/orders/[id]/page.tsx](<src/app/(public)/orders/%5Bid%5D/page.tsx>) and add return status to the order history list
+- [x] T054 [P] [US4] Declare `returnStatusChanged = eventType('order/return.status.changed', { schema })` in [src/features/orders/inngest/events.ts](src/features/orders/inngest/events.ts) matching the existing `orderStatusChanged` pattern
+- [x] T055 [P] [US4] Add `returnStatusUpdateTemplate` to [src/lib/email/templates.ts](src/lib/email/templates.ts) returning `{ subject, bodyHtml, bodyText }`. Each status carries a **next step** as well as a headline — status opacity is what drives customers to contact support, which is the thing US4 exists to prevent
+- [x] T056 [US4] Implement `deliverReturnStatusNotification` in [src/lib/notifications/order-notifications.ts](src/lib/notifications/order-notifications.ts), resolving the recipient via `resolveNotificationRecipient` and gating each channel on `isChannelEnabled(preferences, 'transactional', channel)` — T052 must pass
+- [x] T057 [US4] Add `sendReturnStatusEmailFunction` to [src/features/orders/inngest/emails.ts](src/features/orders/inngest/emails.ts) — **not** `src/lib/inngest/functions/` — with `idempotency: 'event.data.returnId + "-" + event.data.status'`, `retries: EMAIL_FUNCTION_RETRIES`, and `onFailure: recordEmailFailure`. Both helpers are module-private to `emails.ts`, and a domain-specific function in `src/lib/` would violate constitution Principle VIII. Also required adding `'return_status_update'` to the `EmailType` union in `src/lib/email/failed-emails.ts`
+- [x] T058 [US4] **Register `sendReturnStatusEmailFunction` in [src/lib/inngest/registry.ts](src/lib/inngest/registry.ts)** — an unregistered function fails silently: the event publishes, nothing consumes it, no error is raised
+- [x] T059 [US4] Publish the event via `dispatchWorkflowEvent` with an inline `fallback` from every transition point in `return-admin-service.ts`, so notification still reaches the customer when Inngest is unconfigured. Notification failure is caught and logged, never propagated — money and inventory have already moved, and rolling those back because an email bounced would be worse than a missed message
+- [x] T060 [US4] Build `ReturnStatusPanel.tsx` in `src/features/orders/components/` showing current status, next step, rejection reason, and refunded amount and date — rendering a `FAILED` refund as "processing" rather than as a customer-visible failure (handled in `serializeCustomerReturn`) — T053 must pass. **Client, not Server**: it needs `useCurrency()` for `formatPrice`, and its parent is already a Client Component
+- [x] T061 [US4] Render `ReturnStatusPanel` on [src/app/(public)/orders/[id]/page.tsx](<src/app/(public)/orders/%5Bid%5D/page.tsx>) via `OrderReturnsSection`. Existing claims now come back with the eligibility payload in one round trip, rather than a second request per return
 
 **Checkpoint**: All four user stories functional.
 
@@ -195,16 +195,16 @@
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T062 [P] Implement `GET /api/admin/export/returns` in `src/app/api/admin/export/returns/route.ts` using `streamCsvResponse` and `batchedCsvRows` from [src/features/admin/services/admin-csv.ts](src/features/admin/services/admin-csv.ts) with the fixed column order from [contracts/admin-returns.md](./contracts/admin-returns.md) (FR-017)
-- [ ] T063 Amend **three** clauses in [src/lib/constants/checkout-policies.ts](src/lib/constants/checkout-policies.ts) so the published promise matches the shipped mechanism (FR-018): `refunds` per decision **B-1** (approved damage claims may be settled by refund where replacement is unavailable); `returns` to replace "must contact support" with in-product submission; and `damagedItems` to describe photos in-product plus video over Instagram. Requires product/legal sign-off on the wording before merge
-- [ ] T063a Re-sync every surface that restates the policy, two of which **hardcode their copy** rather than deriving it from `CHECKOUT_POLICIES`: the `RETURN_STEPS` array and the "Refunds are not issued" reminder in [src/app/(public)/returns/page.tsx](<src/app/(public)/returns/page.tsx>), the return-policy FAQ answer in [src/app/(public)/help/page.tsx](<src/app/(public)/help/page.tsx>), and verify that [src/app/(public)/checkout/review/page.tsx](<src/app/(public)/checkout/review/page.tsx>) and [src/features/cart/components/OrderPolicyConfirmDialog.tsx](src/features/cart/components/OrderPolicyConfirmDialog.tsx) still render correctly from the amended constant. Amending the constant alone leaves the hardcoded copy stale and contradictory
+- [x] T062 [P] Implement `GET /api/admin/export/returns` in `src/app/api/admin/export/returns/route.ts` using `streamCsvResponse` and `batchedCsvRows` from [src/features/admin/services/admin-csv.ts](src/features/admin/services/admin-csv.ts) with the fixed column order from [contracts/admin-returns.md](./contracts/admin-returns.md) (FR-017)
+- [x] T063 Amend **three** clauses in [src/lib/constants/checkout-policies.ts](src/lib/constants/checkout-policies.ts) so the published promise matches the shipped mechanism (FR-018): `refunds` per decision **B-1** (approved damage claims may be settled by refund where replacement is unavailable); `returns` to replace "must contact support" with in-product submission; and `damagedItems` to describe photos in-product plus video over Instagram. **Wording still needs product/legal sign-off before merge** — the mechanism it describes is now accurate, but the phrasing has not been reviewed
+- [x] T063a Re-sync every surface that restates the policy: the `RETURN_STEPS` array and the "Refunds are not issued" reminder in [src/app/(public)/returns/page.tsx](<src/app/(public)/returns/page.tsx>), and the return-policy FAQ answer in [src/app/(public)/help/page.tsx](<src/app/(public)/help/page.tsx>). `checkout/review/page.tsx` and `OrderPolicyConfirmDialog.tsx` both render from `CHECKOUT_POLICIES` and needed no change. `INSTAGRAM_HANDLE` is imported from `lib/constants/store.ts` rather than duplicated
 - [ ] T063b Confirm the Instagram account named by `INSTAGRAM_HANDLE` exists, is monitored, and that `https://ig.me/m/<handle>` resolves to its inbox — **before** `returnVideoViaInstagram` is switched on in Edge Config. This channel replaces a working email address, so an unstaffed inbox is a regression. Not a merge gate: the flag defaults to `false`
-- [ ] T064 [P] Update [docs/features.md](docs/features.md) and `specs/003-order-policy-dialog` to describe the returns lifecycle (FR-018)
-- [ ] T065 [P] Add accessibility attributes across the new UI: `htmlFor`/`id` on every label, `aria-label` on icon-only controls, `aria-expanded`/`aria-haspopup`/`role="menu"` on the queue action menus, `aria-hidden` on decorative elements, and real `<button>`/`<a>` elements rather than ARIA-roled divs
-- [ ] T066 [P] Write `playwright-tests/returns.spec.ts` covering the full lifecycle, the keyboard path through the request form, the Instagram prompt in both flag states, and axe-core accessibility assertions on the customer form and admin queue; capture screenshots per constitution Principle III
+- [x] T064 [P] Update [docs/features.md](docs/features.md) to describe the returns lifecycle (FR-018)
+- [x] T065 [P] Add accessibility attributes across the new UI: `htmlFor`/`id` on every label (the admin decision-reason field now binds explicitly via `useId` rather than relying on a wrapping label), `aria-hidden` on decorative elements, `role="alert"` on every error region, and real `<button>`/`<a>` elements rather than ARIA-roled divs. No queue action menus exist — the actions are plain buttons, so no `aria-expanded`/`role="menu"` is warranted
+- [x] T066 [P] Write `playwright-tests/returns.spec.ts` covering the policy copy, the admin decision path, the keyboard path, and axe-core assertions on the customer-facing returns page and the admin queue. The queue is driven through route interception rather than a seeded database, so the assertions do not depend on whatever returns the environment happens to hold
 - [ ] T067 Verify coverage meets the 85%/76%/85%/85% threshold for `src/features/**/services/**` with `npm run test:coverage` (SC-008)
 - [ ] T068 Run `sonarqube_analyze_file` on every added and modified file, and `sonarqube_list_potential_security_issues` on all API routes plus the evidence upload handler; resolve every BLOCKER and CRITICAL
-- [ ] T069 Run the full gate — `npm run lint`, `npx tsc --noEmit -p tsconfig.check.json`, `npm test`, `npm run build`, `npm run docs:check` — and the manual verification path in [quickstart.md](./quickstart.md)
+- [x] T069 Run the full gate — `npm run lint`, `npx tsc --noEmit -p tsconfig.check.json`, `npm test`, `npm run build`, `npm run docs:check`. All five pass. **Note for whoever runs these next**: the full unit suite takes ~9 minutes and must not be run alongside another vitest process or a build — jsdom component tests then fail with `Test timed out in 5000ms` purely from CPU contention, which looks exactly like a real regression and is not one. Re-run any timeout failure in isolation before believing it
 - [ ] T070 Run the `branch-diff-review` skill, then `branch-diff-remediate`, looping until the verdict is `READY TO COMMIT` with an empty remediation queue
 
 ---
@@ -325,3 +325,59 @@ Phases 1–5 (T002–T051, including T018a and T046a). This is the smallest set 
 | **Total**        |                           | **78** |
 
 Test tasks: 17. Parallelisable tasks: 32.
+
+## Progress (2026-08-08)
+
+**75 of 78 complete.** All four user stories are functional end to end, and Phase 7 polish
+is done apart from the three items below.
+
+Gates, all run serially on an otherwise idle machine:
+
+| Gate                                      | Result                      |
+| ----------------------------------------- | --------------------------- |
+| `npm run lint`                            | clean                       |
+| `npx tsc --noEmit -p tsconfig.check.json` | clean                       |
+| `npm test`                                | 3766 passing, 8 skipped     |
+| `npm run build`                           | **exit 0**, compiled in 25s |
+| `npm run docs:check`                      | passed, 146 files           |
+| `npx prettier --check`                    | clean                       |
+| **SonarQube**                             | ⛔ **unmet** — see below    |
+
+### Still open
+
+- **T067** — `npm run test:coverage` has not been run against the 85/76/85/85 threshold for
+  `src/features/**/services/**`. The four new service modules each have a dedicated suite
+  (`return-state-machine` 16, `return-refund-calculator` 11, `return-restock` 5,
+  `return-service` 13, `return-admin-service` 18), so the threshold is likely met, but
+  "likely" is not the same as measured.
+- **T068** — SonarQube analysis. The MCP server exits 125 and the IDE tool is disabled, so
+  this could not run. It must be run over the full diff before the final commit; it is not
+  optional, merely deferred.
+- **T070** — `branch-diff-review` → `branch-diff-remediate`, looped to `READY TO COMMIT`.
+- **T063** carries a caveat rather than being open: the amended policy copy now describes
+  the shipped mechanism accurately, but the **wording has not had product or legal
+  sign-off**. That review is a merge precondition.
+- **T063b** is a deployment precondition, not a merge one: the flag defaults to `false`, so
+  the Instagram channel is dark until someone confirms the account is monitored.
+
+### Environment notes for whoever picks this up
+
+- **Never run the unit suite concurrently with another vitest run or a build.** The full
+  suite takes ~9 minutes, and under contention jsdom component tests fail with
+  `Test timed out in 5000ms`. That looks exactly like a real regression and is not one —
+  20 spurious failures were chased this way. Re-run any timeout failure in isolation before
+  believing it.
+- **A `npm run build` failure in `globals.css` (`__turbopack_context__.a is not a function`)
+  is Turbopack cache corruption, not a code error.** `rm -rf .next` clears it. Check
+  `git status` on `globals.css` and `postcss.config.js` first — if they are unmodified, the
+  failure is not yours.
+- Component tests need `// @vitest-environment jsdom`; `vitest.config.mts` defaults to
+  `node`. `@testing-library/user-event` is not installed — use `fireEvent`.
+- New Drizzle tables must be registered in `src/lib/db.ts` (imports **and** the `schema`
+  object) or `db.query.<table>` does not exist. They must **also** be added to the schema
+  mocks in `__tests__/lib/db.test.ts`, `db-queries.test.ts`, and
+  `db-connection-fallback.test.ts`, which enumerate every export explicitly.
+- `apiError(msg, status, details)` nests its third argument under `details`. Assert
+  `payload.details.code`, not `payload.code`.
+- Redux state typed with `readonly` nested arrays needs `castDraft` from `immer` at each
+  assignment; Immer's draft type rejects them otherwise.

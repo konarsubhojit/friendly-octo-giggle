@@ -2,6 +2,7 @@ import { configureStore } from '@reduxjs/toolkit'
 import cartReducer from '@/features/cart/store/cartSlice'
 import ordersReducer from '@/features/orders/store/ordersSlice'
 import adminReducer from '@/features/admin/store/adminSlice'
+import returnsReducer from '@/features/orders/store/returnsSlice'
 import wishlistReducer from '@/features/wishlist/store/wishlistSlice'
 
 /**
@@ -56,6 +57,7 @@ export const makeAdminStore = () =>
   configureStore({
     reducer: {
       admin: adminReducer,
+      returns: returnsReducer,
     },
   })
 

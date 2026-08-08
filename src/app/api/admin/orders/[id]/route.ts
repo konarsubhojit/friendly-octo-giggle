@@ -20,6 +20,7 @@ import { logBusinessEvent, logError } from '@/lib/logger'
 import { getRedisClient } from '@/lib/redis'
 import { settlesPaymentOnDelivery } from '@/lib/payments'
 import { restockOrderItems } from '@/features/orders/services/order-restock'
+import { VALID_ORDER_TRANSITIONS } from '@/features/orders/services/order-status-transitions'
 import { waitUntil } from '@vercel/functions'
 
 /**
@@ -57,6 +58,7 @@ const buildUpdateData = (
     shippingProvider?: string | null
   },
   currentOrder?: {
+    status?: string
     paymentProvider: string | null
     paymentStatus: string
     totalAmount: number
@@ -68,20 +70,22 @@ const buildUpdateData = (
       shippingProvider: data.shippingProvider,
     }).filter(([, v]) => v !== undefined)
   )
+  // Stamped on the transition *into* DELIVERED, not on every write that leaves
+  // the order delivered. `DELIVERED -> DELIVERED` is a legal transition (an
+  // admin editing tracking details, say), and re-stamping would silently
+  // restart the customer's return window. The return window is measured from
+  // this column; `updatedAt` cannot stand in for it because any later mutation
+  // moves it.
+  const isNewlyDelivered =
+    data.status === 'DELIVERED' && currentOrder?.status !== 'DELIVERED'
+
   return {
     status: data.status,
     updatedAt: new Date(),
+    ...(isNewlyDelivered ? { deliveredAt: new Date() } : {}),
     ...optional,
     ...buildDeliverySettlement(data.status, currentOrder),
   }
-}
-
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  PENDING: ['PROCESSING', 'CANCELLED'],
-  PROCESSING: ['SHIPPED', 'CANCELLED'],
-  SHIPPED: ['DELIVERED'],
-  DELIVERED: ['DELIVERED'],
-  CANCELLED: ['CANCELLED'],
 }
 
 const NOTIFY_STATUSES = new Set([
@@ -171,7 +175,7 @@ export const PATCH = async (
       return apiError('Order not found', 404)
     }
 
-    const allowedNext = VALID_TRANSITIONS[currentOrder.status] ?? []
+    const allowedNext = VALID_ORDER_TRANSITIONS[currentOrder.status] ?? []
     if (!allowedNext.includes(validatedBody.status)) {
       return apiError(
         `Cannot transition order from ${currentOrder.status} to ${validatedBody.status}`,

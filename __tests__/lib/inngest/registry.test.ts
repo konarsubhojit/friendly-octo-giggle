@@ -6,6 +6,7 @@ const EXPECTED_FUNCTION_IDS = [
   'process-checkout-request',
   'send-order-confirmation-email',
   'send-order-status-email',
+  'send-return-status-email',
   'send-order-refund-email',
   'send-auth-email',
   'index-order-for-search',

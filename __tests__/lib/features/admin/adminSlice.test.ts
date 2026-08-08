@@ -178,6 +178,16 @@ describe('admin selectors', () => {
       usersLoading: true,
       error: 'admin err',
     },
+    // The admin store also mounts the returns queue slice. These selectors
+    // ignore it, but the state shape must still be complete.
+    returns: {
+      filter: 'REQUESTED' as const,
+      items: [],
+      loading: false,
+      error: null,
+      decidingId: null,
+      decisionError: null,
+    },
   }
 
   it('selectAdminProducts', () => {

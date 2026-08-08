@@ -24,6 +24,7 @@ export const ADMIN_PERMISSIONS = [
   'orders:read',
   'orders:update',
   'orders:refund',
+  'orders:returns',
   'products:read',
   'products:write',
   'users:read',
@@ -44,12 +45,20 @@ export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number]
  *   read the catalog for picking, but cannot edit products or prices — moving
  *   money back to a customer stays with `ADMIN`.
  * - `SUPPORT` answers customer questions: read orders and users, moderate
- *   reviews — but never change roles or catalog data.
+ *   reviews, and triage damaged-item return claims — but never change roles or
+ *   catalog data. Triage (`orders:returns`) moves inventory at most; issuing
+ *   the refund needs `orders:refund`, which stays with `ADMIN`.
  */
 export const ROLE_PERMISSIONS: Record<UserRole, readonly AdminPermission[]> = {
   CUSTOMER: [],
   ADMIN: ADMIN_PERMISSIONS,
-  SUPPORT: ['orders:read', 'products:read', 'users:read', 'reviews:moderate'],
+  SUPPORT: [
+    'orders:read',
+    'orders:returns',
+    'products:read',
+    'users:read',
+    'reviews:moderate',
+  ],
   FULFILMENT: ['orders:read', 'orders:update', 'products:read'],
 }
 

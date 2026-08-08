@@ -21,6 +21,7 @@ import {
   sendOrderConfirmationEmailFunction,
   sendOrderRefundEmailFunction,
   sendOrderStatusEmailFunction,
+  sendReturnStatusEmailFunction,
 } from '@/features/orders/inngest/emails'
 import {
   indexOrderForSearchFunction,
@@ -40,6 +41,7 @@ export const inngestFunctions = [
   sendOrderConfirmationEmailFunction,
   sendOrderStatusEmailFunction,
   sendOrderRefundEmailFunction,
+  sendReturnStatusEmailFunction,
   sendAuthEmailFunction,
   indexOrderForSearchFunction,
   invalidateOrderCachesFunction,

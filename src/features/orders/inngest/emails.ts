@@ -3,11 +3,13 @@ import {
   orderCreated,
   orderRefunded,
   orderStatusChanged,
+  returnStatusChanged,
 } from '@/features/orders/inngest/events'
 import {
   deliverOrderConfirmationNotification,
   deliverOrderRefundNotification,
   deliverOrderStatusNotification,
+  deliverReturnStatusNotification,
   type NotificationDeliveryResult,
 } from '@/lib/notifications/order-notifications'
 import { getShippingMethodLabel } from '@/lib/shipping/methods'
@@ -253,5 +255,51 @@ export const sendOrderRefundEmailFunction = inngest.createFunction(
     )
 
     return finishEmailRun(step, 'order_refund_update', data.orderId, result)
+  }
+)
+
+/**
+ * Return status update email.
+ *
+ * Keyed on the return id **and** its status: a claim passes through several
+ * states, each warranting its own message, but a replayed event for a state
+ * already announced must not send twice.
+ */
+export const sendReturnStatusEmailFunction = inngest.createFunction(
+  {
+    id: 'send-return-status-email',
+    name: 'Send return status email',
+    triggers: [returnStatusChanged],
+    retries: EMAIL_FUNCTION_RETRIES,
+    idempotency: 'event.data.returnId + "-" + event.data.status',
+    onFailure: ({ event, error }) =>
+      recordEmailFailure({
+        recipientEmail: event.data.event.data.customerEmail,
+        emailType: 'return_status_update',
+        referenceId: event.data.event.data.returnId,
+        error,
+      }),
+  },
+  async ({ event, step }) => {
+    const data = event.data
+
+    const result = await step.run('deliver-return-status', () =>
+      deliverReturnStatusNotification({
+        to: data.customerEmail,
+        customerName: data.customerName,
+        orderId: data.orderId,
+        returnId: data.returnId,
+        status: data.status,
+        decisionReason: data.decisionReason,
+        // Formatted here rather than in the template so the currency the
+        // customer actually paid in is preserved; templates take strings.
+        refundAmount:
+          data.refundAmount === null || data.refundAmount === undefined
+            ? null
+            : formatPriceForCurrency(data.refundAmount, 'INR'),
+      })
+    )
+
+    return finishEmailRun(step, 'return_status_update', data.returnId, result)
   }
 )

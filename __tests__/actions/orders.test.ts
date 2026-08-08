@@ -334,6 +334,7 @@ describe('getUserOrders', () => {
       couponId: null,
       couponCode: null,
       stockRestoredAt: null,
+      deliveredAt: null,
       createdAt: new Date('2026-01-01'),
       updatedAt: new Date('2026-01-01'),
       items: [
@@ -420,6 +421,7 @@ describe('getUserOrders', () => {
       couponId: null,
       couponCode: null,
       stockRestoredAt: null,
+      deliveredAt: null,
       createdAt: new Date('2026-01-02'),
       updatedAt: new Date('2026-01-02'),
       items: [],

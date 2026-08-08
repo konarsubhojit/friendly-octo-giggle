@@ -24,10 +24,12 @@ import {
   orderConfirmationTemplate,
   orderStatusUpdateTemplate,
   orderRefundUpdateTemplate,
+  returnStatusUpdateTemplate,
   abandonedCartReminderTemplate,
   type OrderConfirmationData,
   type OrderStatusUpdateData,
   type OrderRefundUpdateData,
+  type ReturnStatusUpdateData,
   type AbandonedCartReminderData,
 } from './templates'
 
@@ -54,6 +56,11 @@ export const deliverOrderRefundUpdateEmail = (
   data: OrderRefundUpdateData
 ): Promise<EmailDeliveryResult> =>
   deliverEmail({ to: data.to, ...orderRefundUpdateTemplate(data) })
+
+export const deliverReturnStatusUpdateEmail = (
+  data: ReturnStatusUpdateData
+): Promise<EmailDeliveryResult> =>
+  deliverEmail({ to: data.to, ...returnStatusUpdateTemplate(data) })
 
 export const deliverAbandonedCartReminderEmail = (
   data: AbandonedCartReminderData

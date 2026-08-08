@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   MAX_MONEY_AMOUNT,
   MoneyRangeError,
+  allocateMoney,
   convertMoney,
   formatMoneyValue,
   fromMinorUnits,
@@ -163,5 +164,69 @@ describe('isSupportedMoneyAmount', () => {
   it('rejects out-of-range and non-finite amounts', () => {
     expect(isSupportedMoneyAmount(MAX_MONEY_AMOUNT + 1)).toBe(false)
     expect(isSupportedMoneyAmount(Number.NaN)).toBe(false)
+  })
+})
+
+describe('allocateMoney', () => {
+  it('splits proportionally when the division is exact', () => {
+    expect(allocateMoney(100, [1, 1, 1, 1])).toEqual([25, 25, 25, 25])
+    expect(allocateMoney(90, [2, 1])).toEqual([60, 30])
+  })
+
+  it('distributes the remainder instead of losing it', () => {
+    // The naive approach rounds each share to 3.33 and loses a paisa.
+    const parts = allocateMoney(10, [1, 1, 1])
+    expect(sumMoney(parts)).toBe(10)
+    expect(parts).toEqual([3.34, 3.33, 3.33])
+  })
+
+  it('breaks ties by ascending index so the split is deterministic', () => {
+    expect(allocateMoney(0.01, [1, 1])).toEqual([0.01, 0])
+    expect(allocateMoney(0.02, [1, 1, 1])).toEqual([0.01, 0.01, 0])
+  })
+
+  it('preserves the sum for randomised weight vectors', () => {
+    for (let run = 0; run < 200; run += 1) {
+      const count = 1 + Math.floor(Math.random() * 8)
+      const weights = Array.from(
+        { length: count },
+        () => Math.round(Math.random() * 100_000) / 100
+      )
+      const total = Math.round(Math.random() * 1_000_000) / 100
+
+      const parts = allocateMoney(total, weights)
+
+      expect(parts).toHaveLength(count)
+      expect(sumMoney(parts)).toBe(roundMoney(total))
+    }
+  })
+
+  it('never allocates more than the total to any single share', () => {
+    const parts = allocateMoney(10, [1, 0, 0])
+    expect(parts).toEqual([10, 0, 0])
+  })
+
+  it('splits evenly when every weight is zero', () => {
+    // With no proportional signal there is no principled split, so the
+    // remainder rule alone decides and the sum invariant still holds.
+    const parts = allocateMoney(10, [0, 0, 0, 0])
+    expect(sumMoney(parts)).toBe(10)
+  })
+
+  it('returns a single share unchanged', () => {
+    expect(allocateMoney(49.99, [7])).toEqual([49.99])
+  })
+
+  it('returns zeros for a zero total', () => {
+    expect(allocateMoney(0, [3, 1])).toEqual([0, 0])
+  })
+
+  it('returns an empty array for no weights', () => {
+    expect(allocateMoney(10, [])).toEqual([])
+  })
+
+  it('rejects negative totals and negative weights', () => {
+    expect(() => allocateMoney(-1, [1])).toThrow(MoneyRangeError)
+    expect(() => allocateMoney(1, [-1, 2])).toThrow(MoneyRangeError)
   })
 })

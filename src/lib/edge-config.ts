@@ -7,6 +7,14 @@ export interface FeatureFlags {
   readonly saleBannerText: string
   readonly enableWishlist: boolean
   readonly enableReviews: boolean
+  /**
+   * Whether damaged-item return claims direct the customer to send their video
+   * over Instagram DM. Defaults to `false` so shipping the code and staffing
+   * the inbox stay separate decisions — this channel replaces a support email
+   * address that demonstrably works, so an unmonitored inbox is a regression.
+   * When off, the UI falls back to the support-email instruction.
+   */
+  readonly returnVideoViaInstagram: boolean
 }
 
 export interface ShippingConfig {
@@ -14,6 +22,20 @@ export interface ShippingConfig {
   readonly standardShippingRate: number
   readonly expressShippingRate: number
   readonly estimatedDeliveryDays: number
+}
+
+/**
+ * Return-window configuration.
+ *
+ * Keyed by category **name**, not id: `products.category` is free text with an
+ * index but no foreign key to the `Category` table, so an id-keyed lookup
+ * would silently match nothing and every product would fall through to the
+ * default while appearing configured.
+ */
+export interface ReturnsConfig {
+  readonly defaultWindowDays: number
+  readonly categoryWindowDays: Readonly<Record<string, number>>
+  readonly nonReturnableCategoryNames: readonly string[]
 }
 
 export interface AiConfig {
@@ -39,6 +61,7 @@ export interface EdgeConfigData {
   readonly featureFlags: FeatureFlags
   readonly shippingConfig: ShippingConfig
   readonly aiConfig: AiConfig
+  readonly returnsConfig: ReturnsConfig
 }
 
 const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
@@ -47,6 +70,7 @@ const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   saleBannerText: '',
   enableWishlist: true,
   enableReviews: true,
+  returnVideoViaInstagram: false,
 }
 
 const DEFAULT_SHIPPING_CONFIG: ShippingConfig = {
@@ -54,6 +78,12 @@ const DEFAULT_SHIPPING_CONFIG: ShippingConfig = {
   standardShippingRate: 49,
   expressShippingRate: 149,
   estimatedDeliveryDays: 5,
+}
+
+const DEFAULT_RETURNS_CONFIG: ReturnsConfig = {
+  defaultWindowDays: 7,
+  categoryWindowDays: {},
+  nonReturnableCategoryNames: [],
 }
 
 const DEFAULT_AI_CONFIG: AiConfig = {
@@ -78,6 +108,7 @@ const EDGE_CONFIG_TTL_MS = 60_000
 let cachedFlags: { value: FeatureFlags; expiresAt: number } | null = null
 let cachedShipping: { value: ShippingConfig; expiresAt: number } | null = null
 let cachedAiConfig: { value: AiConfig; expiresAt: number } | null = null
+let cachedReturns: { value: ReturnsConfig; expiresAt: number } | null = null
 let cachedAllConfig: { value: EdgeConfigData; expiresAt: number } | null = null
 
 export const getFeatureFlags = async (): Promise<FeatureFlags> => {
@@ -115,6 +146,23 @@ export const getShippingConfig = async (): Promise<ShippingConfig> => {
   }
 }
 
+export const getReturnsConfig = async (): Promise<ReturnsConfig> => {
+  const now = Date.now()
+  if (cachedReturns && cachedReturns.expiresAt > now) return cachedReturns.value
+
+  if (!isEdgeConfigAvailable()) return DEFAULT_RETURNS_CONFIG
+
+  try {
+    const config = await get<ReturnsConfig>('returnsConfig')
+    const result = config ?? DEFAULT_RETURNS_CONFIG
+    cachedReturns = { value: result, expiresAt: now + EDGE_CONFIG_TTL_MS }
+    return result
+  } catch (error) {
+    logError({ error, context: 'edge_config_returns' })
+    return DEFAULT_RETURNS_CONFIG
+  }
+}
+
 export const getAiConfig = async (): Promise<AiConfig> => {
   const now = Date.now()
   if (cachedAiConfig && cachedAiConfig.expiresAt > now)
@@ -143,6 +191,7 @@ export const getAllEdgeConfig = async (): Promise<EdgeConfigData> => {
       featureFlags: DEFAULT_FEATURE_FLAGS,
       shippingConfig: DEFAULT_SHIPPING_CONFIG,
       aiConfig: DEFAULT_AI_CONFIG,
+      returnsConfig: DEFAULT_RETURNS_CONFIG,
     }
   }
 
@@ -151,7 +200,8 @@ export const getAllEdgeConfig = async (): Promise<EdgeConfigData> => {
       featureFlags: FeatureFlags
       shippingConfig: ShippingConfig
       aiConfig: AiConfig
-    }>(['featureFlags', 'shippingConfig', 'aiConfig'])
+      returnsConfig: ReturnsConfig
+    }>(['featureFlags', 'shippingConfig', 'aiConfig', 'returnsConfig'])
 
     logBusinessEvent({
       event: 'edge_config_read',
@@ -163,6 +213,7 @@ export const getAllEdgeConfig = async (): Promise<EdgeConfigData> => {
       featureFlags: data.featureFlags ?? DEFAULT_FEATURE_FLAGS,
       shippingConfig: data.shippingConfig ?? DEFAULT_SHIPPING_CONFIG,
       aiConfig: data.aiConfig ?? DEFAULT_AI_CONFIG,
+      returnsConfig: data.returnsConfig ?? DEFAULT_RETURNS_CONFIG,
     }
     cachedAllConfig = { value: result, expiresAt: now + EDGE_CONFIG_TTL_MS }
     return result
@@ -172,6 +223,7 @@ export const getAllEdgeConfig = async (): Promise<EdgeConfigData> => {
       featureFlags: DEFAULT_FEATURE_FLAGS,
       shippingConfig: DEFAULT_SHIPPING_CONFIG,
       aiConfig: DEFAULT_AI_CONFIG,
+      returnsConfig: DEFAULT_RETURNS_CONFIG,
     }
   }
 }

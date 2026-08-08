@@ -196,6 +196,7 @@ describe('edge-config', () => {
         'featureFlags',
         'shippingConfig',
         'aiConfig',
+        'returnsConfig',
       ])
     })
 

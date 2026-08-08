@@ -18,19 +18,24 @@ describe('checkout policies', () => {
   })
 
   it('includes the damaged-only return exception', () => {
-    expect(CHECKOUT_POLICIES.returns.items.join(' ')).toContain(
-      'cannot be returned unless the product is received in damaged condition'
+    const returns = CHECKOUT_POLICIES.returns.items.join(' ')
+    expect(returns).toContain(
+      'cannot be returned unless the product is received'
     )
-    expect(CHECKOUT_POLICIES.returns.items.join(' ')).toContain('short video')
+    expect(returns).toContain('damaged, defective, or incorrect')
+    // The claim is raised in product now, not by emailing support.
+    expect(returns).toContain('from the order page')
+    expect(returns).toContain('short video')
   })
 
-  it('includes the no-refund and replacement guidance', () => {
-    expect(CHECKOUT_POLICIES.refunds.items.join(' ')).toContain(
-      'Refunds are not issued'
-    )
-    expect(CHECKOUT_POLICIES.refunds.items.join(' ')).toContain(
-      'replacement rather than refund'
-    )
+  it('reserves refunds for approved damage claims', () => {
+    const refunds = CHECKOUT_POLICIES.refunds.items.join(' ')
+    // Refunds are still refused for change of mind — the exception is narrow.
+    expect(refunds).toContain('Refunds are not issued for change of mind')
+    expect(refunds).toContain('normally resolved by replacement')
+    // Where replacement is impossible the claim must still be settleable, or
+    // an approved claim would have no outcome at all.
+    expect(refunds).toContain('settled by refund')
   })
 
   it('includes damaged-item contact and shipping responsibilities', () => {
