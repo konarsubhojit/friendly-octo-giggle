@@ -3,8 +3,6 @@ import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { AdminSalesDashboardClient } from '@/features/admin/components/AdminSalesDashboardClient'
 import { getAdminSalesDashboardData } from '@/features/admin/services/admin-sales'
 
-export const dynamic = 'force-dynamic'
-
 const AdminSalesPage = async () => {
   const authCheck = await checkAdminAuth('analytics:read')
   if (!authCheck.authorized) {

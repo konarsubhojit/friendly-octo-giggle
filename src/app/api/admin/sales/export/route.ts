@@ -3,8 +3,6 @@ import { streamCsvResponse } from '@/features/admin/services/admin-csv'
 import { getAdminSalesDashboardData } from '@/features/admin/services/admin-sales'
 import { apiError, handleApiError } from '@/lib/api-utils'
 
-export const dynamic = 'force-dynamic'
-
 export const GET = async () => {
   const authCheck = await checkAdminAuth('analytics:read')
   if (!authCheck.authorized) {

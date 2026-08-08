@@ -1,6 +1,5 @@
 import { z } from 'zod'
 import { and, inArray, isNull, sql } from 'drizzle-orm'
-import { revalidateTag } from 'next/cache'
 import { drizzleDb } from '@/lib/db'
 import { products, productVariants } from '@/lib/schema'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
@@ -12,8 +11,6 @@ import {
   handleApiError,
   parseJsonBody,
 } from '@/lib/api-utils'
-
-export const dynamic = 'force-dynamic'
 
 const ProductBulkSchema = z.discriminatedUnion('operation', [
   z.object({
@@ -154,7 +151,6 @@ export const POST = async (request: Request) => {
     })
 
     await invalidateProductCaches(payload.productIds)
-    revalidateTag('products', 'max')
 
     return apiSuccess({
       operation: payload.operation,

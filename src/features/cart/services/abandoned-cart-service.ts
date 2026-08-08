@@ -9,13 +9,7 @@
  * the query only returns rows that still exist in the Cart table.
  */
 
-import {
-  eq,
-  and,
-  lt,
-  isNotNull,
-  sql,
-} from 'drizzle-orm'
+import { eq, and, lt, isNotNull, sql } from 'drizzle-orm'
 import { drizzleDb, primaryDrizzleDb } from '@/lib/db'
 import {
   carts,
@@ -133,12 +127,7 @@ const findIdleCartsForReminder = async (
       abandonedCartReminders,
       eq(abandonedCartReminders.cartId, carts.id)
     )
-    .where(
-      and(
-        isNotNull(carts.userId),
-        lt(carts.updatedAt, idleBefore)
-      )
-    )
+    .where(and(isNotNull(carts.userId), lt(carts.updatedAt, idleBefore)))
     .groupBy(carts.id, carts.userId)
     .having(
       sql`cast(coalesce(count(distinct ${abandonedCartReminders.id}), 0) as int) < ${maxReminders}`

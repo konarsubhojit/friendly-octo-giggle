@@ -23,7 +23,7 @@
     "Use Zod for all input validation",
     "Follow existing file structure and naming conventions",
     "Include proper error handling in all async functions",
-    "Use helper functions from lib/ directory",
+    "Use helper functions from the src/lib/ directory, or the owning src/features/<domain>/ module",
     "Add cache invalidation when modifying data",
     "Check authentication before protected operations",
     "Return type-safe API responses",

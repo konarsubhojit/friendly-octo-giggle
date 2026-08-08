@@ -33,10 +33,6 @@ vi.mock('@/lib/cache', () => ({
   invalidateProductCaches: vi.fn(),
 }))
 
-vi.mock('next/cache', () => ({
-  revalidateTag: vi.fn(),
-}))
-
 vi.mock('@/lib/api-utils', async () => {
   const { NextResponse } = await import('next/server')
   return {
@@ -57,7 +53,6 @@ vi.mock('@/lib/api-utils', async () => {
 
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { invalidateProductCaches } from '@/lib/cache'
-import { revalidateTag } from 'next/cache'
 
 const makeParams = (id: string, optionId: string) => ({
   params: Promise.resolve({ id, optionId }),
@@ -103,7 +98,6 @@ describe('DELETE /api/admin/products/[id]/options/[optionId]', () => {
     expect(json.error).toBe('Invalid route parameters')
     expect(mockOptionFindFirst).not.toHaveBeenCalled()
     expect(mockDelete).not.toHaveBeenCalled()
-    expect(vi.mocked(revalidateTag)).not.toHaveBeenCalled()
     expect(vi.mocked(invalidateProductCaches)).not.toHaveBeenCalled()
   })
 
@@ -169,7 +163,6 @@ describe('DELETE /api/admin/products/[id]/options/[optionId]', () => {
     const json = await res.json()
     expect(json.data.deleted).toBe(true)
     expect(mockDelete).toHaveBeenCalled()
-    expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith('products', {})
     expect(vi.mocked(invalidateProductCaches)).toHaveBeenCalledWith('p1')
   })
 

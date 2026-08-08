@@ -101,23 +101,23 @@ Use the catalog as the product-level index and the API and architecture guides f
 
 ## 📦 Technology Stack
 
-| Category           | Technology                          |
-| ------------------ | ----------------------------------- |
-| **Framework**      | Next.js 16 with App Router          |
-| **Language**       | TypeScript 6.x (strict mode)        |
-| **Database**       | PostgreSQL (Neon) with Drizzle ORM  |
-| **Cache**          | Redis (Upstash, HTTP-based)         |
-| **Authentication** | NextAuth.js v5                      |
-| **Validation**     | Zod 4.x                             |
-| **Styling**        | Tailwind CSS v4                     |
-| **State**          | Redux Toolkit 2.x                   |
-| **Logging**        | Pino                                |
-| **Image Storage**  | Vercel Blob                         |
-| **Search**         | Upstash Search (with DB fallback)   |
-| **Workflows**      | Inngest (durable step functions)    |
-| **AI**             | AI SDK (product assistant)          |
-| **Email**          | MailerSend / Google SMTP            |
-| **Feature Flags**  | Vercel Edge Config                  |
+| Category           | Technology                         |
+| ------------------ | ---------------------------------- |
+| **Framework**      | Next.js 16 with App Router         |
+| **Language**       | TypeScript 6.x (strict mode)       |
+| **Database**       | PostgreSQL (Neon) with Drizzle ORM |
+| **Cache**          | Redis (Upstash, HTTP-based)        |
+| **Authentication** | NextAuth.js v5                     |
+| **Validation**     | Zod 4.x                            |
+| **Styling**        | Tailwind CSS v4                    |
+| **State**          | Redux Toolkit 2.x                  |
+| **Logging**        | Pino                               |
+| **Image Storage**  | Vercel Blob                        |
+| **Search**         | Upstash Search (with DB fallback)  |
+| **Workflows**      | Inngest (durable step functions)   |
+| **AI**             | AI SDK (product assistant)         |
+| **Email**          | MailerSend / Google SMTP           |
+| **Feature Flags**  | Vercel Edge Config                 |
 
 ## 🔧 System Requirements
 

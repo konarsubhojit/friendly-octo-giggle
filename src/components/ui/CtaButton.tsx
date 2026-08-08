@@ -1,3 +1,4 @@
+import type { Route } from 'next'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 
@@ -6,7 +7,7 @@ const CTA_LINK_CLASSES =
 
 interface CtaButtonProps {
   readonly text: string
-  readonly href?: string
+  readonly href?: Route
   readonly onClick?: () => void
 }
 

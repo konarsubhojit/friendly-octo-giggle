@@ -30,6 +30,8 @@ describe('GET/POST/PUT /api/inngest', () => {
   it('bounds a step invocation to the claim-holder budget', () => {
     // Longer than STALE_PROCESSING_CLAIM_MS would let a live claim be stolen.
     expect(route.maxDuration).toBe(30)
-    expect(route.dynamic).toBe('force-dynamic')
+    // Under Cache Components route handlers are dynamic unless they opt into
+    // `"use cache"`, so the legacy `dynamic = 'force-dynamic'` export is gone.
+    expect((route as { dynamic?: string }).dynamic).toBeUndefined()
   })
 })

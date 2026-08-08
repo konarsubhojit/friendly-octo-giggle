@@ -28,7 +28,13 @@ vi.mock('drizzle-orm', () => ({
   ne: vi.fn(),
 }))
 
+vi.mock('@/lib/cache-tags', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/cache-tags')>()),
+  revalidateCacheTags: vi.fn(),
+}))
+
 import { PUT, DELETE } from '@/app/api/admin/categories/[id]/route'
+import { categoriesTag, revalidateCacheTags } from '@/lib/cache-tags'
 
 const makeParams = (id: string) => ({ params: Promise.resolve({ id }) })
 
@@ -129,6 +135,10 @@ describe('admin/categories/[id] API', () => {
       const response = await PUT(request, makeParams('cat1'))
 
       expect(response.status).toBe(200)
+      expect(revalidateCacheTags).toHaveBeenCalledWith(
+        [categoriesTag()],
+        'admin_category_update'
+      )
     })
 
     it('returns 409 for duplicate name', async () => {
@@ -213,6 +223,10 @@ describe('admin/categories/[id] API', () => {
 
       expect(response.status).toBe(200)
       expect(body.data.deleted).toBe(true)
+      expect(revalidateCacheTags).toHaveBeenCalledWith(
+        [categoriesTag()],
+        'admin_category_delete'
+      )
     })
   })
 })

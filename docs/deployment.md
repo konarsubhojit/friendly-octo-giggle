@@ -161,13 +161,17 @@ NEXT_PUBLIC_APP_URL=https://your-domain.com
 ```
 
 **Step 4: Run migrations**
-After deployment, run migrations:
+Run migrations **before** the new code is deployed (see
+[Database Migrations](#database-migrations)):
 
 ```bash
 # In your local project with DATABASE_URL pointing to production
 npm run db:migrate
-npm run db:seed
 ```
+
+On a database that has never been initialized, `npm run db:migrate` applies the
+full schema from an empty state. The project ships no sample-data seeding, so a
+new production database starts empty.
 
 **Vercel-specific notes:**
 
@@ -328,8 +332,73 @@ Add in Cloudflare Pages dashboard:
 ```bash
 # Use Railway CLI
 railway run npm run db:migrate
-railway run npm run db:seed
 ```
+
+---
+
+## Database Migrations
+
+### Ordering: migrate before deploy
+
+`.github/workflows/build.yml` runs `database-migrations-preview` /
+`database-migrations-production` **before** `deploy-preview` /
+`deploy-production`. A deploy is blocked if its migration job fails.
+
+Running migrations after the deploy would leave the new code serving live
+traffic against the old schema for the whole duration of the migration job:
+additive-column releases throw runtime errors during that window, and releases
+that depend on a new table fail outright.
+
+The inverted order moves the risk to the other side: between the migration
+finishing and the deploy completing, the **old** code runs against the **new**
+schema. That window is safe only if migrations follow expand/contract.
+
+### Expand/contract discipline (required)
+
+Every schema change must be split so that both the old and the new code version
+tolerate both schema versions. Never combine an expand and a contract step in
+the same release.
+
+**Release N — expand (backward compatible):**
+
+- Add columns as nullable, or with a database default. Never `NOT NULL` without
+  a default.
+- Add new tables and indexes. These are invisible to old code.
+- Add new columns alongside old ones when renaming; do not `ALTER ... RENAME`.
+- Backfill data in a separate, idempotent step.
+
+**Release N — application code:**
+
+- Write to both the old and the new column while both exist.
+- Read from the new column with a fallback to the old one.
+
+**Release N+1 — contract (only after N is fully rolled out):**
+
+- Stop writing and reading the old column.
+
+**Release N+2 — drop:**
+
+- Drop the old column, table, or index.
+
+**Never do in a single release:**
+
+| Unsafe                                  | Safe equivalent                                                       |
+| --------------------------------------- | --------------------------------------------------------------------- |
+| `ALTER TABLE ... RENAME COLUMN`         | Add new column → dual-write → backfill → drop old column (3 releases) |
+| Add `NOT NULL` column without a default | Add nullable → backfill → add `NOT NULL` constraint (2 releases)      |
+| Drop a column still read by live code   | Stop reading it in release N, drop it in release N+1                  |
+| Change a column type in place           | Add new typed column → dual-write → backfill → drop old               |
+| Rename or drop a table                  | Create new table → dual-write → backfill → drop old                   |
+
+### Authoring checklist
+
+- [ ] Migration generated with `npm run db:generate` (never hand-edited after being applied)
+- [ ] Generated SQL in `drizzle/` reviewed by a human
+- [ ] Change is additive only, or is the contract half of a previously shipped expand
+- [ ] The currently deployed code still works against the new schema
+- [ ] Backfills are idempotent and safe to re-run
+- [ ] New columns on large tables are nullable or defaulted, to avoid a full table rewrite
+- [ ] Applied and verified locally against a development database
 
 ---
 

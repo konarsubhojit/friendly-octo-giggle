@@ -83,6 +83,7 @@ export function paymentStatusVariant(status: string): BadgeVariant {
     PAID: 'success',
     FAILED: 'error',
     REFUNDED: 'info',
+    PARTIALLY_REFUNDED: 'warning',
   }
   return map[status.toUpperCase()] ?? 'neutral'
 }

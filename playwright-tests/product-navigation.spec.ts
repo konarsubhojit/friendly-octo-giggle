@@ -130,3 +130,55 @@ test.describe('product navigation (no 404 regression)', () => {
     await expect(page.getByText(/this page could not be found/i)).toHaveCount(0)
   })
 })
+
+/**
+ * Server-rendered product detail guard for the Cache Components migration.
+ *
+ * The product itself is read in a `"use cache"` scope and the request-scoped
+ * region streams behind a Suspense boundary; with JavaScript disabled neither
+ * can be filled in on the client, so everything asserted here must have been
+ * produced by the server. Counts and text content are asserted rather than
+ * visibility because React leaves streamed boundaries in hidden containers
+ * when its inline swap script cannot run.
+ */
+test.describe('product detail renders server-side without JavaScript', () => {
+  test.use({ javaScriptEnabled: false })
+
+  test('initial HTML contains name, description, price and variant options', async ({
+    page,
+  }) => {
+    await page.goto('/shop', { waitUntil: 'load' })
+
+    const card = page.locator('a[href*="/products/"]').first()
+    const href = await card.getAttribute('href')
+    expect(href, 'shop should render at least one product').toBeTruthy()
+    const name = (await card.locator('h3').first().textContent())?.trim() ?? ''
+    const description =
+      (await card.locator('p').first().textContent())?.trim() ?? ''
+    expect(name, 'grid card should expose a product name').not.toBe('')
+
+    await page.goto(href as string, { waitUntil: 'load' })
+
+    await expect(
+      page.getByRole('heading', { level: 1 }),
+      'product name must be server-rendered'
+    ).toHaveText(name)
+
+    if (description !== '') {
+      await expect(
+        page.locator('p', { hasText: description }),
+        'product description must be server-rendered'
+      ).not.toHaveCount(0)
+    }
+
+    await expect(
+      page.locator('body'),
+      'a formatted price must be server-rendered'
+    ).toContainText(/[₹$€£]\s?\d/)
+
+    await expect(
+      page.locator('#variant-selector-label'),
+      'variant options must be server-rendered'
+    ).not.toHaveCount(0)
+  })
+})

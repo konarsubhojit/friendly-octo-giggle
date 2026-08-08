@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { handlePaymentWebhook } from '@/features/payments/services/payment-webhook-service'
 
-export const dynamic = 'force-dynamic'
-
 /**
  * Bounds how long this route can hold a `PROCESSING` claim on a checkout
  * request. Must stay at or below `STALE_PROCESSING_CLAIM_MS` (see

@@ -502,6 +502,7 @@ export default function OrdersManagement() {
           {STATUS_FILTERS.map((status) => (
             <button
               key={status}
+              type="button"
               onClick={() => handleFilterChange(status)}
               className={`rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap transition ${
                 filter === status

@@ -111,3 +111,55 @@ describe('safeFetch', () => {
     expect(result.error).toBe('Network error')
   })
 })
+
+describe('handleApiError control-flow handling', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('rethrows Next.js control-flow errors instead of converting them', async () => {
+    const { handleApiError } = await import('@/lib/api-utils')
+    const { notFound } = await import('next/navigation')
+
+    // `notFound()` throws the same class of digest-carrying signal that Next.js
+    // uses for the prerender bail-out; swallowing it turns a legitimate
+    // bail-out into a JSON 500 and breaks the Cache Components build.
+    let controlFlowError: unknown
+    try {
+      notFound()
+    } catch (error) {
+      controlFlowError = error
+    }
+
+    expect(() => handleApiError(controlFlowError)).toThrow(controlFlowError)
+  })
+
+  it('rethrows a control-flow error wrapped as the cause of another error', async () => {
+    const { handleApiError } = await import('@/lib/api-utils')
+    const { notFound } = await import('next/navigation')
+
+    let controlFlowError: unknown
+    try {
+      notFound()
+    } catch (error) {
+      controlFlowError = error
+    }
+
+    const wrapped = new Error('Failed to load product', {
+      cause: controlFlowError,
+    })
+
+    expect(() => handleApiError(wrapped)).toThrow(controlFlowError)
+  })
+
+  it('still converts an ordinary Error into an API error response', async () => {
+    const { handleApiError } = await import('@/lib/api-utils')
+    const response = handleApiError(new Error('Database unavailable'))
+
+    expect(response.status).toBe(500)
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      error: 'Database unavailable',
+    })
+  })
+})

@@ -14,8 +14,6 @@ import { z } from 'zod'
 import { ASSIGNABLE_USER_ROLES } from '@/lib/constants/roles'
 import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 
-export const dynamic = 'force-dynamic'
-
 const UpdateUserRoleSchema = z.object({
   role: z.enum(ASSIGNABLE_USER_ROLES),
 })

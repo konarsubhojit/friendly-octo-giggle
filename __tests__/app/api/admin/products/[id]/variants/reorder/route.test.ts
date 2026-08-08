@@ -5,7 +5,6 @@ const {
   mockCheckAdminAuth,
   mockTransaction,
   mockSet,
-  mockRevalidateTag,
   mockInvalidateProductCaches,
 } = vi.hoisted(() => {
   const mockSet = vi.fn()
@@ -25,7 +24,6 @@ const {
     mockCheckAdminAuth: vi.fn(),
     mockTransaction,
     mockSet,
-    mockRevalidateTag: vi.fn(),
     mockInvalidateProductCaches: vi.fn(),
   }
 })
@@ -43,7 +41,6 @@ vi.mock('drizzle-orm', () => ({
   eq: vi.fn((...args: unknown[]) => args),
 }))
 vi.mock('@/lib/logger', () => ({ logError: vi.fn() }))
-vi.mock('next/cache', () => ({ revalidateTag: mockRevalidateTag }))
 vi.mock('@/lib/cache', () => ({
   invalidateProductCaches: mockInvalidateProductCaches,
 }))
@@ -146,7 +143,6 @@ describe('PATCH /api/admin/products/[id]/variants/reorder', () => {
       2,
       expect.objectContaining({ sortOrder: 1, updatedAt: expect.any(Date) })
     )
-    expect(mockRevalidateTag).toHaveBeenCalledWith('products', {})
     expect(mockInvalidateProductCaches).toHaveBeenCalledWith('p1')
   })
 
@@ -166,7 +162,6 @@ describe('PATCH /api/admin/products/[id]/variants/reorder', () => {
 
     expect(response.status).toBe(500)
     expect(body.error).toBe('tx failed')
-    expect(mockRevalidateTag).not.toHaveBeenCalled()
     expect(mockInvalidateProductCaches).not.toHaveBeenCalled()
   })
 })

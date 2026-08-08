@@ -39,7 +39,9 @@ const request = async <T>(url: string, options?: RequestInit): Promise<T> => {
     const message = await parseErrorResponse(res)
     const retryAfterHeader = res.headers?.get?.('Retry-After') ?? null
     const retryAfter =
-      retryAfterHeader !== null ? parseInt(retryAfterHeader, 10) : undefined
+      retryAfterHeader !== null
+        ? Number.parseInt(retryAfterHeader, 10)
+        : undefined
     throw new ApiError(message, res.status, retryAfter)
   }
   return res.json() as Promise<T>

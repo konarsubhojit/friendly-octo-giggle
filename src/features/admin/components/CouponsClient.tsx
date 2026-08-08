@@ -1,12 +1,12 @@
 'use client'
 
-import { useCallback, useId, useState } from 'react'
+import { useId, useState } from 'react'
 import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/Button'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { apiClient } from '@/lib/api-client'
 import { formatMoneyValue } from '@/lib/money'
-import { DISCOUNT_TYPES } from '@/features/cart/services/coupon-service'
+import { DISCOUNT_TYPES } from '@/lib/constants/discounts'
 import type {
   AdminCouponRecord,
   AdminCouponRedemptionSummary,
@@ -131,12 +131,12 @@ export default function CouponsClient({
   )
   const formId = useId()
 
-  const setField = useCallback(
-    <K extends keyof CouponFormState>(key: K, value: CouponFormState[K]) => {
-      setForm((current) => ({ ...current, [key]: value }))
-    },
-    []
-  )
+  const setField = <K extends keyof CouponFormState>(
+    key: K,
+    value: CouponFormState[K]
+  ) => {
+    setForm((current) => ({ ...current, [key]: value }))
+  }
 
   const handleCreate = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -397,7 +397,7 @@ export default function CouponsClient({
                   setField('stackable', event.target.checked)
                 }
               />
-              Can be combined with other coupons
+              <span>Can be combined with other coupons</span>
             </label>
             <label
               className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200"
@@ -409,7 +409,7 @@ export default function CouponsClient({
                 checked={form.isActive}
                 onChange={(event) => setField('isActive', event.target.checked)}
               />
-              Active
+              <span>Active</span>
             </label>
           </div>
 

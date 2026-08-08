@@ -5,10 +5,15 @@ import ProductGrid, {
   type ProductGridItem,
 } from '@/features/product/components/ProductGrid'
 import { BestsellersScroller } from '@/features/product/components/BestsellersScroller'
+import RecommendationRailSkeleton from '@/components/skeletons/RecommendationRailSkeleton'
+import { PersonalizedRailSeeds } from '@/features/recommendations/components/PersonalizedRailSeeds'
+import { ZeroResultRecommendations } from '@/features/recommendations/components/RecommendationSections'
 import ProductCardSkeleton from '@/components/skeletons/ProductCardSkeleton'
 import BestsellerCardSkeleton from '@/components/skeletons/BestsellerCardSkeleton'
+import { cacheLife, cacheTag } from 'next/cache'
+import { unstable_rethrow } from 'next/navigation'
 import { db, drizzleDb } from '@/lib/db'
-import { cacheCategoriesList, cacheProductsBestsellers } from '@/lib/cache'
+import { bestsellersTag, categoriesTag, productListTag } from '@/lib/cache-tags'
 import { categories as categoriesTable } from '@/lib/schema'
 import { isNull, asc } from 'drizzle-orm'
 import { logError } from '@/lib/logger'
@@ -25,8 +30,6 @@ import {
   type SearchVariantFilter,
 } from '@/lib/search-discovery'
 import { withStoreName } from '@/lib/constants/store'
-
-export const revalidate = 60
 
 const SHOP_INITIAL_SIZE = 24
 const SHOP_BATCH_SIZE = 20
@@ -131,41 +134,128 @@ export function parseShopFilters(
 const SKELETON_IDS = ['s1', 's2', 's3', 's4', 's5', 's6'] as const
 const BESTSELLER_SKELETON_IDS = ['b1', 'b2', 'b3', 'b4', 'b5'] as const
 
-/** Fallback for the streamed catalog region (bestsellers + product grid). */
+/**
+ * Cached bestsellers read.
+ *
+ * Reads the database directly rather than through `cacheProductsBestsellers`:
+ * a `"use cache"` scope must not nest a Redis round trip, which would
+ * double-cache the same rows and split invalidation across two systems.
+ * Freshness comes from the tags below — `bestsellersTag()` is revalidated when
+ * an order changes sales volume and `productListTag()` when catalog membership
+ * changes — with `cacheLife('catalog')` as the time-based safety net.
+ *
+ * The failure path is handled inside the scope rather than by the caller
+ * because an error escaping a cached scope aborts the surrounding prerender
+ * and cannot be caught downstream. Degrading to an empty rail keeps a database
+ * outage from failing the build, at the cost of caching the empty result until
+ * the `catalog` profile revalidates it.
+ */
+async function getCachedBestsellers(): Promise<ProductGridItem[]> {
+  'use cache'
+  cacheLife('catalog')
+  cacheTag(bestsellersTag(), productListTag())
+
+  try {
+    const topProducts = await db.products.findBestsellers({ withCache: false })
+    return topProducts.map(toGridItem)
+  } catch (error) {
+    unstable_rethrow(error)
+    logError({ error, context: 'shop_bestsellers_fetch' })
+    return []
+  }
+}
+
+/** Cached category-chip read; invalidated by any category mutation. */
+async function getCachedCategoryNames(): Promise<string[]> {
+  'use cache'
+  cacheLife('taxonomy')
+  cacheTag(categoriesTag())
+
+  const rows = await drizzleDb
+    .select({ name: categoriesTable.name })
+    .from(categoriesTable)
+    .where(isNull(categoriesTable.deletedAt))
+    .orderBy(asc(categoriesTable.sortOrder), asc(categoriesTable.name))
+
+  return rows.map((category) => category.name)
+}
+
+/** Fallback for the bestsellers rail while its cached scope is populated. */
+function ShopBestsellersFallback() {
+  return (
+    <section
+      className="mx-auto w-full max-w-[96rem] px-4 pb-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12"
+      aria-hidden="true"
+    >
+      <div className="h-9 w-48 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] rounded-lg animate-pulse mb-2" />
+      <div className="h-4 w-64 bg-[var(--accent-blush)] rounded animate-pulse mb-5" />
+      <div className="flex items-stretch gap-4 overflow-hidden pb-3">
+        {BESTSELLER_SKELETON_IDS.map((id) => (
+          <BestsellerCardSkeleton key={id} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+/** Fallback for the streamed, `searchParams`-driven product grid. */
 function ShopCatalogFallback() {
   return (
-    <>
-      <section
-        className="mx-auto w-full max-w-[96rem] px-4 pb-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12"
-        aria-hidden="true"
-      >
-        <div className="h-9 w-48 bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] rounded-lg animate-pulse mb-2" />
-        <div className="h-4 w-64 bg-[var(--accent-blush)] rounded animate-pulse mb-5" />
-        <div className="flex items-stretch gap-4 overflow-hidden pb-3">
-          {BESTSELLER_SKELETON_IDS.map((id) => (
-            <BestsellerCardSkeleton key={id} />
-          ))}
-        </div>
-      </section>
-      <section
-        className="mx-auto w-full max-w-[96rem] px-4 pb-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12"
-        aria-hidden="true"
-      >
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {SKELETON_IDS.map((id) => (
-            <ProductCardSkeleton key={id} />
-          ))}
-        </div>
-      </section>
-    </>
+    <section
+      className="mx-auto w-full max-w-[96rem] px-4 pb-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12"
+      aria-hidden="true"
+    >
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {SKELETON_IDS.map((id) => (
+          <ProductCardSkeleton key={id} />
+        ))}
+      </div>
+    </section>
   )
 }
 
 /**
- * Streamed data region. Doing all DB/cache work here (instead of in the page
- * body) lets the static shell — the page heading — flush immediately while the
- * catalog data is fetched, improving perceived LCP/TTFB by streaming the shell
- * and filling the data-dependent regions in via a Suspense boundary.
+ * Bestsellers rail.
+ *
+ * Reads only cached data, so it is part of the prerendered static shell and
+ * appears in the initial HTML without a database round trip. A read failure
+ * degrades to the scroller's own empty state inside the cached scope, so this
+ * component always has data to render.
+ */
+export async function ShopBestsellers() {
+  const bestsellers = await getCachedBestsellers()
+
+  return (
+    <section
+      className="mx-auto w-full max-w-[96rem] px-4 pb-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12"
+      aria-labelledby="shop-bestsellers-heading"
+    >
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <h2
+          id="shop-bestsellers-heading"
+          className="font-cursive text-3xl sm:text-4xl font-bold text-[var(--foreground)]"
+        >
+          Bestsellers
+        </h2>
+        <span className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+          Top 5 by orders
+        </span>
+      </div>
+      <p className="text-[var(--text-secondary)] text-sm mb-5">
+        Most purchased favorites from our community.
+      </p>
+
+      <BestsellersScroller bestsellers={bestsellers} />
+    </section>
+  )
+}
+
+/**
+ * Streamed catalog region.
+ *
+ * The result set depends on `searchParams`, so this cannot be prerendered and
+ * stays inside a `Suspense` boundary. The category chips it renders still come
+ * from a cached scope, so a filter change never re-reads the taxonomy.
  */
 export async function ShopCatalog({
   filters,
@@ -185,14 +275,12 @@ export async function ShopCatalog({
 
   let shopData: {
     products: ProductGridItem[]
-    bestsellers: ProductGridItem[]
     categoryNames: string[]
     hasNextPage: boolean
     suggestions: string[]
     trending: Array<{ id: string; name: string; category: string }>
   } = {
     products: [],
-    bestsellers: [],
     categoryNames: [],
     hasNextPage: false,
     suggestions: [],
@@ -203,41 +291,25 @@ export async function ShopCatalog({
     const selectedCategoryFilter =
       selectedCategory === 'All' ? undefined : selectedCategory
 
-    const [topProducts, cats] = await Promise.all([
+    const [categoryNames, searchResult] = await Promise.all([
+      getCachedCategoryNames(),
       withTimeout(
-        cacheProductsBestsellers(() => db.products.findBestsellers(), 5),
+        searchCatalog({
+          q: search,
+          category: selectedCategoryFilter,
+          sort: selectedSort,
+          minPrice,
+          maxPrice,
+          inStock,
+          minRating,
+          variant: selectedVariant,
+          limit: SHOP_INITIAL_SIZE + 1,
+          offset: 0,
+        }),
         5_000,
-        'shop_bestsellers'
-      ),
-      withTimeout(
-        cacheCategoriesList(() =>
-          drizzleDb
-            .select({ name: categoriesTable.name })
-            .from(categoriesTable)
-            .where(isNull(categoriesTable.deletedAt))
-            .orderBy(asc(categoriesTable.sortOrder), asc(categoriesTable.name))
-        ),
-        5_000,
-        'shop_categories'
+        'shop_catalog_search'
       ),
     ])
-
-    const searchResult = await withTimeout(
-      searchCatalog({
-        q: search,
-        category: selectedCategoryFilter,
-        sort: selectedSort,
-        minPrice,
-        maxPrice,
-        inStock,
-        minRating,
-        variant: selectedVariant,
-        limit: SHOP_INITIAL_SIZE + 1,
-        offset: 0,
-      }),
-      5_000,
-      'shop_catalog_search'
-    )
 
     shopData = {
       products: searchResult.results
@@ -252,8 +324,7 @@ export async function ShopCatalog({
           stock: product.stock,
           soldCount: product.soldCount,
         })),
-      bestsellers: topProducts.map(toGridItem),
-      categoryNames: cats.map((c) => c.name),
+      categoryNames,
       hasNextPage: searchResult.total > SHOP_INITIAL_SIZE,
       suggestions: searchResult.suggestions,
       trending: searchResult.trending,
@@ -262,39 +333,11 @@ export async function ShopCatalog({
     logError({ error, context: 'shop_products_fetch' })
   }
 
-  const {
-    products,
-    bestsellers,
-    categoryNames,
-    hasNextPage,
-    suggestions,
-    trending,
-  } = shopData
+  const { products, categoryNames, hasNextPage, suggestions, trending } =
+    shopData
 
   return (
     <>
-      <section
-        className="mx-auto w-full max-w-[96rem] px-4 pb-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12"
-        aria-labelledby="shop-bestsellers-heading"
-      >
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <h2
-            id="shop-bestsellers-heading"
-            className="font-cursive text-3xl sm:text-4xl font-bold text-[var(--foreground)]"
-          >
-            Bestsellers
-          </h2>
-          <span className="text-xs sm:text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-            Top 5 by orders
-          </span>
-        </div>
-        <p className="text-[var(--text-secondary)] text-sm mb-5">
-          Most purchased favorites from our community.
-        </p>
-
-        <BestsellersScroller bestsellers={bestsellers} />
-      </section>
-
       <ProductGrid
         products={products}
         categories={categoryNames}
@@ -311,14 +354,39 @@ export async function ShopCatalog({
         hasNextPage={hasNextPage}
         batchSize={SHOP_BATCH_SIZE}
       />
+      {/*
+        Rendered after the grid's own empty-state guidance, so the
+        recommendations supplement that copy rather than replace it. The active
+        category is passed through so the recovery never overrides the
+        shopper's stated filter.
+      */}
+      {products.length === 0 && (
+        <div className="mx-auto w-full max-w-[96rem] px-4 pb-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
+          <Suspense fallback={<RecommendationRailSkeleton />}>
+            <ZeroResultRecommendations
+              category={selectedCategory === 'All' ? null : selectedCategory}
+            />
+          </Suspense>
+        </div>
+      )}
     </>
   )
 }
 
-const ShopPage = async ({ searchParams }: ShopPageProps) => {
+/**
+ * Resolves `searchParams` inside the `Suspense` boundary so awaiting request
+ * data never demotes the surrounding static shell to a dynamic render.
+ */
+async function ShopCatalogSection({
+  searchParams,
+}: {
+  readonly searchParams: ShopPageProps['searchParams']
+}) {
   const resolvedSearchParams = (await searchParams) ?? {}
-  const filters = parseShopFilters(resolvedSearchParams)
+  return <ShopCatalog filters={parseShopFilters(resolvedSearchParams)} />
+}
 
+const ShopPage = ({ searchParams }: ShopPageProps) => {
   return (
     <div className="min-h-screen bg-warm-gradient">
       <section
@@ -336,8 +404,21 @@ const ShopPage = async ({ searchParams }: ShopPageProps) => {
         </p>
       </section>
 
+      <Suspense fallback={<ShopBestsellersFallback />}>
+        <ShopBestsellers />
+      </Suspense>
+
+      {/*
+        Below the bestsellers rail it complements rather than replaces. A
+        Client Component, because its recently-viewed seeds only exist in the
+        browser; it renders its own skeleton while resolving.
+      */}
+      <section className="mx-auto w-full max-w-[96rem] px-4 pb-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
+        <PersonalizedRailSeeds />
+      </section>
+
       <Suspense fallback={<ShopCatalogFallback />}>
-        <ShopCatalog filters={filters} />
+        <ShopCatalogSection searchParams={searchParams} />
       </Suspense>
 
       <Footer />

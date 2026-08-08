@@ -1,8 +1,6 @@
 import Footer from '@/components/layout/Footer'
 import { withStoreName } from '@/lib/constants/store'
 
-export const revalidate = 3600
-
 export const metadata = {
   title: withStoreName('Shipping Information'),
   description:

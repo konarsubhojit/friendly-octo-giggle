@@ -10,22 +10,13 @@
 import { db } from '@/lib/db'
 import { convertMoney, multiplyMoney, roundMoney, sumMoney } from '@/lib/money'
 import type { coupons } from '@/lib/schema'
+import { DISCOUNT_TYPES, type DiscountType } from '@/lib/constants/discounts'
+
+export { DISCOUNT_TYPES }
+export type { DiscountType }
 
 /** Maximum number of coupon codes that may be applied to a single cart. */
 export const MAX_COUPONS_PER_CART = 5
-
-export type DiscountType =
-  | 'PERCENTAGE'
-  | 'FIXED_AMOUNT'
-  | 'FREE_SHIPPING'
-  | 'BOGO'
-
-export const DISCOUNT_TYPES: readonly DiscountType[] = [
-  'PERCENTAGE',
-  'FIXED_AMOUNT',
-  'FREE_SHIPPING',
-  'BOGO',
-]
 
 export interface CouponRecord {
   readonly id: string

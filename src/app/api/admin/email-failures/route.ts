@@ -18,8 +18,6 @@ import {
   ManualRetryBodySchema,
 } from '@/features/admin/validations'
 
-export const dynamic = 'force-dynamic'
-
 const parseStatusList = (statusParam: string): FailedEmailStatus[] => {
   const valid = new Set<FailedEmailStatus>(['pending', 'failed', 'sent'])
   return statusParam

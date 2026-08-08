@@ -36,8 +36,12 @@ export const SCORE_NAMES = {
   exchangeRatesRefreshed: 'exchange-rates-refreshed',
   /** Tool use — did the payment gateway settle without needing a retry? */
   paymentVerifiedFirstAttempt: 'payment-verified-first-attempt',
+  /** Quality — did the expiry sweep clear its backlog inside one run? */
+  reservationExpirySweepDrained: 'reservation-expiry-sweep-drained',
   /** Quality — did the order reach the Redis search mirror? */
   orderIndexed: 'order-indexed',
+  /** Quality — did the nightly scoring run write any usable affinity pairs? */
+  affinityComputed: 'affinity-computed',
 } as const
 
 /**

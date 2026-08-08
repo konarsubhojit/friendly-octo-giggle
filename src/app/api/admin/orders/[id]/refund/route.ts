@@ -16,8 +16,6 @@ import {
   refundOrder,
 } from '@/features/orders/services/refund-service'
 
-export const dynamic = 'force-dynamic'
-
 /**
  * Refund an order in full or in part.
  *

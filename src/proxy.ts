@@ -58,6 +58,7 @@ const ADMIN_SECTION_PERMISSIONS: ReadonlyArray<
   ['/admin/sales', 'analytics:read'],
   ['/admin/search', 'system:manage'],
   ['/admin/email-failures', 'system:manage'],
+  ['/admin/recommendations', 'system:manage'],
 ]
 
 const getAdminSectionPermission = (pathname: string): AdminPermission | null =>
@@ -81,6 +82,9 @@ const RATE_LIMIT_PATHS = [
   '/api/search',
   '/api/products',
   '/api/share',
+  // Unauthenticated and write-shaped: the event endpoint accepts beacons from
+  // any visitor, so it needs a bucket even though it only writes a log line.
+  '/api/recommendations',
 ]
 const STRICT_RATE_LIMIT_PATHS = [
   '/api/auth/register',

@@ -475,7 +475,13 @@ describe('cart-service', () => {
         ],
       })
       mockDbCartsFindVariantStock.mockResolvedValue([
-        { id: 'var1', stock: 4, deletedAt: null },
+        {
+          id: 'var1',
+          stock: 4,
+          reservedStock: 0,
+          availableStock: 4,
+          deletedAt: null,
+        },
       ])
 
       const rotatedSessionId = await mergeGuestCartIntoUserCart(
@@ -503,7 +509,13 @@ describe('cart-service', () => {
       })
       mockDbCartsFindWithItemsByUserId.mockResolvedValue(null)
       mockDbCartsFindVariantStock.mockResolvedValue([
-        { id: 'var1', stock: 0, deletedAt: null },
+        {
+          id: 'var1',
+          stock: 0,
+          reservedStock: 0,
+          availableStock: 0,
+          deletedAt: null,
+        },
       ])
       mockDbCartsPromoteToUser.mockResolvedValue(undefined)
 
@@ -532,7 +544,13 @@ describe('cart-service', () => {
       })
       mockDbCartsFindWithItemsByUserId.mockResolvedValue(null)
       mockDbCartsFindVariantStock.mockResolvedValue([
-        { id: 'var2', stock: 10, deletedAt: new Date('2024-01-01') },
+        {
+          id: 'var2',
+          stock: 10,
+          reservedStock: 0,
+          availableStock: 10,
+          deletedAt: new Date('2024-01-01'),
+        },
       ])
       mockDbCartsPromoteToUser.mockResolvedValue(undefined)
 

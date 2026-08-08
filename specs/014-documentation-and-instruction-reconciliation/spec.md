@@ -3,7 +3,7 @@
 **Feature Branch**: `014-documentation-and-instruction-reconciliation`  
 **Created**: 2026-08-01  
 **Status**: Draft  
-**Epic**: Phase 1 — Foundation: rendering model, CI truth, and stack modernization  
+**Epic**: Phase 1 — Foundation: rendering model and stack modernization  
 **Input**: Reconcile the README, `/docs`, the project constitution, the agent instruction files, and the spec index with the code that actually exists, so contributors and automated agents stop being briefed from a stale map.
 
 ## Baseline (verified 2026-08-01)
@@ -12,10 +12,14 @@ Documented instructions have drifted materially from the implementation. Each of
 
 **Commands that do not exist**
 
+<!-- doc-drift-ignore-next-block --> <!-- This block is an inventory of the commands that do not exist; naming them is the point. -->
+
 - `npm run db:seed` is referenced by `README.md`, `docs/getting-started.md`, `docs/development.md`, `docs/deployment.md`, and `docs/troubleshooting.md`. `package.json` defines no such script.
 - `npm run dev:https` is referenced by `README.md` and `docs/development.md`. No such script exists; `npm run dev` already runs `next dev --experimental-https`, so the documented HTTP/HTTPS distinction is inverted.
 
 **Files and workflows that do not exist**
+
+<!-- doc-drift-ignore-next-block --> <!-- This block is an inventory of the workflows that do not exist; naming them is the point. -->
 
 - `docs/observability.md` cites `.github/workflows/synthetic-uptests.yml`. The repository contains only `build.yml` and `copilot-setup-steps.yml`.
 - `.specify/memory/constitution.md` mandates QStash via `lib/qstash.ts`, `lib/qstash-events.ts`, service endpoints under `app/api/services/`, Vercel Cron Jobs in `vercel.json`, cron routes under `app/api/cron/`, `checkAdminAuth` from `lib/admin-auth.ts`, `lib/search.ts`, `lib/search-service.ts`, and Zod schemas in `lib/validations.ts`. **None of these paths exist.** Background work now runs on Inngest (`src/lib/inngest/`), admin auth lives in `src/features/admin/services/admin-auth.ts`, search lives in `src/lib/search/`, and validations live in `src/lib/validations/`.
@@ -72,7 +76,7 @@ An agent operating under `.github/copilot-instructions.md` and the project const
 
 The specification index and the platform capability specification no longer assert removed features, so specifications remain a trustworthy record of intended behavior.
 
-**Why this priority**: Specifications drive acceptance tests and feature planning. Claiming a removed capability perpetuates dead test assertions such as the ones repaired in `013-e2e-in-continuous-integration`.
+**Why this priority**: Specifications drive acceptance tests and feature planning. Claiming a removed capability perpetuates dead test assertions, such as the localization expectations still present in `playwright-tests/latest-features.spec.ts`.
 
 **Independent Test**: Search the specification tree and `docs/features.md` for localization claims and confirm none remain.
 
@@ -129,6 +133,8 @@ A check prevents the reintroduction of references to commands, scripts, and work
 - **FR-014**: `docs/features.md` MUST be verified so that every claimed capability is traceable to code in the working tree.
 - **FR-015**: An automated check MUST fail when documentation references a nonexistent npm script or workflow file, and it MUST run in CI.
 - **FR-016**: No behavioral source code may change in this work; changes are limited to documentation, specifications, instruction files, and the drift check.
+- **FR-017**: `.github/copilot/instructions.md` MUST NOT restate the architecture independently; it MUST defer to `.github/copilot-instructions.md`, so a single instruction surface exists.
+- **FR-018**: No instruction file may name a dependency the project does not have — `.github/copilot/instructions.md` currently names Prisma ORM and ioredis, and neither is installed.
 
 ### Key Entities
 
@@ -148,6 +154,7 @@ A check prevents the reintroduction of references to commands, scripts, and work
 - **SC-005**: The constitution version is incremented and its Sync Impact Report records the rationale.
 - **SC-006**: The drift check runs in CI and fails on a deliberately introduced bad reference.
 - **SC-007**: `git diff` for this work contains no changes under `src/`.
+- **SC-008**: Exactly one file in the repository states the project architecture for agent consumption, and every technology it names is present in `package.json`.
 
 ## Out of Scope
 
@@ -157,5 +164,5 @@ A check prevents the reintroduction of references to commands, scripts, and work
 
 ## Dependencies
 
-- Coordinates with `013-e2e-in-continuous-integration`, which repairs the test-side consequences of the same localization drift.
+- None. `013-e2e-in-continuous-integration`, which would have repaired the test-side consequences of the same localization drift, was withdrawn on 2026-08-07; this work records the drift in documentation and specifications but does not repair the Playwright suite.
 - Should land before Phase 2 so subsequent feature work is planned from an accurate architectural description.

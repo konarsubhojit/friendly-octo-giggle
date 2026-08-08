@@ -1,13 +1,18 @@
 # Observability Guide
 
-This project uses structured logs, request-level telemetry, and synthetic checks to improve reliability and detect regressions early.
+This project uses structured logs, request-level telemetry, and continuous-integration checks to improve reliability and detect regressions early.
 
 ## Stack
 
 - **Logs**: Pino structured logs (`src/lib/logger.ts`)
 - **Tracing / error monitoring**: Sentry Next.js SDK (`src/instrumentation.ts`, `sentry.*.config.ts`)
 - **Metrics endpoint**: Prometheus-formatted metrics at `GET /api/metrics`
-- **Synthetic uptests**: GitHub Actions workflow `.github/workflows/synthetic-uptests.yml`
+- **Health endpoint**: `GET /api/health` for liveness probing by an external monitor
+- **Continuous integration**: `.github/workflows/build.yml`, whose `test`, `build`, `sonarqube`, `deepsource`, and `codecov` jobs run on every pull request and on pushes to `develop` and `master`
+
+> There is no synthetic-uptest workflow in this repository. Uptime checking is
+> not configured; `GET /api/health` is the endpoint an external monitor would
+> poll if one were introduced.
 
 ## Current workflow coverage
 

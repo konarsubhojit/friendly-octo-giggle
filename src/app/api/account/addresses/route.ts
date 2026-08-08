@@ -11,8 +11,6 @@ import {
   listUserAddresses,
 } from '@/features/account/services/address-service'
 
-export const dynamic = 'force-dynamic'
-
 export async function GET() {
   try {
     const session = await auth()

@@ -23,7 +23,10 @@ export interface ProductVariant {
   productId: string
   sku: string | null
   price: number
+  /** Units physically on hand, including any held by open checkout requests. */
   stock: number
+  /** Units held by open checkout requests; `stock - reservedStock` is on sale. */
+  reservedStock?: number
   /** Shipping weight of one unit in grams; null uses the engine default. */
   weightGrams?: number | null
   image: string | null
@@ -66,7 +69,12 @@ export enum OrderStatus {
   CANCELLED = 'CANCELLED',
 }
 
-export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED'
+export type PaymentStatus =
+  | 'PENDING'
+  | 'PAID'
+  | 'FAILED'
+  | 'REFUNDED'
+  | 'PARTIALLY_REFUNDED'
 
 export type PaymentProvider = PaymentProviderName
 

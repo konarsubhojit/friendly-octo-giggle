@@ -9,6 +9,7 @@ import { drizzleDb } from '@/lib/db'
 import { categories } from '@/lib/schema'
 import { eq, and, isNull, ne } from 'drizzle-orm'
 import { z } from 'zod/v4'
+import { categoriesTag, revalidateCacheTags } from '@/lib/cache-tags'
 
 const UpdateCategorySchema = z.object({
   name: z.string().min(1, 'Name is required').max(100).optional(),
@@ -70,6 +71,8 @@ export async function PUT(request: Request, { params }: RouteParams) {
       .where(eq(categories.id, id))
       .returning()
 
+    revalidateCacheTags([categoriesTag()], 'admin_category_update')
+
     return apiSuccess({
       category: {
         ...updated,
@@ -106,6 +109,8 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
       .update(categories)
       .set({ deletedAt: new Date(), updatedAt: new Date() })
       .where(eq(categories.id, id))
+
+    revalidateCacheTags([categoriesTag()], 'admin_category_delete')
 
     return apiSuccess({ deleted: true })
   } catch (error) {

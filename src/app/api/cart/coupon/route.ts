@@ -15,8 +15,6 @@ import {
   type DiscountCartItem,
 } from '@/features/cart/services/coupon-service'
 
-export const dynamic = 'force-dynamic'
-
 /**
  * Preview the discount a coupon would produce for the signed-in user's cart.
  *

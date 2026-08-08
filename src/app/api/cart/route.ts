@@ -18,8 +18,6 @@ import {
   verifyCartSessionCookieValue,
 } from '@/features/cart/services/cart-session'
 
-export const dynamic = 'force-dynamic'
-
 const getGuestCartSessionCookie = (request: NextRequest) => {
   const cookieValue = request.cookies.get(CART_SESSION_COOKIE_NAME)?.value
   return {

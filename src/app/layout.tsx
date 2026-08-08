@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import { Suspense } from 'react'
 import { Nunito, Playfair_Display } from 'next/font/google'
 import './globals.css'
 import { SessionProvider } from '@/components/providers/SessionProvider'
@@ -10,6 +11,14 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import { AppEnhancements } from '@/components/pwa/AppEnhancements'
 import { STORE_NAME, STORE_SHORT_NAME } from '@/lib/constants/store'
 
+/**
+ * Client provider tree.
+ *
+ * `makeStore()` calls `configureStore`, whose action-id generation uses
+ * `Math.random()`. Under Cache Components that is a sync-IO source that aborts
+ * the prerender of every page unless a `Suspense` boundary sits above it, so
+ * the root layout mounts this behind one.
+ */
 function AppProviders({ children }: { readonly children: React.ReactNode }) {
   return (
     <StoreProvider>
@@ -92,10 +101,12 @@ export default function RootLayout({
         >
           Skip to main content
         </a>
-        <AppProviders>
-          {children}
-          <AppEnhancements />
-        </AppProviders>
+        <Suspense>
+          <AppProviders>
+            {children}
+            <AppEnhancements />
+          </AppProviders>
+        </Suspense>
         <Analytics />
         <SpeedInsights />
       </body>

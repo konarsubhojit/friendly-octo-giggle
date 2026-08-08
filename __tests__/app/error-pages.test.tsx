@@ -184,11 +184,11 @@ describe('CartError (app/cart/error.tsx)', () => {
     expect(reset).toHaveBeenCalledOnce()
   })
 
-  it('"Continue shopping" link points to "/products"', () => {
+  it('"Continue shopping" link points to the "/shop" listing route', () => {
     render(<CartError error={createError('fail')} reset={vi.fn()} />)
     expect(screen.getByText('Continue shopping')).toHaveAttribute(
       'href',
-      '/products'
+      '/shop'
     )
   })
 

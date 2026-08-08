@@ -12,6 +12,12 @@ import {
   getRedisClient,
 } from './redis'
 import { logCacheOperation, logError } from './logger'
+import {
+  bestsellersTag,
+  productListTag,
+  productTag,
+  revalidateCacheTags,
+} from './cache-tags'
 
 // Cache key patterns
 export const CACHE_KEYS = {
@@ -58,6 +64,13 @@ export const CACHE_KEYS = {
   SHARE_RESOLVE_BY_KEY: (key: string) => `share:${key}`,
   // Pincode → city/state lookup (practically immutable)
   PINCODE_LOOKUP: (code: string) => `pincode:${code}`,
+  // Recommendations (affinity scores are rewritten once per scoring run)
+  RECOMMENDATIONS_BY_ANCHOR: (anchorId: string, limit: number) =>
+    `recommendations:anchor:${anchorId}:${limit}`,
+  RECOMMENDATIONS_BY_ANCHOR_SET: (anchorHash: string, limit: number) =>
+    `recommendations:anchors:${anchorHash}:${limit}`,
+  RECOMMENDATIONS_STATUS: 'recommendations:status',
+  RECOMMENDATIONS_PATTERN: 'recommendations:*',
 } as const
 
 // Cache TTL configuration (in seconds)
@@ -93,6 +106,11 @@ export const CACHE_TTL = {
   SHARE_RESOLVE: 31536000, // 1 year in seconds
   // Pincode lookup: geographic boundaries rarely change — cache for 1 year
   PINCODE_LOOKUP: 31536000, // 1 year in seconds
+  // Recommendations: the underlying scores are rewritten once per day, so a
+  // 15-minute window costs nothing in freshness and absorbs rail traffic.
+  RECOMMENDATIONS: 900,
+  RECOMMENDATIONS_STALE: 60,
+  RECOMMENDATIONS_STATUS: 60,
 } as const
 
 /**
@@ -295,6 +313,19 @@ export const invalidateProductCaches = async (
   } catch (error) {
     logError({ error, context: 'cache_invalidation' })
   }
+
+  // Cache Components tags are revalidated outside the try/catch above so a
+  // Redis outage cannot leave the prerendered catalog stale. `productListTag`
+  // and `bestsellersTag` cover the listing scopes because a create, delete, or
+  // soft delete changes catalog membership even when no id is supplied.
+  revalidateCacheTags(
+    [
+      productListTag(),
+      bestsellersTag(),
+      ...normalizeCacheKeys(productIds).map(productTag),
+    ],
+    'invalidate_product_caches'
+  )
 }
 
 export const invalidateCartCache = async (

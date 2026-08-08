@@ -2,7 +2,6 @@ import { auth } from '@/lib/auth'
 import { AuthRequiredState } from '@/components/ui/AuthRequiredState'
 import OrdersClient from '@/app/(public)/orders/OrdersClient'
 
-export const dynamic = 'force-dynamic'
 export default async function OrdersPage() {
   const session = await auth()
 

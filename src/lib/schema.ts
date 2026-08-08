@@ -5,12 +5,15 @@ import {
   integer,
   timestamp,
   numeric,
+  doublePrecision,
   pgEnum,
   index,
   unique,
   json,
   boolean,
   uniqueIndex,
+  check,
+  primaryKey,
 } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
 import type { AdapterAccountType } from '@auth/core/adapters'
@@ -65,11 +68,26 @@ export const checkoutRequestStatusEnum = pgEnum('CheckoutRequestStatus', [
   'FAILED',
 ])
 
+/**
+ * Lifecycle of a stock hold.
+ *
+ * `HELD` is the only state that counts against `ProductVariant.reservedStock`;
+ * every other value is terminal and is reached by a conditional update that
+ * claims the row, so a replay claims nothing and changes nothing.
+ */
+export const stockReservationStatusEnum = pgEnum('StockReservationStatus', [
+  'HELD',
+  'CONSUMED',
+  'RELEASED',
+  'EXPIRED',
+])
+
 export const paymentStatusEnum = pgEnum('PaymentStatus', [
   'PENDING',
   'PAID',
   'FAILED',
   'REFUNDED',
+  'PARTIALLY_REFUNDED',
 ])
 
 export const paymentProviderEnum = pgEnum('PaymentProvider', PAYMENT_PROVIDERS)
@@ -231,7 +249,15 @@ export const verificationTokens = pgTable(
     expires: timestamp('expires', { mode: 'date' }).notNull(),
   },
   (t) => [
-    unique('VerificationToken_identifier_token_key').on(t.identifier, t.token),
+    // Composite primary key rather than a bare unique constraint. The Auth.js
+    // adapter deletes this row when a token is redeemed, and Postgres refuses
+    // any DELETE on a table that is published for logical replication with
+    // neither a primary key nor an explicit replica identity. Without it,
+    // email verification and password reset both fail at the final step.
+    primaryKey({
+      name: 'VerificationToken_identifier_token_pk',
+      columns: [t.identifier, t.token],
+    }),
   ]
 )
 
@@ -341,6 +367,17 @@ export const productVariants = pgTable(
     sku: text('sku'),
     price: money('price').notNull(),
     stock: integer('stock').notNull(),
+    /**
+     * Units held by live checkout reservations.
+     *
+     * Denormalised sum of `StockReservation.quantity` for rows still `HELD`.
+     * It exists so the reservation grant can be a single conditional
+     * `UPDATE ... WHERE stock - "reservedStock" >= q` and so availability
+     * (`stock - reservedStock`) is readable from a row every catalog query
+     * already selects. Only `features/orders/services/stock-reservation.ts`
+     * and the order transaction may change it.
+     */
+    reservedStock: integer('reservedStock').notNull().default(0),
     /** Shipping weight of one unit; null falls back to the engine default. */
     weightGrams: integer('weightGrams'),
     image: text('image'),
@@ -353,6 +390,10 @@ export const productVariants = pgTable(
   (t) => [
     index('ProductVariant_productId_idx').on(t.productId),
     index('ProductVariant_deletedAt_idx').on(t.deletedAt),
+    check(
+      'ProductVariant_reservedStock_non_negative',
+      sql`${t.reservedStock} >= 0`
+    ),
   ]
 )
 
@@ -367,7 +408,15 @@ export const productVariantOptionValues = pgTable(
       .references(() => productOptionValues.id, { onDelete: 'cascade' }),
   },
   (t) => [
-    unique('ProductVariantOptionValue_pk').on(t.variantId, t.optionValueId),
+    // Composite primary key, not a unique constraint: the pair already
+    // identifies the row, and a junction table published for logical
+    // replication cannot accept a DELETE without one. Re-assigning a
+    // variant's options deletes the old links, so admin variant edits depend
+    // on this.
+    primaryKey({
+      name: 'ProductVariantOptionValue_pk',
+      columns: [t.variantId, t.optionValueId],
+    }),
     index('ProductVariantOptionValue_variantId_idx').on(t.variantId),
     index('ProductVariantOptionValue_optionValueId_idx').on(t.optionValueId),
   ]
@@ -562,6 +611,49 @@ export const orderItems = pgTable(
     index('OrderItem_orderId_idx').on(t.orderId),
     index('OrderItem_productId_idx').on(t.productId),
     index('OrderItem_variantId_idx').on(t.variantId),
+  ]
+)
+
+/**
+ * One hold on a quantity of one variant, for one checkout request.
+ *
+ * The ledger is the audit trail and the unit of expiry;
+ * `ProductVariant.reservedStock` carries the summed live holds that the grant
+ * tests against. `UNIQUE (checkoutRequestId, variantId)` is what makes the
+ * grant idempotent under Inngest retries and duplicate submissions: a replay
+ * collides on the constraint and reuses the existing row instead of holding a
+ * second set of units.
+ */
+export const stockReservations = pgTable(
+  'StockReservation',
+  {
+    id: varchar('id', { length: 7 })
+      .primaryKey()
+      .$defaultFn(() => generateShortId()),
+    checkoutRequestId: varchar('checkoutRequestId', { length: 7 })
+      .notNull()
+      .references(() => checkoutRequests.id, { onDelete: 'cascade' }),
+    variantId: varchar('variantId', { length: 7 })
+      .notNull()
+      .references(() => productVariants.id, { onDelete: 'cascade' }),
+    quantity: integer('quantity').notNull(),
+    status: stockReservationStatusEnum('status').default('HELD').notNull(),
+    /** Compared against the database clock, never an instance clock. */
+    expiresAt: timestamp('expiresAt', { mode: 'date' }).notNull(),
+    /** When the hold left `HELD`; null while it is live. */
+    settledAt: timestamp('settledAt', { mode: 'date' }),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
+  },
+  (t) => [
+    unique('StockReservation_checkoutRequestId_variantId_key').on(
+      t.checkoutRequestId,
+      t.variantId
+    ),
+    index('StockReservation_status_expiresAt_idx').on(t.status, t.expiresAt),
+    index('StockReservation_variantId_status_idx').on(t.variantId, t.status),
+    index('StockReservation_checkoutRequestId_idx').on(t.checkoutRequestId),
+    check('StockReservation_quantity_positive', sql`${t.quantity} > 0`),
   ]
 )
 
@@ -872,6 +964,64 @@ export const productShares = pgTable(
   ]
 )
 
+// ─── Product Affinity Scores ─────────────────────────────
+
+/**
+ * One directed association from an anchor product to a recommended product.
+ *
+ * Directed rather than symmetric: "shoppers who bought A also bought B" does
+ * not carry the same strength as the reverse when A is a staple and B is an
+ * add-on.
+ *
+ * Rows are written only by the scoring job, which enforces a minimum support
+ * floor in its aggregation so a pair backed by a single order — which would
+ * leak one shopper's basket — never reaches this table. `support` is stored
+ * alongside `score` so the scoring model can move from weighted counts to a
+ * normalised measure without a migration.
+ */
+export const productAffinityScores = pgTable(
+  'ProductAffinityScore',
+  {
+    id: varchar('id', { length: 7 })
+      .primaryKey()
+      .$defaultFn(() => generateShortId()),
+    anchorProductId: varchar('anchorProductId', { length: 7 })
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    recommendedProductId: varchar('recommendedProductId', { length: 7 })
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    /** Weighted association strength; higher is stronger. */
+    score: doublePrecision('score').notNull(),
+    /** Distinct orders or users backing the pair. */
+    support: integer('support').notNull(),
+    /** Dominant contributing signal. */
+    source: text('source').notNull().default('combined'),
+    computedAt: timestamp('computedAt', { mode: 'date' })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    unique('ProductAffinityScore_anchor_recommended_key').on(
+      t.anchorProductId,
+      t.recommendedProductId
+    ),
+    index('ProductAffinityScore_anchor_score_idx').on(
+      t.anchorProductId,
+      t.score.desc()
+    ),
+    index('ProductAffinityScore_recommendedProductId_idx').on(
+      t.recommendedProductId
+    ),
+    index('ProductAffinityScore_computedAt_idx').on(t.computedAt),
+    check(
+      'ProductAffinityScore_no_self_reference',
+      sql`${t.anchorProductId} <> ${t.recommendedProductId}`
+    ),
+    check('ProductAffinityScore_support_positive', sql`${t.support} >= 1`),
+  ]
+)
+
 // ─── Relations ───────────────────────────────────────────
 
 export const usersRelations = relations(users, ({ many, one }) => ({
@@ -973,6 +1123,7 @@ export const productVariantsRelations = relations(
     optionValues: many(productVariantOptionValues),
     orderItems: many(orderItems),
     cartItems: many(cartItems),
+    reservations: many(stockReservations),
   })
 )
 
@@ -992,7 +1143,7 @@ export const productVariantOptionValuesRelations = relations(
 
 export const checkoutRequestsRelations = relations(
   checkoutRequests,
-  ({ one }) => ({
+  ({ one, many }) => ({
     user: one(users, {
       fields: [checkoutRequests.userId],
       references: [users.id],
@@ -1000,6 +1151,21 @@ export const checkoutRequestsRelations = relations(
     order: one(orders, {
       fields: [checkoutRequests.id],
       references: [orders.checkoutRequestId],
+    }),
+    reservations: many(stockReservations),
+  })
+)
+
+export const stockReservationsRelations = relations(
+  stockReservations,
+  ({ one }) => ({
+    checkoutRequest: one(checkoutRequests, {
+      fields: [stockReservations.checkoutRequestId],
+      references: [checkoutRequests.id],
+    }),
+    variant: one(productVariants, {
+      fields: [stockReservations.variantId],
+      references: [productVariants.id],
     }),
   })
 )

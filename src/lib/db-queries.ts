@@ -42,6 +42,11 @@ import { isPaymentProvider } from './payments/providers'
 import type { VerifiedPayment } from './payments/gateway'
 import type { ShippingMethodName } from './shipping/methods'
 import { toShippingMethod } from './shipping/methods'
+import {
+  consumeForCheckoutRequest,
+  getHeldQuantitiesForCheckoutRequest,
+} from '@/features/orders/services/stock-reservation'
+import { availableUnits } from './stock-availability'
 
 // ─── Shared error types ──────────────────────────────────
 
@@ -101,6 +106,22 @@ export interface ProductListOptions {
   category?: string
 }
 
+/**
+ * Options for {@link db.products.findBestsellers}.
+ *
+ * `category` scopes the result to one catalog category, which the
+ * recommendation fallback uses to keep a cold-start rail topically relevant.
+ *
+ * `withCache` controls the Redis sold-count lookup only. Callers inside a
+ * `"use cache"` scope must pass `false`: nesting a Redis round trip inside a
+ * cached scope stores the same rows twice and splits invalidation across two
+ * systems, so the cached scope could serve data the tag revalidation already
+ * cleared.
+ */
+export interface BestsellerOptions extends ProductListOptions {
+  withCache?: boolean
+}
+
 /** Minimal product representation returned by list queries (includes derived price/stock). */
 export interface MinimalProduct {
   id: string
@@ -128,6 +149,12 @@ function deriveMinimalProduct(row: {
   const { variants, ...base } = row
   const price =
     variants.length > 0 ? Math.min(...variants.map((v) => v.price)) : 0
+  // On-hand units on purpose: these listings are served from `"use cache"`
+  // catalog scopes whose profiles outlive a hold by minutes, so a
+  // reservation-derived figure would be cached long after the hold settled
+  // (plan decision D4). Availability is recomputed per request at every point
+  // that can actually reject a shopper — the cart cap, cart validation, and
+  // the reservation grant itself.
   const stock = variants.reduce((sum, v) => sum + v.stock, 0)
   return { ...base, price, stock }
 }
@@ -143,13 +170,14 @@ type MinimalProductDerivedFields = {
 }
 
 const fetchProductSoldCounts = async (
-  productIds: string[]
+  productIds: string[],
+  withCache = true
 ): Promise<Map<string, number>> => {
   if (productIds.length === 0) {
     return new Map()
   }
 
-  const rows = await cacheProductSoldCounts(productIds, async () =>
+  const fetcher = async () =>
     drizzleDb
       .select({
         productId: orderItems.productId,
@@ -168,7 +196,10 @@ const fetchProductSoldCounts = async (
       )
       .where(inArray(orderItems.productId, productIds))
       .groupBy(orderItems.productId)
-  )
+
+  const rows = withCache
+    ? await cacheProductSoldCounts(productIds, fetcher)
+    : await fetcher()
 
   return new Map(rows.map((row) => [row.productId, row.soldCount]))
 }
@@ -253,9 +284,9 @@ export const db = {
      * @returns Array of products sorted by sales volume descending
      */
     findBestsellers: async (
-      options: ProductListOptions = {}
+      options: BestsellerOptions = {}
     ): Promise<Product[]> => {
-      const { limit = 5 } = options
+      const { limit = 5, category, withCache = true } = options
 
       // Single SQL query: LEFT JOIN a sales-aggregate subquery so products
       // with no sales still appear (totalSold = 0), then sort + limit in DB.
@@ -289,7 +320,11 @@ export const db = {
         })
         .from(products)
         .leftJoin(salesSubquery, eq(products.id, salesSubquery.productId))
-        .where(isNull(products.deletedAt))
+        .where(
+          category
+            ? and(isNull(products.deletedAt), eq(products.category, category))
+            : isNull(products.deletedAt)
+        )
         .orderBy(
           desc(sql`coalesce(${salesSubquery.totalSold}, 0)`),
           desc(products.createdAt)
@@ -319,7 +354,10 @@ export const db = {
         varsByProduct.set(v.productId, list)
       }
 
-      const soldCountByProductId = await fetchProductSoldCounts(productIds)
+      const soldCountByProductId = await fetchProductSoldCounts(
+        productIds,
+        withCache
+      )
 
       return rows.map((p) => ({
         ...serializeProduct(p),
@@ -433,7 +471,8 @@ export const db = {
     /**
      * Find product by ID with optional caching
      * @param id - Product ID
-     * @param withCache - Whether to use Redis cache
+     * @param withCache - Whether to use Redis cache. Pass `false` from inside a
+     *   `"use cache"` scope so the cached scope holds no nested Redis read.
      * @returns Product with full details or null if not found
      */
     findById: async (id: string, withCache = true): Promise<Product | null> => {
@@ -463,7 +502,10 @@ export const db = {
           },
         })
         if (!row) return null
-        const soldCountByProductId = await fetchProductSoldCounts([id])
+        const soldCountByProductId = await fetchProductSoldCounts(
+          [id],
+          withCache
+        )
         return {
           ...serializeProduct(row),
           soldCount: soldCountByProductId.get(id) ?? 0,
@@ -558,16 +600,38 @@ export const db = {
     /**
      * Find products with their variants for order stock validation.
      * Uses the primary DB to avoid stale reads before stock checks.
+     *
+     * Each variant carries an `availableStock` figure: on-hand minus units held
+     * by *other* checkout requests. The requesting checkout's own hold is added
+     * back, since those units are exactly what it is about to spend.
      */
-    findManyWithVariantsForOrderValidation: async (ids: string[]) => {
-      return primaryDrizzleDb.query.products.findMany({
-        where: and(inArray(products.id, ids), isNull(products.deletedAt)),
-        with: {
-          variants: {
-            where: (variant, operators) => operators.isNull(variant.deletedAt),
+    findManyWithVariantsForOrderValidation: async (
+      ids: string[],
+      checkoutRequestId?: string | null
+    ) => {
+      const [rows, ownHeld] = await Promise.all([
+        primaryDrizzleDb.query.products.findMany({
+          where: and(inArray(products.id, ids), isNull(products.deletedAt)),
+          with: {
+            variants: {
+              where: (variant, operators) =>
+                operators.isNull(variant.deletedAt),
+            },
           },
-        },
-      })
+        }),
+        checkoutRequestId
+          ? getHeldQuantitiesForCheckoutRequest(checkoutRequestId)
+          : Promise.resolve(new Map<string, number>()),
+      ])
+
+      return rows.map((row) => ({
+        ...row,
+        variants: row.variants.map((variant) => ({
+          ...variant,
+          availableStock:
+            availableUnits(variant) + (ownHeld.get(variant.id) ?? 0),
+        })),
+      }))
     },
 
     /**
@@ -586,9 +650,12 @@ export const db = {
 
     /**
      * Find a single product with its active variants for cart stock checks.
+     *
+     * Variants carry `availableStock` so the cart caps quantities at what a
+     * shopper could actually buy rather than at on-hand units.
      */
     findFirstForCart: async (productId: string) => {
-      return drizzleDb.query.products.findFirst({
+      const row = await drizzleDb.query.products.findFirst({
         where: and(eq(products.id, productId), isNull(products.deletedAt)),
         with: {
           variants: {
@@ -597,6 +664,16 @@ export const db = {
           },
         },
       })
+
+      if (!row) return row
+
+      return {
+        ...row,
+        variants: row.variants.map((variant) => ({
+          ...variant,
+          availableStock: availableUnits(variant),
+        })),
+      }
     },
   },
 
@@ -934,6 +1011,13 @@ export const db = {
           throw new StockConflictError(
             'Unable to reserve stock — item was sold out by a concurrent order'
           )
+        }
+
+        // On-hand and held units move together, in the transaction that commits
+        // the order. The claim-shaped update means a retried pipeline that
+        // reaches here twice consumes nothing the second time.
+        if (input.checkoutRequestId) {
+          await consumeForCheckoutRequest(tx, input.checkoutRequestId)
         }
 
         for (const applied of appliedCoupons) {
@@ -1535,18 +1619,26 @@ export const db = {
       Array<{
         id: string
         stock: number
+        reservedStock: number
+        availableStock: number
         deletedAt: Date | null
       }>
     > => {
       if (variantIds.length === 0) return []
-      return primaryDrizzleDb
+      const rows = await primaryDrizzleDb
         .select({
           id: productVariants.id,
           stock: productVariants.stock,
+          reservedStock: productVariants.reservedStock,
           deletedAt: productVariants.deletedAt,
         })
         .from(productVariants)
         .where(inArray(productVariants.id, variantIds))
+
+      return rows.map((row) => ({
+        ...row,
+        availableStock: availableUnits(row),
+      }))
     },
   },
 }

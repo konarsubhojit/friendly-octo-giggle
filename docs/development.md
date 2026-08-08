@@ -20,9 +20,6 @@ npm run db:generate
 
 # Create and apply database migration
 npm run db:migrate -- --name your_migration_name
-
-# Seed database with test data
-npm run db:seed
 ```
 
 ### Environment Setup
@@ -53,18 +50,24 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ### Development Commands
 
 ```bash
-npm run dev         # Start dev server over HTTP (port 3000)
-npm run dev:https   # Start dev server over HTTPS (experimental, self-signed cert)
+npm run dev         # Start dev server over HTTPS on port 3000 (experimental, self-signed cert)
 npm run build       # Build production bundle
+npm run analyze     # Build with the bundle analyzer enabled
 npm run start       # Start production server
 npm run lint        # Run ESLint (flat config)
+npm run lint:strict # Run ESLint, failing on any warning
+npm run format      # Rewrite files with Prettier
+npm run format:check # Check Prettier formatting
 npm run test        # Run unit tests (single run)
 npm run test:watch  # Run unit tests (watch mode)
 npm run test:coverage # Run unit tests with coverage
 npm run db:generate # Generate Drizzle migrations
 npm run db:migrate  # Apply migrations
-npm run db:seed     # Seed database
+npm run db:push     # Push schema directly, without a migration file
+npm run db:studio   # Open Drizzle Studio
 ```
+
+There is no plain-HTTP dev script; `npm run dev` is `next dev --experimental-https`.
 
 ### Workflow Setup
 
@@ -79,6 +82,91 @@ npx inngest-cli@latest dev
 - Admin checkout visibility is available at `/admin/checkout-requests`.
 
 ---
+
+### Build capabilities
+
+`next.config.ts` turns on two build-level capabilities beyond Cache Components.
+Both are top-level, stable options in Next.js 16.3 — neither belongs under
+`experimental`, where the 16.2-era names are deprecated.
+
+| Flag            | What it does                                                                       |
+| --------------- | ---------------------------------------------------------------------------------- |
+| `typedRoutes`   | Checks internal `href` / `redirect` / `router` targets against the real route tree |
+| `reactCompiler` | Memoizes client components automatically at build time                             |
+
+`reactCompiler` requires the `babel-plugin-react-compiler` devDependency. It is
+build-time only and never reaches the browser; without it the build aborts with
+an explicit resolution error rather than silently shipping unoptimized output.
+`vitest.config.mts` passes the same plugin to `@vitejs/plugin-react`, so
+`npm run test` exercises compiled components rather than the raw sources.
+
+**Deliberately not declared.** `turbopackFileSystemCacheForDev`,
+`turbopackFileSystemCacheForBuild` and `turbopackInferModuleSideEffects` are all
+`true` by default in 16.3. Restating a default in `next.config.ts` would create
+a second source of truth that silently diverges the day the default changes, so
+the flags are absent on purpose. `experimental.optimizePackageImports` is
+likewise absent: it was measured against this codebase and changed the client
+bundle by zero bytes, because every candidate package already ships ESM with
+`"sideEffects": false`. See `specs/015-build-and-dx-modernization/plan.md` for
+the measurements.
+
+### Memoization policy under the React Compiler
+
+Do not add `useMemo` or `useCallback` by hand. The compiler memoizes client
+components automatically, so a hand-written wrapper is at best redundant and at
+worst a stale dependency array waiting to happen.
+
+Two cases still justify one, and both are about behavior rather than speed:
+
+- The value's **referential identity is a dependency of a `useEffect`**, so a
+  new identity re-runs the effect. Keep the memo and say so in a comment.
+- The value's creation is a **side effect** that must happen once — an object
+  URL that a cleanup revokes, for example.
+
+If a component seems to need memoization for performance, that is a signal to
+check the compiler bailout register in
+`specs/015-build-and-dx-modernization/plan.md` rather than to add a wrapper. If
+`npm run lint` reports `react-hooks/preserve-manual-memoization` after you
+remove a memo, the removal was unsafe: put it back. Never suppress the rule.
+
+### Typed routes
+
+Internal route values are typed as `Route`, imported from `next`:
+
+```typescript
+import type { Route } from 'next'
+
+interface CtaButtonProps {
+  readonly href?: Route
+}
+```
+
+When the type checker rejects a route string, the remedy is a **corrected route
+string**, not an `as Route` cast — the whole point of the flag is that a route
+that does not exist fails the build instead of 404ing in production. Dynamic
+segments are expressed by making the component generic in the route literal
+(`Route<T>`), as `BreadcrumbItem` and `AdminPageShell` do, rather than widening
+to `string`. Exactly one escape hatch exists in the codebase, in
+`src/app/(public)/products/[id]/ProductClient.tsx`, where `usePathname()`
+returns `string` and a same-page query-string update cannot be statically typed;
+it is commented with that reason.
+
+### Clearing a corrupt Turbopack cache
+
+The Turbopack filesystem cache lives in `.next/cache/turbopack`. Deleting it is
+always safe:
+
+```bash
+rm -rf .next/cache/turbopack
+```
+
+The next build recompiles from scratch — roughly 45 s versus 11 s warm on a
+2-vCPU machine — and produces **byte-identical** output. Only time is lost.
+
+If a build dies with a `turbo-persistence` panic and `Aborting.`, the cache has
+been damaged rather than merely invalidated; Turbopack does not recover from
+that on its own. Delete the directory and rebuild. The failure is loud and
+non-zero-exit, so a damaged cache can never yield a wrong artifact.
 
 ### Current feature development map
 
@@ -442,32 +530,9 @@ npx drizzle-kit migrate
 }
 ```
 
-### Keeping the bootstrap script in sync
-
-`npm run db:bootstrap` applies `scripts/sql/bootstrap-drizzle-initial.sql`, an
-idempotent snapshot of the **full current schema** that also records every
-bundled migration as applied, so `npm run db:migrate` becomes a no-op
-afterwards. It is safe to run against an empty database as well as one that is
-only partially migrated.
-
-Whenever a new file is added to `drizzle/`, refresh the bootstrap snapshot:
-
-1. Create a scratch database and apply every file in `drizzle/` in order.
-2. Mirror the resulting schema into `scripts/sql/bootstrap-drizzle-initial.sql`
-   using idempotent statements only (`CREATE TABLE IF NOT EXISTS`,
-   `ADD COLUMN IF NOT EXISTS`, guarded `DO $$ ... $$` blocks for constraints and
-   enum types, `CREATE INDEX IF NOT EXISTS`).
-3. Add an `INSERT ... WHERE NOT EXISTS` row for the new migration using its
-   `when` value from `drizzle/meta/_journal.json` and the SHA-256 hash of the
-   migration file.
-4. Verify on a scratch database that bootstrap-then-migrate and
-   migrate-only produce the same schema, and that re-running the bootstrap is a
-   no-op.
-
 ### Best Practices
 
 - ✅ Always review generated SQL before committing
-- ✅ Regenerate the bootstrap snapshot whenever a migration is added
 - ✅ Use descriptive migration names
 - ✅ Test migrations locally first
 - ✅ Keep migrations small and incremental
@@ -1041,6 +1106,14 @@ const products = await drizzleDb.query.products.findMany({
 
 ### Redis Caching
 
+Redis and Cache Components are two separate layers with two separate jobs.
+Redis (`getCachedData`) owns cross-instance data reuse for route handlers —
+cart, orders, admin lists, exchange rates, share/pincode lookups, and public
+API payloads. Cache Components (`"use cache"`) owns render output for the
+prerendered public shell. **Never nest a Redis read inside a `"use cache"`
+scope**: it stores the same rows twice under two independent expiries and
+splits invalidation across two systems.
+
 **Cache expensive queries**
 
 ```typescript
@@ -1064,14 +1137,35 @@ await db.products.create(data)
 await invalidateCache('products:*')
 ```
 
+`invalidateProductCaches` in `src/lib/cache.ts` already does both halves — the
+Redis pattern deletes and the `revalidateCacheTags` call — so call it rather
+than invalidating the two layers separately at each site.
+
 ### Next.js Optimization
 
 **Storefront performance budgets**
 
 - Home, shop, and product pages should target: **LCP ≤ 2.5s**, **INP ≤ 200ms**, **CLS ≤ 0.1**, and **TBT ≤ 200ms**
 - Keep first-load JavaScript lean on key storefront routes; treat a **10% bundle growth** as a regression that needs review
-- Prefer `revalidate = 60` for public storefront pages unless telemetry shows stale content is unacceptable
+- Public storefront pages use the Cache Components model: wrap the shared, non-personalized read in a `"use cache"` scope with an explicit `cacheLife` profile and entity-keyed `cacheTag` values, and leave genuinely per-request regions inside a `Suspense` boundary. Do not add `export const revalidate` or `export const dynamic` — Next.js 16.2 fails the build when either is combined with `cacheComponents`.
 - Use `npm run analyze` locally (or in CI with `ANALYZE=true`) to inspect route bundles before merging
+
+**Declaring a route per-request**
+
+Without segment configuration, a route that renders per-request data but never
+reads request data would be prerendered. Declare it explicitly:
+
+```typescript
+import { connection } from 'next/server'
+
+export async function GET() {
+  await connection() // never prerender: this response changes every request
+  return new NextResponse(renderPrometheusMetrics())
+}
+```
+
+Routes that already call `auth()`, `cookies()`, `headers()`, or read
+`searchParams` are self-classifying and need nothing extra.
 
 **Use Server Components for data fetching**
 
@@ -1270,19 +1364,27 @@ export default async function AdminPage() {
 ### Data fetching with cache
 
 ```typescript
-import { unstable_cache } from 'next/cache';
+import { cacheLife, cacheTag } from 'next/cache';
+import { db } from '@/lib/db';
+import { bestsellersTag, productListTag } from '@/lib/cache-tags';
 
-const getCachedProducts = unstable_cache(
-  async () => await db.products.findAll(),
-  ['products'],
-  { revalidate: 60 }
-);
+async function getCachedBestsellers() {
+  'use cache';
+  cacheLife('catalog');                       // named profile from next.config.ts
+  cacheTag(bestsellersTag(), productListTag()); // how writes invalidate this scope
 
-export default async function ProductsPage() {
-  const products = await getCachedProducts();
+  // `withCache: false` — a "use cache" scope must not nest a Redis read.
+  return db.products.findBestsellers({ withCache: false });
+}
+
+export default async function BestsellersRail() {
+  const products = await getCachedBestsellers();
   return <ProductGrid products={products} />;
 }
 ```
+
+`unstable_cache` and `export const revalidate` are not used in this codebase;
+Next.js 16.2 rejects segment configuration when `cacheComponents` is enabled.
 
 ### Form handling with validation
 

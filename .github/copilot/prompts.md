@@ -9,18 +9,18 @@ This file contains reusable prompts for common tasks in this project.
 ```
 Create a new API endpoint at /api/[name] that:
 - Validates input using Zod schema
-- Uses Prisma for database operations
+- Uses Drizzle ORM via src/lib/db.ts for database operations
 - Returns type-safe responses with apiSuccess/apiError
 - Implements proper error handling
 - Includes authentication check if needed
-- Follows the pattern in lib/api-utils.ts
+- Follows the pattern in src/lib/api-utils.ts
 ```
 
 ### Add Cache to Endpoint
 
 ```
 Add Redis caching to the [endpoint] API route:
-- Use getCachedData from lib/redis.ts
+- Use getCachedData from src/lib/redis.ts
 - Set TTL to [X] seconds with stale-while-revalidate
 - Include stampede prevention
 - Add cache invalidation on related mutations
@@ -28,25 +28,26 @@ Add Redis caching to the [endpoint] API route:
 
 ## Database Operations
 
-### Create New Model
+### Create New Table
 
 ```
-Add a new Prisma model for [entity]:
+Add a new Drizzle table for [entity] in src/lib/schema.ts:
 - Include proper relations
 - Add appropriate indexes
-- Use cuid() for IDs
+- Use a Base62 7-char short ID (varchar(7)) via src/lib/short-id.ts
 - Include createdAt and updatedAt timestamps
-- Follow existing model patterns in schema.prisma
+- Follow existing table patterns in src/lib/schema.ts
 ```
 
 ### Add Migration
 
 ```
-Create a Prisma migration to:
+Create a Drizzle migration to:
 - [describe changes]
+- Generate it with npm run db:generate and review the SQL in drizzle/
 - Ensure backward compatibility
 - Include data migration if needed
-- Update seed.ts if relevant
+- Apply it with npm run db:migrate
 ```
 
 ## Authentication & Authorization
@@ -55,7 +56,7 @@ Create a Prisma migration to:
 
 ```
 Add authentication to [route/component]:
-- Check session with auth() from lib/auth.ts
+- Check session with auth() from src/lib/auth.ts
 - Redirect unauthenticated users to /auth/signin
 - Check user role if admin access required
 - Return proper error for unauthorized access
@@ -102,7 +103,7 @@ Add loading and error states to [component]:
 
 ```
 Create a Server Action for [operation]:
-- Add to lib/actions.ts
+- Add to the owning src/features/<domain>/actions/ module
 - Use 'use server' directive
 - Validate input with Zod
 - Return AsyncResult type
@@ -114,7 +115,7 @@ Create a Server Action for [operation]:
 
 ```
 Convert [API route] to a Server Action:
-- Move logic to lib/actions.ts
+- Move logic to the owning src/features/<domain>/actions/ module
 - Update client components to use the action
 - Remove API route file
 - Add optimistic updates if applicable
@@ -127,7 +128,7 @@ Convert [API route] to a Server Action:
 
 ```
 Add Zod validation for [input]:
-- Define schema in lib/validations.ts
+- Define schema under src/lib/validations/, or the feature's validations.ts
 - Export inferred TypeScript type
 - Use in API route or Server Action
 - Add custom error messages
@@ -151,7 +152,7 @@ Test the authentication flow for [feature]:
 
 ```
 Optimize the database query in [location]:
-- Add proper indexes in Prisma schema
+- Add proper indexes in src/lib/schema.ts
 - Use select to fetch only needed fields
 - Implement pagination if returning many records
 - Add cursor-based pagination for infinite scroll
@@ -188,7 +189,7 @@ Debug caching issue in [endpoint]:
 Fix TypeScript errors in [file]:
 - Check type definitions
 - Verify Zod schema matches types
-- Update Prisma client if schema changed
+- Regenerate migrations with npm run db:generate if the schema changed
 - Use type guards where needed
 - Add proper null checks
 ```
@@ -223,7 +224,7 @@ Add new environment variable [NAME]:
 
 ```
 Extract reusable logic from [component/function]:
-- Create utility function in lib/
+- Create utility function in src/lib/
 - Add proper TypeScript types
 - Make it generic if applicable
 - Add JSDoc comments

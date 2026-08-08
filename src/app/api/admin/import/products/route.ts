@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { revalidateTag } from 'next/cache'
 import { ProductInputSchema } from '@/features/product/validations'
 import { parseCsv } from '@/features/admin/services/admin-csv'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
@@ -13,8 +12,6 @@ import {
 } from '@/lib/api-utils'
 import { primaryDrizzleDb } from '@/lib/db'
 import { products } from '@/lib/schema'
-
-export const dynamic = 'force-dynamic'
 
 const ImportRequestSchema = z.object({
   csv: z.string().min(1),
@@ -122,7 +119,6 @@ export const POST = async (request: Request) => {
     })
 
     await invalidateProductCaches()
-    revalidateTag('products', 'max')
 
     return apiSuccess({
       ...report,

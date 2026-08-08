@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { SHORT_ID_REGEX } from '@/lib/validations/primitives'
 import { MAX_MONEY_AMOUNT } from '@/lib/money'
-import { DISCOUNT_TYPES } from '@/features/cart/services/coupon-service'
+import { DISCOUNT_TYPES } from '@/lib/constants/discounts'
 
 // ─── Admin Email-Failures Validation Schemas ──────────────
 

@@ -72,13 +72,8 @@ vi.mock('@/lib/logger', () => ({
   logError: vi.fn(),
 }))
 
-vi.mock('next/cache', () => ({
-  revalidateTag: vi.fn(),
-}))
-
 import { db } from '@/lib/db'
 import { invalidateProductCaches } from '@/lib/cache'
-import { revalidateTag } from 'next/cache'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 
 const makeRequest = (params?: Record<string, string>) => {
@@ -390,7 +385,6 @@ describe('Admin Products API', () => {
         ...validProductInput,
         images: [],
       })
-      expect(revalidateTag).toHaveBeenCalledWith('products', {})
       expect(invalidateProductCaches).toHaveBeenCalled()
     })
   })

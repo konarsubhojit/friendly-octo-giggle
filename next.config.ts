@@ -10,6 +10,36 @@ const nextConfig: NextConfig = {
   // india-pincode reads data/pincodes.json.gz at runtime via fs —
   // keep it out of the Turbopack bundle so the data file is resolvable.
   serverExternalPackages: ['india-pincode'],
+  // Typed routes: internal `href`/`redirect`/`router` targets are checked
+  // against the real route tree, so a mistyped route is a compile error rather
+  // than a production 404. Stable and top-level in Next.js 16.3 —
+  // `experimental.typedRoutes` is deprecated. Route props are declared as
+  // `Route` (imported from `next`); an `as Route` cast is not the remedy for a
+  // type error here, a corrected route string is.
+  typedRoutes: true,
+  // React Compiler: client components are memoized automatically, so
+  // re-render correctness no longer depends on hand-placed `useMemo` /
+  // `useCallback` dependency arrays. Top-level and stable in Next.js 16.3.
+  // Requires `babel-plugin-react-compiler` (a devDependency); without it the
+  // build aborts with an explicit resolution error rather than silently
+  // shipping unoptimized output, which is what spec 015 FR-001 asks for.
+  // Cost is build time only: the compile step goes from ~0.5 s to ~10 s.
+  reactCompiler: true,
+  // Cache Components: the public shell is prerendered and per-request regions
+  // stream into Suspense holes. Incompatible with `export const dynamic` /
+  // `revalidate` / `runtime` segment configs, which is why none remain.
+  cacheComponents: true,
+  // Named `cacheLife` profiles for every `"use cache"` scope in the app.
+  // Values are anchored to the matching `CACHE_TTL` entries in src/lib/cache.ts
+  // so the Cache Components layer and the Redis layer cannot disagree.
+  cacheLife: {
+    // Catalog listings and bestsellers (CACHE_TTL.PRODUCTS_LIST = 600).
+    catalog: { stale: 60, revalidate: 300, expire: 3600 },
+    // Product detail (CACHE_TTL.PRODUCT_DETAIL = 900).
+    product: { stale: 60, revalidate: 900, expire: 3600 },
+    // Category taxonomy (CACHE_TTL.CATEGORIES_LIST = 3600).
+    taxonomy: { stale: 300, revalidate: 3600, expire: 86400 },
+  },
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [

@@ -1,13 +1,14 @@
 'use client'
 
+import type { Route } from 'next'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import type { AdminPermission } from '@/lib/constants/roles'
 
 interface NavItem {
-  readonly href: string
+  readonly href: Route
   readonly label: string
   readonly badge?: number
   readonly keywords?: readonly string[]
@@ -17,7 +18,7 @@ interface NavItem {
 
 interface NavGroup {
   readonly label: string
-  readonly href?: string
+  readonly href?: Route
   readonly items?: readonly NavItem[]
 }
 
@@ -90,6 +91,12 @@ const NAV_GROUPS: readonly NavGroup[] = [
         href: '/admin/email-failures',
         label: 'Email Failures',
         keywords: ['notifications', 'errors', 'emails'],
+        permission: 'system:manage',
+      },
+      {
+        href: '/admin/recommendations',
+        label: 'Recommendations',
+        keywords: ['affinity', 'scores', 'rails', 'cross-sell'],
         permission: 'system:manage',
       },
       {
@@ -292,12 +299,9 @@ function CommandPalette({
   const inputRef = useRef<HTMLInputElement>(null)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [prevOpen, setPrevOpen] = useState(open)
-  const allItems = useMemo(
-    () => getAllNavItems(groups, failedEmailCount),
-    [groups, failedEmailCount]
-  )
+  const allItems = getAllNavItems(groups, failedEmailCount)
 
-  const filtered = useMemo(() => {
+  const filtered = (() => {
     if (!query.trim()) return allItems
     const q = query.toLowerCase()
     return allItems.filter(
@@ -306,7 +310,7 @@ function CommandPalette({
         item.href.toLowerCase().includes(q) ||
         item.keywords?.some((kw) => kw.includes(q))
     )
-  }, [query, allItems])
+  })()
 
   // Reset state when the dialog opens (state-based prev tracking)
   if (open && !prevOpen) {
@@ -329,24 +333,21 @@ function CommandPalette({
     setPrevFilteredLen(filtered.length)
   }
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault()
-        setSelectedIndex((i) => (i + 1) % filtered.length)
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        setSelectedIndex((i) => (i - 1 + filtered.length) % filtered.length)
-      } else if (e.key === 'Enter' && filtered[selectedIndex]) {
-        e.preventDefault()
-        onClose()
-        router.push(filtered[selectedIndex].href)
-      } else if (e.key === 'Escape') {
-        onClose()
-      }
-    },
-    [filtered, selectedIndex, onClose, router]
-  )
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setSelectedIndex((i) => (i + 1) % filtered.length)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSelectedIndex((i) => (i - 1 + filtered.length) % filtered.length)
+    } else if (e.key === 'Enter' && filtered[selectedIndex]) {
+      e.preventDefault()
+      onClose()
+      router.push(filtered[selectedIndex].href)
+    } else if (e.key === 'Escape') {
+      onClose()
+    }
+  }
 
   if (!open) return null
 
@@ -437,10 +438,7 @@ export function AdminNavLinksClient({
   permissions,
 }: AdminNavLinksClientProps) {
   const [paletteOpen, setPaletteOpen] = useState(false)
-  const visibleGroups = useMemo(
-    () => getVisibleNavGroups(permissions),
-    [permissions]
-  )
+  const visibleGroups = getVisibleNavGroups(permissions)
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {

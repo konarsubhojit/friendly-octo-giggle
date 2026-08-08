@@ -17,11 +17,11 @@
 
 ## 1. Current Status Snapshot
 
-As of July 2026, the project is a Next.js 16 App Router storefront running primarily as a server-rendered application with ISR for public pages and dynamic route handlers for user- and admin-specific data.
+As of August 2026, the project is a Next.js 16 App Router storefront running on the Cache Components rendering model: public surfaces are served as a prerendered static shell with per-request regions streamed into `Suspense` holes, while user- and admin-specific data is read by dynamic route handlers.
 
 Key current-state points:
 
-- Public pages such as the home page and shop page use `revalidate = 60` instead of forcing every request dynamic.
+- Public pages such as the shop page and product detail pages serve catalog data from `"use cache"` scopes with explicit `cacheLife` profiles and entity-keyed `cacheTag` values. The legacy segment model (`export const dynamic` / `revalidate` / `runtime`) has been removed entirely — Next.js 16.2 rejects it when `cacheComponents` is enabled.
 - The application uses Neon PostgreSQL through Drizzle with a primary connection plus an optional read replica via `withReplicas`.
 - Authentication is handled by NextAuth v5 with Google OAuth, Microsoft Entra ID, and credentials-based login.
 - Sessions use JWT strategy with secure cookies, while the Drizzle adapter persists auth-related records such as users, accounts, and verification tokens.
@@ -81,13 +81,13 @@ The dominant design principles in the current code are:
 
 ### Frontend
 
-| Technology    | Version | Purpose                                               |
-| ------------- | ------- | ----------------------------------------------------- |
-| React         | 19.2.4  | Rendering, client interactivity, server components    |
-| Next.js       | 16.1.6  | App Router, route handlers, ISR, image optimization   |
-| TypeScript    | 5.9.3   | Static typing across app, services, and tests         |
-| Tailwind CSS  | 4.1.18  | Styling system and design tokens                      |
-| Redux Toolkit | 2.11.2  | Shared client state for cart, orders, admin, wishlist |
+| Technology    | Version | Purpose                                                          |
+| ------------- | ------- | ---------------------------------------------------------------- |
+| React         | 19.2.4  | Rendering, client interactivity, server components               |
+| Next.js       | 16.1.6  | App Router, route handlers, Cache Components, image optimization |
+| TypeScript    | 5.9.3   | Static typing across app, services, and tests                    |
+| Tailwind CSS  | 4.1.18  | Styling system and design tokens                                 |
+| Redux Toolkit | 2.11.2  | Shared client state for cart, orders, admin, wishlist            |
 
 ### Backend and Domain Services
 
@@ -267,6 +267,63 @@ Variant behavior in the live codebase is more capable than the earlier document 
 
 ## 7. Caching, Search, and State
 
+### Two cache layers, one responsibility each
+
+The application has two independent caches. Confusing them is the most common
+source of stale-data bugs, so the boundary is explicit:
+
+| Layer                            | Owns                                                                                                          | Does **not** own                                                      |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Cache Components (`"use cache"`) | Render output for the prerendered public shell, invalidated by tag                                            | Cross-instance data reuse for route handlers                          |
+| Redis (`getCachedData`)          | Cart, orders, admin lists, sales, exchange rates, share/pincode lookups, and the payloads of public read APIs | Anything inside a `"use cache"` scope — a nested Redis read is banned |
+| PostgreSQL                       | The correctness floor: every cached path degrades to a direct query                                           | —                                                                     |
+
+A `"use cache"` scope must never nest a Redis read. Doing so stores the same
+rows twice under two independent expiries and splits invalidation across two
+systems, so tag revalidation could clear one copy while the other keeps
+serving superseded data. Cached scopes therefore call the database directly
+(`db.products.findById(id, false)`, `db.products.findBestsellers({ withCache: false })`).
+
+In a serverless deployment the two layers also differ in durability: the Cache
+Components store is per-instance and does not survive a deployment, whereas
+Redis is shared across instances. Redis remains the mechanism for cross-instance
+reuse; Cache Components is what puts catalog markup into the initial HTML.
+
+### Cache Components model
+
+`next.config.ts` sets `cacheComponents: true` and declares three named
+`cacheLife` profiles, anchored to the matching `CACHE_TTL` entries in
+`src/lib/cache.ts` so the two layers cannot disagree:
+
+| Profile    | `stale` | `revalidate` | `expire` | Used by                       |
+| ---------- | ------- | ------------ | -------- | ----------------------------- |
+| `catalog`  | 60      | 300          | 3600     | shop listing, bestsellers     |
+| `product`  | 60      | 900          | 3600     | product detail                |
+| `taxonomy` | 300     | 3600         | 86400    | category list, category chips |
+
+Every cached scope names a profile explicitly; an implicit lifetime is a defect,
+not a default. Time bounds are the safety net — tags are the freshness
+mechanism. The tag vocabulary lives in `src/lib/cache-tags.ts`:
+
+| Helper             | Tag                    | Revalidated by                                                          |
+| ------------------ | ---------------------- | ----------------------------------------------------------------------- |
+| `productTag(id)`   | `product:<id>`         | product/variant/option writes; order stock side effects                 |
+| `productListTag()` | `products:list`        | anything that changes catalog membership (create, delete, bulk, import) |
+| `bestsellersTag()` | `products:bestsellers` | order creation side effects, product delete                             |
+| `categoriesTag()`  | `categories:list`      | category create, update, delete, reorder                                |
+
+`revalidateCacheTags(tags, context)` is called from the same functions that
+already perform Redis invalidation (`invalidateProductCaches` in
+`src/lib/cache.ts`, `invalidateOrderCaches` in
+`src/features/orders/services/order-cache.ts`), so the two layers cannot drift.
+A tag revalidation failure is logged through `logError` and never fails the
+originating write — the database is already updated, and the `cacheLife` bound
+still guarantees eventual freshness.
+
+Cached scopes may not read sessions, cookies, or headers. Currency remains a
+client-side display concern in `CurrencyContext`, so cached price markup stays
+currency-agnostic.
+
 ### Redis Caching Strategy
 
 The cache layer in `lib/redis.ts` is optional and implements:
@@ -362,6 +419,65 @@ Two invariants keep a killed worker from stranding a request:
 Duplicate orders are impossible regardless: `Order.checkoutRequestId` and
 `Order.paymentTransactionId` are both unique.
 
+### Inventory Reservation
+
+Because the order — and therefore the stock decrement — is created by the
+durable pipeline rather than by the request the customer waits on, the units a
+shopper has committed to are still on the shelf for as long as the queue takes.
+Reservations close that window by taking an explicit hold at request acceptance.
+
+`features/orders/services/stock-reservation.ts` is the only module that writes
+reservation state. It owns two pieces of storage:
+
+- `StockReservation` — the ledger. One row per checkout request × variant, with
+  status `HELD`, `CONSUMED`, `RELEASED` or `EXPIRED`, an `expiresAt` stamp, and
+  `UNIQUE (checkoutRequestId, variantId)` so a replayed grant cannot double-hold.
+- `ProductVariant.reservedStock` — a denormalised counter of units currently
+  held. Availability is `stock - reservedStock`, computed on read and never
+  stored.
+
+The grant is a single conditional statement per variant:
+
+```sql
+UPDATE "ProductVariant"
+   SET "reservedStock" = "reservedStock" + $q
+ WHERE id = $v AND "deletedAt" IS NULL AND stock - "reservedStock" >= $q
+RETURNING id
+```
+
+Zero rows updated _is_ the denial — the same compare-and-swap idiom the codebase
+uses for coupon `usageCount` and the order stock decrement, so no two concurrent
+requests can be granted the same last unit. The grant is all-or-nothing and
+locks variants in sorted id order to avoid deadlock between overlapping carts.
+
+Every transition is claim-shaped, so replays are harmless:
+
+- **Consume** — inside the same transaction as the order insert and stock
+  decrement, `HELD → CONSUMED` and `reservedStock` drops by the consumed units.
+- **Release** — on terminal checkout failure and on retry exhaustion, best
+  effort: a failed release is logged and never masks the original failure.
+- **Expire** — `expire-stock-reservations` runs every five minutes, claims at
+  most 500 rows whose `expiresAt` has passed **by the database clock**, and
+  returns their units. The 30-minute TTL is far longer than the pipeline's
+  worst observed latency, so expiry only ever reclaims abandoned holds.
+
+Restock (`Order.stockRestoredAt`) credits `stock` only. Reserved units are
+already accounted for by the ledger, so a cancellation never inflates the
+counter.
+
+Availability is deliberately kept **out** of `"use cache"` catalog scopes: a
+cached page may show a slightly stale number, but every rejecting decision point
+— add to cart, cart read, order validation — recomputes it per request. Order
+validation runs on behalf of a request that already holds its own reservation,
+so it adds that request's held quantities back before comparing.
+
+Admin surfaces expose the split: the checkout-requests dashboard shows
+reservation state and expiry, variant views show on-hand / reserved / available,
+and a manual release (`orders:update`, audit-logged) exists for a stuck request.
+Editing a variant's stock below its reserved quantity is rejected with 409.
+`application_stock_reservations_total` counts each outcome
+(`granted`, `denied`, `consumed`, `released`, `expired`, `manually_released`).
+
 ### Checkout Settlement Push
 
 The payment page does not ask whether the order exists yet; it is told.
@@ -456,11 +572,11 @@ no separate cron endpoint to authenticate:
 - `retry-failed-emails` daily at 02:30 UTC
 - `refresh-exchange-rates` every 6 hours
 - `scan-abandoned-carts` daily at 10:00 UTC
+- `expire-stock-reservations` every 5 minutes
 
 Each scan fans out one event per item rather than looping in a single
 invocation, so a slow provider cannot stall the batch and every item retries
 independently.
-
 
 ### Exchange Rate Refresh
 
@@ -515,11 +631,19 @@ The project is designed for Vercel-style serverless deployment with:
 
 ### Rendering Strategy
 
-The current storefront is not universally dynamic. Public pages now lean on ISR where appropriate:
+The storefront runs on the Cache Components model. A production build reports
+117 routes: 23 fully static (`○`), 21 partially prerendered (`◐`), and 73
+dynamic (`ƒ`).
 
-- home page: `revalidate = 60`
-- shop page: `revalidate = 60`
-- user- and admin-specific APIs: dynamic route handlers where personalization is required
+- `/shop` — static shell plus a cached bestsellers rail; the `searchParams`-driven catalog grid streams into a `Suspense` hole.
+- `/products/[id]` — cached product read with `cacheLife('product')` and `cacheTag(productTag(id))`; the AI feature flag and `?v=` variant preselection stream separately. The top 20 products by sales volume are prerendered at build time via `generateStaticParams`, and the rest are generated on demand.
+- Cart, orders, wishlist, account, and every `/admin` surface read session state outside any cached scope, so no personalized markup can enter the shell.
+- User- and admin-specific APIs stay dynamic route handlers.
+
+Two build-time constraints are worth knowing before touching this area:
+
+- `generateStaticParams` may not return an empty array under Cache Components (`EmptyGenerateStaticParamsError`, Next.js `E898`). `/products/[id]` therefore returns a single stand-in id when the catalog cannot be read, and resolves that id to `notFound()` without a query.
+- An error thrown out of a `"use cache"` scope aborts that route's prerender even if a caller catches it. A cached scope that must degrade has to absorb its own failure; one that must not cache a failed read has to be kept off the prerendered param list.
 
 ### Query and Read Optimization
 
@@ -553,7 +677,7 @@ This keeps the storefront operational even when optional edge services are unava
 
 ## Summary
 
-The current architecture is a replica-aware, serverless-first Next.js commerce application with optional edge accelerators layered around a stable PostgreSQL core. The biggest differences from earlier versions are the move to ISR-first public pages, JWT-based auth sessions, richer domain schema, optional search and edge-config infrastructure, and the addition of asynchronous email plus scheduled maintenance jobs.
+The current architecture is a replica-aware, serverless-first Next.js commerce application with optional edge accelerators layered around a stable PostgreSQL core. The biggest differences from earlier versions are the move to the Cache Components rendering model for public pages (a prerendered shell with streamed per-request holes, replacing segment-level ISR), JWT-based auth sessions, richer domain schema, optional search and edge-config infrastructure, and the addition of asynchronous email plus scheduled maintenance jobs.
 
 For deployment details, see [docs/deployment.md](./deployment.md).
 For setup guidance, see [docs/getting-started.md](./getting-started.md).

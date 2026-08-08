@@ -27,11 +27,13 @@ import {
   invalidateOrderCachesFunction,
 } from '@/features/orders/inngest/side-effects'
 import { sendAuthEmailFunction } from '@/features/auth/inngest/emails'
+import { computeProductAffinityFunction } from '@/features/recommendations/inngest/affinity'
 import {
   retryFailedEmailsFunction,
   retrySingleEmailFunction,
 } from '@/lib/inngest/functions/email-retry'
 import { refreshExchangeRatesFunction } from '@/lib/inngest/functions/exchange-rates'
+import { expireStockReservationsFunction } from '@/lib/inngest/functions/stock-reservations'
 
 export const inngestFunctions = [
   processCheckoutRequestFunction,
@@ -46,5 +48,7 @@ export const inngestFunctions = [
   scanAbandonedCartsFunction,
   sendAbandonedCartReminderFunction,
   refreshExchangeRatesFunction,
+  expireStockReservationsFunction,
+  computeProductAffinityFunction,
   cartRecoveryScorer,
 ] as const

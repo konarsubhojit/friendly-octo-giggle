@@ -54,6 +54,7 @@ export const PaymentStatusEnum = z.enum([
   'PAID',
   'FAILED',
   'REFUNDED',
+  'PARTIALLY_REFUNDED',
 ])
 
 export const CheckoutRequestStatusEnum = z.enum([
@@ -118,6 +119,22 @@ export const UpdateOrderStatusSchema = z.object({
     .nullish(),
 })
 
+/**
+ * Payload for an operator-initiated reservation release.
+ *
+ * The reason is recorded in the admin audit log, so a manual release is always
+ * attributable to a person and a stated cause.
+ */
+export const ReleaseReservationSchema = z.object({
+  reason: z
+    .string()
+    .trim()
+    .min(1, 'Reason is required')
+    .max(200, 'Reason must be under 200 characters')
+    .default('admin_manual_release'),
+})
+
 export type OrderStatusType = z.infer<typeof OrderStatusEnum>
+export type ReleaseReservationInput = z.infer<typeof ReleaseReservationSchema>
 export type CreateOrderInput = z.infer<typeof CreateOrderSchema>
 export type RefundOrderInput = z.infer<typeof RefundOrderSchema>

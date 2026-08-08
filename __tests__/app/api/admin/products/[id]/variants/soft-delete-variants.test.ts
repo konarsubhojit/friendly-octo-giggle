@@ -34,6 +34,7 @@ const mockVariant = {
   sku: null,
   price: 150,
   stock: 0,
+  reservedStock: 0,
   weightGrams: null,
   image: null,
   images: [] as string[],
@@ -96,6 +97,7 @@ const mockOrder = {
   discountAmount: 0,
   couponId: null,
   couponCode: null,
+  stockRestoredAt: null,
   createdAt: new Date('2025-01-05'),
   updatedAt: new Date('2025-01-05'),
 }

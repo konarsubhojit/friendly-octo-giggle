@@ -22,8 +22,6 @@ import {
   refundOrder,
 } from '@/features/orders/services/refund-service'
 
-export const dynamic = 'force-dynamic'
-
 const OrderActionSchema = z.object({
   action: z.literal('cancel'),
 })

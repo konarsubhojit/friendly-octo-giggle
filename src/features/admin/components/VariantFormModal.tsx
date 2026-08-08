@@ -212,6 +212,10 @@ const VariantFormModal = ({
   const priceInInr = convertCurrency(priceNum, priceCurrency, 'INR', rates)
   const priceWarning = formData.price !== '' && priceInInr <= 0
 
+  // Kept memoized under the React Compiler (spec 015 FR-008 policy): the
+  // object URL is a side effect that must be created once per file and revoked
+  // by the effect below, so this value's identity is a contract with that
+  // effect's dependency array, not a render optimization.
   const primaryImagePreviewUrl = useMemo(
     () =>
       primaryImageFile

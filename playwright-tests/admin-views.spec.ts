@@ -383,6 +383,107 @@ test.describe('Admin layout', () => {
   })
 })
 
+// ─── Admin gate under Cache Components (FR-008 acceptance 4) ─────────────────
+
+/**
+ * Under `cacheComponents: true` every admin page reports `◐` — a prerendered
+ * shell plus streamed dynamic holes. The shell itself carries no user data,
+ * but a shell that were served to an unauthorized visitor would still be a
+ * disclosure of the admin surface. These tests prove the `src/proxy.ts` gate
+ * runs ahead of any cached output: an unauthorized request is redirected or
+ * refused, and its response body contains none of the admin chrome.
+ *
+ * The always-on case is "no session at all". When a non-staff credential is
+ * supplied via `PLAYWRIGHT_CUSTOMER_EMAIL` / `PLAYWRIGHT_CUSTOMER_PASS`, the
+ * stronger authenticated-but-unauthorized case runs as well.
+ */
+const ADMIN_SHELL_MARKERS = [
+  'Product Management',
+  'Order Management',
+  'User Management',
+  'Quick Navigation',
+] as const
+
+const CUSTOMER_EMAIL = process.env.PLAYWRIGHT_CUSTOMER_EMAIL
+const CUSTOMER_PASS = process.env.PLAYWRIGHT_CUSTOMER_PASS
+
+async function expectNoAdminShell(page: Page) {
+  const html = await page.content()
+  for (const marker of ADMIN_SHELL_MARKERS) {
+    expect(html, `a rejected request rendered "${marker}"`).not.toContain(
+      marker
+    )
+  }
+}
+
+test.describe('admin gate rejects unauthorized requests', () => {
+  // Drop the stored admin session for this group only.
+  test.use({ storageState: { cookies: [], origins: [] } })
+
+  test('an anonymous visitor is redirected away from every admin screen', async ({
+    page,
+  }) => {
+    for (const route of ['/admin', '/admin/products', '/admin/users']) {
+      await page.goto(route, { waitUntil: 'load' })
+      await expect(
+        page,
+        `${route} must redirect an anonymous visitor to sign-in`
+      ).toHaveURL(/\/auth\/signin/)
+      await expectNoAdminShell(page)
+    }
+  })
+
+  test('an anonymous visitor gets 401 from admin APIs, never a cached payload', async ({
+    request,
+  }) => {
+    for (const endpoint of [
+      '/api/admin/products',
+      '/api/admin/orders',
+      '/api/admin/users',
+    ]) {
+      const response = await request.get(endpoint)
+      expect(
+        response.status(),
+        `${endpoint} must refuse an unauthenticated request`
+      ).toBe(401)
+      expect(await response.text()).not.toContain('"products"')
+    }
+  })
+
+  test('a signed-in non-staff user is refused the admin surface', async ({
+    page,
+    request,
+  }) => {
+    test.skip(
+      !CUSTOMER_EMAIL || !CUSTOMER_PASS,
+      'set PLAYWRIGHT_CUSTOMER_EMAIL and PLAYWRIGHT_CUSTOMER_PASS to run the non-staff role check'
+    )
+
+    await page.goto('/auth/signin')
+    await page.waitForSelector('input[name="identifier"]')
+    await page.fill('input[name="identifier"]', CUSTOMER_EMAIL!)
+    await page.fill(
+      'input[type="password"], input[name="password"]',
+      CUSTOMER_PASS!
+    )
+    await page.click('button[type="submit"]')
+    await page.waitForURL((url) => !url.pathname.includes('/auth/signin'))
+
+    await page.goto('/admin', { waitUntil: 'load' })
+    await expect(
+      page,
+      'a non-staff role must be redirected off /admin'
+    ).not.toHaveURL(/\/admin/)
+    await expectNoAdminShell(page)
+
+    const response = await request.get('/api/admin/products')
+    expect(
+      response.status(),
+      'a non-staff role must be refused by the admin API'
+    ).toBe(403)
+  })
+})
+
 // ─── Admin Orders – Status Change Confirmation ────────────────────────────────
 
 test.describe('Admin Orders - status change confirmation', () => {

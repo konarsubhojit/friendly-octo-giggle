@@ -1,7 +1,7 @@
 import type { coupons } from '@/lib/schema'
 import { parseMoney } from '@/lib/money'
 import type { UpdateCouponInput } from '@/features/admin/validations'
-import type { DiscountType } from '@/features/cart/services/coupon-service'
+import type { DiscountType } from '@/lib/constants/discounts'
 
 export interface AdminCouponRecord {
   readonly id: string

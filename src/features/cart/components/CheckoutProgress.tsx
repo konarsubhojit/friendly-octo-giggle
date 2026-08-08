@@ -1,8 +1,9 @@
+import type { Route } from 'next'
 import Link from 'next/link'
 
 type CheckoutStep = 'cart' | 'shipping' | 'payment' | 'review' | 'confirmation'
 
-const steps: Array<{ id: CheckoutStep; label: string; href: string }> = [
+const steps: Array<{ id: CheckoutStep; label: string; href: Route }> = [
   { id: 'cart', label: 'Cart', href: '/cart' },
   { id: 'shipping', label: 'Shipping', href: '/checkout/shipping' },
   { id: 'review', label: 'Review', href: '/checkout/review' },

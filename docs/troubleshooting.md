@@ -235,7 +235,6 @@ Error: relation "Product" already exists
    ```bash
    npx drizzle-kit drop
    npm run db:migrate
-   npm run db:seed
    ```
 
 2. **Apply pending migrations:**
@@ -244,13 +243,13 @@ Error: relation "Product" already exists
    npm run db:migrate
    ```
 
-3. **Bootstrap a partially initialized database:**
+3. **Repair a partially initialized database:**
 
    ```bash
-   npm run db:bootstrap
+   npm run db:push
    ```
 
-   Use this when the database already contains some of the app tables, enums, or indexes, but `drizzle.__drizzle_migrations` is missing or incomplete. The bootstrap SQL is idempotent and also inserts the expected migration rows into `drizzle.__drizzle_migrations` so later `npm run db:migrate` runs stay clean.
+   Use this when the database already contains some of the app tables, enums, or indexes, but `drizzle.__drizzle_migrations` is missing or incomplete. `db:push` reconciles the live schema with `src/lib/schema.ts` without writing a migration file. Prefer it only in development.
 
 4. **Resolve migration conflicts:**
 
@@ -1168,7 +1167,7 @@ grep "cache_operation" logs/*.log | grep -c "miss"
 curl https://yourdomain.com/api/metrics
 ```
 
-See `docs/observability.md` for metric names, alert thresholds, and synthetic uptime checks.
+See `docs/observability.md` for metric names and alert thresholds.
 
 ### Health Checks
 
@@ -1270,15 +1269,15 @@ export function rateLimit(ip: string, limit = 100) {
 
 ```bash
 # Development
-npm run dev                  # Start dev server
+npm run dev                 # Start dev server (HTTPS, self-signed cert)
 npm run build               # Build for production
 npm run start               # Start production server
 
 # Database
 npm run db:generate         # Generate Drizzle migrations
 npm run db:migrate          # Apply migrations
-npx drizzle-kit push        # Push schema changes directly
-npm run db:seed             # Seed database
+npm run db:push             # Push schema changes directly
+npm run db:studio           # Open Drizzle Studio
 
 # Troubleshooting
 rm -rf .next                # Clear Next.js cache

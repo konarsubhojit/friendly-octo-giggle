@@ -1,9 +1,135 @@
 {
-  "id": "dc6d5277-3eb2-4397-a9c9-5fd49063c0e7",
+  "id": "6b5aba1d-b65c-4284-845b-f0e17237e15c",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "public.AbandonedCartReminder": {
+      "name": "AbandonedCartReminder",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(7)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "cartId": {
+          "name": "cartId",
+          "type": "varchar(7)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reminderNumber": {
+          "name": "reminderNumber",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sentAt": {
+          "name": "sentAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "AbandonedCartReminder_cartId_idx": {
+          "name": "AbandonedCartReminder_cartId_idx",
+          "columns": [
+            {
+              "expression": "cartId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "AbandonedCartReminder_userId_idx": {
+          "name": "AbandonedCartReminder_userId_idx",
+          "columns": [
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "AbandonedCartReminder_sentAt_idx": {
+          "name": "AbandonedCartReminder_sentAt_idx",
+          "columns": [
+            {
+              "expression": "sentAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "AbandonedCartReminder_cartId_Cart_id_fk": {
+          "name": "AbandonedCartReminder_cartId_Cart_id_fk",
+          "tableFrom": "AbandonedCartReminder",
+          "tableTo": "Cart",
+          "columnsFrom": [
+            "cartId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "AbandonedCartReminder_userId_User_id_fk": {
+          "name": "AbandonedCartReminder_userId_User_id_fk",
+          "tableFrom": "AbandonedCartReminder",
+          "tableTo": "User",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "AbandonedCartReminder_cartId_reminderNumber_key": {
+          "name": "AbandonedCartReminder_cartId_reminderNumber_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "cartId",
+            "reminderNumber"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.Account": {
       "name": "Account",
       "schema": "",
@@ -124,6 +250,264 @@
           ]
         }
       },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.Address": {
+      "name": "Address",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(7)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "addressLine1": {
+          "name": "addressLine1",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "addressLine2": {
+          "name": "addressLine2",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "addressLine3": {
+          "name": "addressLine3",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pinCode": {
+          "name": "pinCode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "isDefault": {
+          "name": "isDefault",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "Address_userId_idx": {
+          "name": "Address_userId_idx",
+          "columns": [
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "Address_one_default_per_user_idx": {
+          "name": "Address_one_default_per_user_idx",
+          "columns": [
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"Address\".\"isDefault\" = true",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "Address_userId_User_id_fk": {
+          "name": "Address_userId_User_id_fk",
+          "tableFrom": "Address",
+          "tableTo": "User",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.AdminAuditLog": {
+      "name": "AdminAuditLog",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(7)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "UserRole",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "entity": {
+          "name": "entity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entityId": {
+          "name": "entityId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "diff": {
+          "name": "diff",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::json"
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "AdminAuditLog_userId_idx": {
+          "name": "AdminAuditLog_userId_idx",
+          "columns": [
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "AdminAuditLog_entity_idx": {
+          "name": "AdminAuditLog_entity_idx",
+          "columns": [
+            {
+              "expression": "entity",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "AdminAuditLog_createdAt_idx": {
+          "name": "AdminAuditLog_createdAt_idx",
+          "columns": [
+            {
+              "expression": "createdAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "AdminAuditLog_userId_User_id_fk": {
+          "name": "AdminAuditLog_userId_User_id_fk",
+          "tableFrom": "AdminAuditLog",
+          "tableTo": "User",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -507,6 +891,44 @@
           "primaryKey": false,
           "notNull": true
         },
+        "couponCode": {
+          "name": "couponCode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shippingMethod": {
+          "name": "shippingMethod",
+          "type": "ShippingMethod",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "paymentProvider": {
+          "name": "paymentProvider",
+          "type": "PaymentProvider",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "paymentOrderId": {
+          "name": "paymentOrderId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "paymentTransactionId": {
+          "name": "paymentTransactionId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "paymentSignature": {
+          "name": "paymentSignature",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "status": {
           "name": "status",
           "type": "CheckoutRequestStatus",
@@ -581,6 +1003,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "CheckoutRequest_paymentTransactionId_key": {
+          "name": "CheckoutRequest_paymentTransactionId_key",
+          "columns": [
+            {
+              "expression": "paymentTransactionId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -600,6 +1037,321 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.CouponRedemption": {
+      "name": "CouponRedemption",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(7)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "couponId": {
+          "name": "couponId",
+          "type": "varchar(7)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "orderId": {
+          "name": "orderId",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "discountAmount": {
+          "name": "discountAmount",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "CouponRedemption_couponId_idx": {
+          "name": "CouponRedemption_couponId_idx",
+          "columns": [
+            {
+              "expression": "couponId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "CouponRedemption_userId_idx": {
+          "name": "CouponRedemption_userId_idx",
+          "columns": [
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "CouponRedemption_createdAt_idx": {
+          "name": "CouponRedemption_createdAt_idx",
+          "columns": [
+            {
+              "expression": "createdAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "CouponRedemption_couponId_Coupon_id_fk": {
+          "name": "CouponRedemption_couponId_Coupon_id_fk",
+          "tableFrom": "CouponRedemption",
+          "tableTo": "Coupon",
+          "columnsFrom": [
+            "couponId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "CouponRedemption_userId_User_id_fk": {
+          "name": "CouponRedemption_userId_User_id_fk",
+          "tableFrom": "CouponRedemption",
+          "tableTo": "User",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "CouponRedemption_orderId_Order_id_fk": {
+          "name": "CouponRedemption_orderId_Order_id_fk",
+          "tableFrom": "CouponRedemption",
+          "tableTo": "Order",
+          "columnsFrom": [
+            "orderId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "CouponRedemption_couponId_orderId_key": {
+          "name": "CouponRedemption_couponId_orderId_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "couponId",
+            "orderId"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.Coupon": {
+      "name": "Coupon",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(7)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "discountType": {
+          "name": "discountType",
+          "type": "DiscountType",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "discountValue": {
+          "name": "discountValue",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "maxDiscountAmount": {
+          "name": "maxDiscountAmount",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "minCartValue": {
+          "name": "minCartValue",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "scopedCategories": {
+          "name": "scopedCategories",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::json"
+        },
+        "scopedProductIds": {
+          "name": "scopedProductIds",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::json"
+        },
+        "usageLimit": {
+          "name": "usageLimit",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "perUserLimit": {
+          "name": "perUserLimit",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "usageCount": {
+          "name": "usageCount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "stackable": {
+          "name": "stackable",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "isActive": {
+          "name": "isActive",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "startsAt": {
+          "name": "startsAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "endsAt": {
+          "name": "endsAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "Coupon_isActive_idx": {
+          "name": "Coupon_isActive_idx",
+          "columns": [
+            {
+              "expression": "isActive",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "Coupon_endsAt_idx": {
+          "name": "Coupon_endsAt_idx",
+          "columns": [
+            {
+              "expression": "endsAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "Coupon_code_unique": {
+          "name": "Coupon_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "code"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -808,6 +1560,95 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.NotificationPreference": {
+      "name": "NotificationPreference",
+      "schema": "",
+      "columns": {
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "transactionalEmail": {
+          "name": "transactionalEmail",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "transactionalPush": {
+          "name": "transactionalPush",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "transactionalSms": {
+          "name": "transactionalSms",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "marketingEmail": {
+          "name": "marketingEmail",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "marketingPush": {
+          "name": "marketingPush",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "marketingSms": {
+          "name": "marketingSms",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "NotificationPreference_userId_User_id_fk": {
+          "name": "NotificationPreference_userId_User_id_fk",
+          "tableFrom": "NotificationPreference",
+          "tableTo": "User",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.OrderItem": {
       "name": "OrderItem",
       "schema": "",
@@ -844,7 +1685,7 @@
         },
         "price": {
           "name": "price",
-          "type": "double precision",
+          "type": "numeric(12, 2)",
           "primaryKey": false,
           "notNull": true
         },
@@ -1025,11 +1866,98 @@
           "primaryKey": false,
           "notNull": false
         },
+        "subtotalAmount": {
+          "name": "subtotalAmount",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "shippingAmount": {
+          "name": "shippingAmount",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "taxAmount": {
+          "name": "taxAmount",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "shippingMethod": {
+          "name": "shippingMethod",
+          "type": "ShippingMethod",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
         "totalAmount": {
           "name": "totalAmount",
-          "type": "double precision",
+          "type": "numeric(12, 2)",
           "primaryKey": false,
           "notNull": true
+        },
+        "discountAmount": {
+          "name": "discountAmount",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "couponId": {
+          "name": "couponId",
+          "type": "varchar(7)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "couponCode": {
+          "name": "couponCode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "paymentStatus": {
+          "name": "paymentStatus",
+          "type": "PaymentStatus",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'PENDING'"
+        },
+        "paymentProvider": {
+          "name": "paymentProvider",
+          "type": "PaymentProvider",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "paymentOrderId": {
+          "name": "paymentOrderId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "paymentTransactionId": {
+          "name": "paymentTransactionId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "amountPaid": {
+          "name": "amountPaid",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "paidAt": {
+          "name": "paidAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
         },
         "status": {
           "name": "status",
@@ -1038,6 +1966,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'PENDING'"
+        },
+        "stockRestoredAt": {
+          "name": "stockRestoredAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
         },
         "trackingNumber": {
           "name": "trackingNumber",
@@ -1111,6 +2045,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "Order_paymentStatus_idx": {
+          "name": "Order_paymentStatus_idx",
+          "columns": [
+            {
+              "expression": "paymentStatus",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -1139,10 +2088,30 @@
           ],
           "onDelete": "set null",
           "onUpdate": "no action"
+        },
+        "Order_couponId_Coupon_id_fk": {
+          "name": "Order_couponId_Coupon_id_fk",
+          "tableFrom": "Order",
+          "tableTo": "Coupon",
+          "columnsFrom": [
+            "couponId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
+        "Order_paymentTransactionId_key": {
+          "name": "Order_paymentTransactionId_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "paymentTransactionId"
+          ]
+        },
         "Order_checkoutRequestId_key": {
           "name": "Order_checkoutRequestId_key",
           "nullsNotDistinct": false,
@@ -1221,6 +2190,160 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ProductAffinityScore": {
+      "name": "ProductAffinityScore",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(7)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "anchorProductId": {
+          "name": "anchorProductId",
+          "type": "varchar(7)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recommendedProductId": {
+          "name": "recommendedProductId",
+          "type": "varchar(7)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "score": {
+          "name": "score",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "support": {
+          "name": "support",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'combined'"
+        },
+        "computedAt": {
+          "name": "computedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ProductAffinityScore_anchor_score_idx": {
+          "name": "ProductAffinityScore_anchor_score_idx",
+          "columns": [
+            {
+              "expression": "anchorProductId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "score",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ProductAffinityScore_recommendedProductId_idx": {
+          "name": "ProductAffinityScore_recommendedProductId_idx",
+          "columns": [
+            {
+              "expression": "recommendedProductId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ProductAffinityScore_computedAt_idx": {
+          "name": "ProductAffinityScore_computedAt_idx",
+          "columns": [
+            {
+              "expression": "computedAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "ProductAffinityScore_anchorProductId_Product_id_fk": {
+          "name": "ProductAffinityScore_anchorProductId_Product_id_fk",
+          "tableFrom": "ProductAffinityScore",
+          "tableTo": "Product",
+          "columnsFrom": [
+            "anchorProductId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "ProductAffinityScore_recommendedProductId_Product_id_fk": {
+          "name": "ProductAffinityScore_recommendedProductId_Product_id_fk",
+          "tableFrom": "ProductAffinityScore",
+          "tableTo": "Product",
+          "columnsFrom": [
+            "recommendedProductId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "ProductAffinityScore_anchor_recommended_key": {
+          "name": "ProductAffinityScore_anchor_recommended_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "anchorProductId",
+            "recommendedProductId"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "ProductAffinityScore_no_self_reference": {
+          "name": "ProductAffinityScore_no_self_reference",
+          "value": "\"ProductAffinityScore\".\"anchorProductId\" <> \"ProductAffinityScore\".\"recommendedProductId\""
+        },
+        "ProductAffinityScore_support_positive": {
+          "name": "ProductAffinityScore_support_positive",
+          "value": "\"ProductAffinityScore\".\"support\" >= 1"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.ProductOptionValue": {
@@ -1564,17 +2687,16 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
+      "compositePrimaryKeys": {
         "ProductVariantOptionValue_pk": {
           "name": "ProductVariantOptionValue_pk",
-          "nullsNotDistinct": false,
           "columns": [
             "variantId",
             "optionValueId"
           ]
         }
       },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -1603,7 +2725,7 @@
         },
         "price": {
           "name": "price",
-          "type": "double precision",
+          "type": "numeric(12, 2)",
           "primaryKey": false,
           "notNull": true
         },
@@ -1612,6 +2734,19 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true
+        },
+        "reservedStock": {
+          "name": "reservedStock",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "weightGrams": {
+          "name": "weightGrams",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "image": {
           "name": "image",
@@ -1704,7 +2839,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "ProductVariant_reservedStock_non_negative": {
+          "name": "ProductVariant_reservedStock_non_negative",
+          "value": "\"ProductVariant\".\"reservedStock\" >= 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.Product": {
@@ -1817,6 +2957,291 @@
         }
       },
       "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.PushSubscription": {
+      "name": "PushSubscription",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(7)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "endpoint": {
+          "name": "endpoint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "p256dh": {
+          "name": "p256dh",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "auth": {
+          "name": "auth",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "userAgent": {
+          "name": "userAgent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "PushSubscription_userId_idx": {
+          "name": "PushSubscription_userId_idx",
+          "columns": [
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "PushSubscription_userId_User_id_fk": {
+          "name": "PushSubscription_userId_User_id_fk",
+          "tableFrom": "PushSubscription",
+          "tableTo": "User",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "PushSubscription_endpoint_unique": {
+          "name": "PushSubscription_endpoint_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "endpoint"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.Refund": {
+      "name": "Refund",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(7)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "orderId": {
+          "name": "orderId",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "PaymentProvider",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "paymentTransactionId": {
+          "name": "paymentTransactionId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "gatewayRefundId": {
+          "name": "gatewayRefundId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "amount": {
+          "name": "amount",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "RefundStatus",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'PENDING'"
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "errorMessage": {
+          "name": "errorMessage",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "initiatedById": {
+          "name": "initiatedById",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "processedAt": {
+          "name": "processedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "Refund_orderId_idx": {
+          "name": "Refund_orderId_idx",
+          "columns": [
+            {
+              "expression": "orderId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "Refund_status_idx": {
+          "name": "Refund_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "Refund_createdAt_idx": {
+          "name": "Refund_createdAt_idx",
+          "columns": [
+            {
+              "expression": "createdAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "Refund_gatewayRefundId_key": {
+          "name": "Refund_gatewayRefundId_key",
+          "columns": [
+            {
+              "expression": "gatewayRefundId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "Refund_orderId_Order_id_fk": {
+          "name": "Refund_orderId_Order_id_fk",
+          "tableFrom": "Refund",
+          "tableTo": "Order",
+          "columnsFrom": [
+            "orderId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "Refund_initiatedById_User_id_fk": {
+          "name": "Refund_initiatedById_User_id_fk",
+          "tableFrom": "Refund",
+          "tableTo": "User",
+          "columnsFrom": [
+            "initiatedById"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -2208,6 +3633,176 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.StockReservation": {
+      "name": "StockReservation",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(7)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "checkoutRequestId": {
+          "name": "checkoutRequestId",
+          "type": "varchar(7)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "variantId": {
+          "name": "variantId",
+          "type": "varchar(7)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "StockReservationStatus",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'HELD'"
+        },
+        "expiresAt": {
+          "name": "expiresAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "settledAt": {
+          "name": "settledAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "StockReservation_status_expiresAt_idx": {
+          "name": "StockReservation_status_expiresAt_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "expiresAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "StockReservation_variantId_status_idx": {
+          "name": "StockReservation_variantId_status_idx",
+          "columns": [
+            {
+              "expression": "variantId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "StockReservation_checkoutRequestId_idx": {
+          "name": "StockReservation_checkoutRequestId_idx",
+          "columns": [
+            {
+              "expression": "checkoutRequestId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "StockReservation_checkoutRequestId_CheckoutRequest_id_fk": {
+          "name": "StockReservation_checkoutRequestId_CheckoutRequest_id_fk",
+          "tableFrom": "StockReservation",
+          "tableTo": "CheckoutRequest",
+          "columnsFrom": [
+            "checkoutRequestId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "StockReservation_variantId_ProductVariant_id_fk": {
+          "name": "StockReservation_variantId_ProductVariant_id_fk",
+          "tableFrom": "StockReservation",
+          "tableTo": "ProductVariant",
+          "columnsFrom": [
+            "variantId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "StockReservation_checkoutRequestId_variantId_key": {
+          "name": "StockReservation_checkoutRequestId_variantId_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "checkoutRequestId",
+            "variantId"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "StockReservation_quantity_positive": {
+          "name": "StockReservation_quantity_positive",
+          "value": "\"StockReservation\".\"quantity\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
     "public.User": {
       "name": "User",
       "schema": "",
@@ -2345,7 +3940,15 @@
       },
       "indexes": {},
       "foreignKeys": {},
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "VerificationToken_identifier_token_pk": {
+          "name": "VerificationToken_identifier_token_pk",
+          "columns": [
+            "identifier",
+            "token"
+          ]
+        }
+      },
       "uniqueConstraints": {
         "VerificationToken_token_unique": {
           "name": "VerificationToken_token_unique",
@@ -2353,13 +3956,81 @@
           "columns": [
             "token"
           ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.WebhookEvent": {
+      "name": "WebhookEvent",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(7)",
+          "primaryKey": true,
+          "notNull": true
         },
-        "VerificationToken_identifier_token_key": {
-          "name": "VerificationToken_identifier_token_key",
+        "provider": {
+          "name": "provider",
+          "type": "PaymentProvider",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "eventId": {
+          "name": "eventId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "eventType": {
+          "name": "eventType",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "receivedAt": {
+          "name": "receivedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "processedAt": {
+          "name": "processedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "WebhookEvent_receivedAt_idx": {
+          "name": "WebhookEvent_receivedAt_idx",
+          "columns": [
+            {
+              "expression": "receivedAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "WebhookEvent_provider_eventId_key": {
+          "name": "WebhookEvent_provider_eventId_key",
           "nullsNotDistinct": false,
           "columns": [
-            "identifier",
-            "token"
+            "provider",
+            "eventId"
           ]
         }
       },
@@ -2469,12 +4140,24 @@
         "FAILED"
       ]
     },
+    "public.DiscountType": {
+      "name": "DiscountType",
+      "schema": "public",
+      "values": [
+        "PERCENTAGE",
+        "FIXED_AMOUNT",
+        "FREE_SHIPPING",
+        "BOGO"
+      ]
+    },
     "public.EmailType": {
       "name": "EmailType",
       "schema": "public",
       "values": [
         "order_confirmation",
-        "order_status_update"
+        "order_status_update",
+        "order_refund_update",
+        "abandoned_cart_reminder"
       ]
     },
     "public.FailedEmailStatus": {
@@ -2497,12 +4180,60 @@
         "CANCELLED"
       ]
     },
+    "public.PaymentProvider": {
+      "name": "PaymentProvider",
+      "schema": "public",
+      "values": [
+        "RAZORPAY",
+        "COD"
+      ]
+    },
+    "public.PaymentStatus": {
+      "name": "PaymentStatus",
+      "schema": "public",
+      "values": [
+        "PENDING",
+        "PAID",
+        "FAILED",
+        "REFUNDED",
+        "PARTIALLY_REFUNDED"
+      ]
+    },
+    "public.RefundStatus": {
+      "name": "RefundStatus",
+      "schema": "public",
+      "values": [
+        "PENDING",
+        "PROCESSED",
+        "FAILED"
+      ]
+    },
+    "public.ShippingMethod": {
+      "name": "ShippingMethod",
+      "schema": "public",
+      "values": [
+        "STANDARD",
+        "EXPRESS"
+      ]
+    },
+    "public.StockReservationStatus": {
+      "name": "StockReservationStatus",
+      "schema": "public",
+      "values": [
+        "HELD",
+        "CONSUMED",
+        "RELEASED",
+        "EXPIRED"
+      ]
+    },
     "public.UserRole": {
       "name": "UserRole",
       "schema": "public",
       "values": [
         "CUSTOMER",
-        "ADMIN"
+        "ADMIN",
+        "SUPPORT",
+        "FULFILMENT"
       ]
     }
   },

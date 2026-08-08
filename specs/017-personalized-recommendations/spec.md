@@ -4,7 +4,7 @@
 **Created**: 2026-08-01  
 **Status**: Draft  
 **Epic**: Phase 2 — Correctness and commerce depth  
-**Input**: Compute product affinity from purchase, share, and browsing signals and surface it as recommendation rails on the product page, the cart, the home page, and zero-result search, with a bestseller fallback whenever scores are unavailable.
+**Input**: Compute product affinity from purchase, wishlist, and share signals and surface it as recommendation rails on the product page, the cart, the `/shop` landing page, and zero-result search, with a bestseller fallback whenever scores are unavailable.
 
 ## Baseline (verified 2026-08-01)
 
@@ -28,7 +28,7 @@ A shopper viewing a product sees other products frequently bought or viewed alon
 
 1. **Given** products co-purchased in past orders, **When** a shopper opens one of them, **Then** its partners are shown ordered by association strength.
 2. **Given** a product with no association data, **When** a shopper opens it, **Then** the rail falls back to bestsellers from the same category rather than rendering empty.
-3. **Given** a recommendation candidate that is soft-deleted, out of stock, or unpublished, **When** the rail renders, **Then** that candidate is excluded.
+3. **Given** a recommendation candidate that is soft-deleted or out of stock, **When** the rail renders, **Then** that candidate is excluded.
 4. **Given** the recommendation rail, **When** it renders, **Then** it never includes the product currently being viewed.
 
 ---
@@ -56,13 +56,13 @@ A returning signed-in shopper sees a rail informed by their own orders, wishlist
 
 **Why this priority**: Highest personalization value, but it depends on per-user data and carries the strictest privacy constraints, so it follows the anonymous surfaces.
 
-**Independent Test**: Sign in as a user with order and wishlist history, load the home page, and confirm the rail reflects that history and differs from a second user's rail.
+**Independent Test**: Sign in as a user with order and wishlist history, load the `/shop` landing page, and confirm the rail reflects that history — combined with any recently-viewed seeds supplied by the browser — and differs from a second user's rail.
 
 **Acceptance Scenarios**:
 
-1. **Given** a signed-in shopper with history, **When** they open the home page, **Then** a personalized rail reflects their own signals.
-2. **Given** a guest, **When** they open the home page, **Then** they see a non-personalized rail and no per-user data is computed or stored for them.
-3. **Given** two different signed-in shoppers, **When** each loads the home page, **Then** neither receives the other's recommendations.
+1. **Given** a signed-in shopper with history, **When** they open the `/shop` landing page, **Then** a personalized rail reflects their own signals.
+2. **Given** a guest, **When** they open the `/shop` landing page, **Then** they see a non-personalized rail and no per-user data is computed or stored for them.
+3. **Given** two different signed-in shoppers, **When** each loads the `/shop` landing page, **Then** neither receives the other's recommendations.
 4. **Given** a signed-in shopper with no history, **When** the rail renders, **Then** it falls back to bestsellers.
 
 ---
@@ -99,16 +99,17 @@ A shopper whose search returns nothing is offered relevant products instead of a
 
 ### Functional Requirements
 
-- **FR-001**: A scheduled Inngest function MUST compute product affinity scores from order co-purchase, share, wishlist, and recently-viewed signals.
+- **FR-001**: A scheduled Inngest function MUST compute product affinity scores from server-side signals: order co-purchase, wishlist co-occurrence, and share co-occurrence.
+- **FR-001a**: The personalized rail MUST additionally accept the shopper's recently-viewed products as client-supplied anchor seeds at selection time. Recently-viewed history MUST NOT be persisted server-side, so it contributes to which scores are read rather than to how scores are computed.
 - **FR-002**: The scoring job MUST process a bounded window of history per run and MUST be safe to re-run without corrupting scores.
 - **FR-003**: Associations below a documented minimum support threshold MUST be discarded.
 - **FR-004**: Computed scores MUST be cached in Redis through `getCachedData` with stampede prevention and an explicit TTL.
 - **FR-005**: Every recommendation surface MUST fall back to category-scoped bestsellers when scores are unavailable, empty, or Redis is down.
-- **FR-006**: Recommendation results MUST exclude soft-deleted, unpublished, and out-of-stock products, and MUST exclude the anchor product or current cart contents.
-- **FR-007**: Recommendations MUST be surfaced on the product detail page, the cart page, the home page for signed-in shoppers, and the zero-result search state.
+- **FR-006**: Recommendation results MUST exclude soft-deleted and out-of-stock products, and MUST exclude the anchor product or current cart contents. The catalog has no separate publication state; soft-delete is the sole inactive-product marker.
+- **FR-007**: Recommendations MUST be surfaced on the product detail page, the cart page, the `/shop` landing page for signed-in shoppers, and the zero-result search state.
 - **FR-008**: Personalized results MUST be computed only for authenticated users, scoped strictly to the requesting user's own signals.
 - **FR-009**: Guest requests MUST NOT create, persist, or cache a per-user profile.
-- **FR-010**: Recommendation responses MUST NOT disclose exact stock counts.
+- **FR-010**: Recommendation responses MUST NOT disclose exact stock counts or sales-volume counts. Availability MUST be expressed as a boolean.
 - **FR-011**: Recommendation surfaces MUST NOT block page rendering; they MUST stream inside `Suspense` boundaries with skeleton fallbacks.
 - **FR-012**: Recommendation impressions and clicks MUST be recorded so effectiveness can be measured, reusing the existing search click-analytics approach.
 - **FR-013**: Schema changes MUST ship as a reviewed Drizzle migration with indexes supporting anchor-product score lookups.
@@ -118,9 +119,9 @@ A shopper whose search returns nothing is offered relevant products instead of a
 ### Key Entities
 
 - **ProductAffinityScore**: A directed association between an anchor product and a recommended product, with a strength value, a support count, and a computation timestamp.
-- **RecommendationSignal**: A contributing input — order co-purchase, share, wishlist entry, or recently-viewed event — with its weight in the scoring model.
+- **RecommendationSignal**: A contributing scoring input — order co-purchase, wishlist co-occurrence, or share co-occurrence — with its weight in the scoring model. Recently-viewed is a selection-time seed (FR-001a), not a scoring signal.
 - **RecommendationSurface**: A placement (product page, cart, home rail, zero-result recovery) with its own candidate rules and fallback.
-- **RecommendationEvent**: An impression or click record used to measure effectiveness.
+- **RecommendationEvent**: An impression or click record used to measure effectiveness. Emitted as a structured log record, not persisted to a table (see SC-007).
 
 ## Success Criteria _(mandatory)_
 
@@ -130,9 +131,9 @@ A shopper whose search returns nothing is offered relevant products instead of a
 - **SC-002**: With Redis unavailable, every surface still renders through the bestseller fallback without error.
 - **SC-003**: No recommendation response contains exact stock counts or another user's data.
 - **SC-004**: Two different signed-in shoppers receive different personalized rails given different histories.
-- **SC-005**: Recommendation rails do not regress Largest Contentful Paint on the product, cart, or home pages.
+- **SC-005**: Recommendation rails do not regress Largest Contentful Paint on the product, cart, or `/shop` pages. Measured with Lighthouse in the production build, median of five runs per page, against a pre-change baseline; a regression greater than 100 ms or any crossing of the 2.5 s "good" threshold fails.
 - **SC-006**: The scoring job completes within its scheduled window on a representative data volume.
-- **SC-007**: Impressions and clicks are recorded for every surface, enabling a click-through measurement.
+- **SC-007**: Impression and click events are emitted as structured log records for every surface, carrying `surface`, `anchorProductId`, `productIds`, and `fallback`, such that click-through rate is derivable by aggregating `recommendation_impression` against `recommendation_click` in the log platform.
 - **SC-008**: Service-layer coverage for scoring and selection meets the 85% threshold for `src/features/**/services/**`.
 
 ## Out of Scope
@@ -141,6 +142,8 @@ A shopper whose search returns nothing is offered relevant products instead of a
 - Real-time per-event score updates; scores refresh on a schedule.
 - Email or push recommendation campaigns.
 - Manual merchandising rules or admin-curated placement.
+- In-application click-through-rate reporting; CTR is derived from log aggregation (SC-007).
+- Server-side persistence of recently-viewed history; it remains a client-supplied seed (FR-001a).
 
 ## Dependencies
 

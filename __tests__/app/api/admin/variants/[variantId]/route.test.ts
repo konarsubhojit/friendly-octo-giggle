@@ -4,23 +4,23 @@ import { NextRequest } from 'next/server'
 const {
   mockCheckAdminAuth,
   mockInvalidateProductCaches,
-  mockRevalidateTag,
   mockFindFirst,
   mockFindMany,
   mockUpdate,
   mockReturning,
   mockDelete,
   mockExecute,
+  mockSelectCurrentVariant,
 } = vi.hoisted(() => ({
   mockCheckAdminAuth: vi.fn(async () => ({ authorized: true })),
   mockInvalidateProductCaches: vi.fn(),
-  mockRevalidateTag: vi.fn(),
   mockFindFirst: vi.fn(),
   mockFindMany: vi.fn(),
   mockUpdate: vi.fn(),
   mockReturning: vi.fn(),
   mockDelete: vi.fn(),
   mockExecute: vi.fn(async () => ({ rows: [{ id: 'var123' }] })),
+  mockSelectCurrentVariant: vi.fn(async () => [] as unknown[]),
 }))
 
 const makeTx = () => ({
@@ -30,6 +30,11 @@ const makeTx = () => ({
     },
   },
   execute: () => mockExecute(),
+  select: () => ({
+    from: () => ({
+      where: () => mockSelectCurrentVariant(),
+    }),
+  }),
   update: (...args: unknown[]) => {
     mockUpdate(...args)
     return {
@@ -93,6 +98,7 @@ vi.mock('@/lib/schema', () => ({
     id: 'id',
     productId: 'productId',
     deletedAt: 'deletedAt',
+    reservedStock: 'reservedStock',
   },
   productVariantOptionValues: {
     variantId: 'variantId',
@@ -106,10 +112,6 @@ vi.mock('@/features/admin/services/admin-auth', () => ({
 
 vi.mock('@/lib/cache', () => ({
   invalidateProductCaches: mockInvalidateProductCaches,
-}))
-
-vi.mock('next/cache', () => ({
-  revalidateTag: mockRevalidateTag,
 }))
 
 vi.mock('drizzle-orm', () => ({
@@ -174,6 +176,46 @@ describe('PUT /api/admin/variants/[variantId]', () => {
     vi.resetAllMocks()
     mockCheckAdminAuth.mockResolvedValue({ authorized: true })
     mockFindFirst.mockResolvedValue(null)
+    mockSelectCurrentVariant.mockResolvedValue([])
+  })
+
+  it('refuses to set stock below the units already reserved', async () => {
+    // Those units are promised to shoppers mid-checkout; allowing the edit
+    // would leave reservedStock above stock and read as permanently sold out.
+    mockFindFirst.mockResolvedValueOnce(mockVariant)
+    mockFindFirst.mockResolvedValueOnce(mockProduct)
+    mockReturning.mockResolvedValue([])
+    mockSelectCurrentVariant.mockResolvedValue([{ reservedStock: 4 }])
+
+    const response = await PUT(
+      new NextRequest('http://localhost/api/admin/variants/var123', {
+        method: 'PUT',
+        body: JSON.stringify({ stock: 2 }),
+      }),
+      { params: Promise.resolve({ variantId: 'var123' }) }
+    )
+
+    expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toMatchObject({
+      error: expect.stringContaining('4 unit'),
+    })
+  })
+
+  it('still reports a vanished variant as not found', async () => {
+    mockFindFirst.mockResolvedValueOnce(mockVariant)
+    mockFindFirst.mockResolvedValueOnce(mockProduct)
+    mockReturning.mockResolvedValue([])
+    mockSelectCurrentVariant.mockResolvedValue([])
+
+    const response = await PUT(
+      new NextRequest('http://localhost/api/admin/variants/var123', {
+        method: 'PUT',
+        body: JSON.stringify({ stock: 2 }),
+      }),
+      { params: Promise.resolve({ variantId: 'var123' }) }
+    )
+
+    expect(response.status).toBe(404)
   })
 
   it('returns 401 when not authenticated as admin', async () => {
@@ -376,6 +418,46 @@ describe('DELETE /api/admin/variants/[variantId]', () => {
     vi.resetAllMocks()
     mockCheckAdminAuth.mockResolvedValue({ authorized: true })
     mockFindFirst.mockResolvedValue(null)
+    mockSelectCurrentVariant.mockResolvedValue([])
+  })
+
+  it('refuses to set stock below the units already reserved', async () => {
+    // Those units are promised to shoppers mid-checkout; allowing the edit
+    // would leave reservedStock above stock and read as permanently sold out.
+    mockFindFirst.mockResolvedValueOnce(mockVariant)
+    mockFindFirst.mockResolvedValueOnce(mockProduct)
+    mockReturning.mockResolvedValue([])
+    mockSelectCurrentVariant.mockResolvedValue([{ reservedStock: 4 }])
+
+    const response = await PUT(
+      new NextRequest('http://localhost/api/admin/variants/var123', {
+        method: 'PUT',
+        body: JSON.stringify({ stock: 2 }),
+      }),
+      { params: Promise.resolve({ variantId: 'var123' }) }
+    )
+
+    expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toMatchObject({
+      error: expect.stringContaining('4 unit'),
+    })
+  })
+
+  it('still reports a vanished variant as not found', async () => {
+    mockFindFirst.mockResolvedValueOnce(mockVariant)
+    mockFindFirst.mockResolvedValueOnce(mockProduct)
+    mockReturning.mockResolvedValue([])
+    mockSelectCurrentVariant.mockResolvedValue([])
+
+    const response = await PUT(
+      new NextRequest('http://localhost/api/admin/variants/var123', {
+        method: 'PUT',
+        body: JSON.stringify({ stock: 2 }),
+      }),
+      { params: Promise.resolve({ variantId: 'var123' }) }
+    )
+
+    expect(response.status).toBe(404)
   })
 
   it('returns 401 when not authenticated as admin', async () => {

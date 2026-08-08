@@ -9,6 +9,7 @@ import { primaryDrizzleDb } from '@/lib/db'
 import { categories } from '@/lib/schema'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod/v4'
+import { categoriesTag, revalidateCacheTags } from '@/lib/cache-tags'
 
 const ReorderCategoriesSchema = z.object({
   items: z
@@ -40,6 +41,8 @@ export const PATCH = async (request: Request) => {
         )
       )
     })
+
+    revalidateCacheTags([categoriesTag()], 'admin_category_reorder')
 
     return apiSuccess({ reordered: true })
   } catch (error) {

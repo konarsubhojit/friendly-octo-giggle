@@ -37,6 +37,7 @@ import {
   searchCatalog,
   suggestSearchTerms,
   type SearchSort,
+  type SearchVariantFilter,
 } from '@/lib/search-discovery'
 
 function queueSelectResults(results: unknown[]) {
@@ -112,7 +113,7 @@ const catalogSelects = [
 const baseOptions = {
   q: 'thing',
   sort: 'relevance' as SearchSort,
-  variant: 'all' as const,
+  variant: 'all' as SearchVariantFilter,
   limit: 10,
   offset: 0,
 }

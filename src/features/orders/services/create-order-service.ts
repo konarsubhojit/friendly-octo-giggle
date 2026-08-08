@@ -21,7 +21,11 @@ import {
 import { notifyOrderConfirmation } from '@/lib/notifications/order-notifications'
 import { orderCreated } from '@/features/orders/inngest/events'
 import { dispatchWorkflowEvent } from '@/lib/inngest/dispatch'
-import { checkoutSession, orderSession, mergeSessions } from '@/lib/inngest/sessions'
+import {
+  checkoutSession,
+  orderSession,
+  mergeSessions,
+} from '@/lib/inngest/sessions'
 import { waitUntil } from '@vercel/functions'
 import { writeOrderToRedis } from '@/features/orders/actions/orders'
 import {
@@ -53,7 +57,8 @@ type ProductWithVariants = {
   variants: Array<{
     id: string
     price: number
-    stock: number
+    /** On-hand units minus units held by other checkout requests. */
+    availableStock: number
     weightGrams?: number | null
   }>
 }
@@ -243,7 +248,7 @@ const checkStockForItem = (
     }
   }
   const price = variant.price
-  const stockToCheck = variant.stock
+  const stockToCheck = variant.availableStock
 
   if (stockToCheck < item.quantity) {
     return {
@@ -625,12 +630,13 @@ const dispatchOrderCreatedInline = async ({
 }
 
 const fetchProductsForOrder = async (
-  requestedProductIds: string[]
+  requestedProductIds: string[],
+  checkoutRequestId?: string | null
 ): Promise<ProductWithVariants[]> => {
-  const productList =
-    await db.products.findManyWithVariantsForOrderValidation(
-      requestedProductIds
-    )
+  const productList = await db.products.findManyWithVariantsForOrderValidation(
+    requestedProductIds,
+    checkoutRequestId
+  )
 
   if (productList.length !== requestedProductIds.length) {
     logFailedOrderCreation(
@@ -831,7 +837,10 @@ const runOrderCreation = async ({
     body,
     user,
   })
-  const productList = await fetchProductsForOrder(requestedProductIds)
+  const productList = await fetchProductsForOrder(
+    requestedProductIds,
+    checkoutRequestId
+  )
   const stockResult = priceAndValidateStock(body.items, productList)
   if (!stockResult.valid) {
     logFailedOrderCreation(

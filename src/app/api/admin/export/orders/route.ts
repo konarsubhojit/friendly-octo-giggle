@@ -9,8 +9,6 @@ import {
 import { apiError, handleApiError } from '@/lib/api-utils'
 import { formatMoneyValue } from '@/lib/money'
 
-export const dynamic = 'force-dynamic'
-
 export const GET = async () => {
   const authCheck = await checkAdminAuth('orders:read')
   if (!authCheck.authorized) {
@@ -32,6 +30,7 @@ export const GET = async () => {
         'discountAmount',
         'couponCode',
         'status',
+        'paymentStatus',
         'trackingNumber',
         'shippingProvider',
         'createdAt',
@@ -55,6 +54,7 @@ export const GET = async () => {
           formatMoneyValue(order.discountAmount ?? 0),
           order.couponCode ?? '',
           order.status,
+          order.paymentStatus,
           order.trackingNumber,
           order.shippingProvider,
           order.createdAt.toISOString(),

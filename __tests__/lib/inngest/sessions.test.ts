@@ -54,10 +54,12 @@ describe('session builders', () => {
 
 describe('mergeSessions', () => {
   it('combines fragments from several builders', () => {
-    expect(mergeSessions(orderSession('ord1'), checkoutSession('cr1'))).toEqual({
-      [SESSION_KEYS.order]: 'ord1',
-      [SESSION_KEYS.checkoutRequest]: 'cr1',
-    })
+    expect(mergeSessions(orderSession('ord1'), checkoutSession('cr1'))).toEqual(
+      {
+        [SESSION_KEYS.order]: 'ord1',
+        [SESSION_KEYS.checkoutRequest]: 'cr1',
+      }
+    )
   })
 
   it('ignores undefined and empty fragments', () => {
@@ -71,15 +73,18 @@ describe('mergeSessions', () => {
   })
 
   it('keeps the first value for a repeated key', () => {
-    expect(mergeSessions(orderSession('first'), orderSession('second'))).toEqual(
-      { [SESSION_KEYS.order]: 'first' }
-    )
+    expect(
+      mergeSessions(orderSession('first'), orderSession('second'))
+    ).toEqual({ [SESSION_KEYS.order]: 'first' })
   })
 
   it('drops entries past the per-event cap, keeping the earliest', () => {
-    const fragments = Array.from({ length: MAX_SESSIONS_PER_EVENT + 2 }, (_v, i) => ({
-      [`key_${i}`]: `id_${i}`,
-    }))
+    const fragments = Array.from(
+      { length: MAX_SESSIONS_PER_EVENT + 2 },
+      (_v, i) => ({
+        [`key_${i}`]: `id_${i}`,
+      })
+    )
 
     const merged = mergeSessions(...fragments)
 

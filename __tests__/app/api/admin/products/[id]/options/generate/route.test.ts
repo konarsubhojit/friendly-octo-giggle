@@ -45,10 +45,6 @@ vi.mock('@/lib/cache', () => ({
   invalidateProductCaches: vi.fn(),
 }))
 
-vi.mock('next/cache', () => ({
-  revalidateTag: vi.fn(),
-}))
-
 vi.mock('@/lib/api-utils', async () => {
   const actual =
     await vi.importActual<typeof import('@/lib/api-utils')>('@/lib/api-utils')
@@ -64,7 +60,6 @@ vi.mock('@/lib/api-utils', async () => {
 
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { invalidateProductCaches } from '@/lib/cache'
-import { revalidateTag } from 'next/cache'
 
 const makeParams = (id: string) => ({ params: Promise.resolve({ id }) })
 
@@ -306,7 +301,6 @@ describe('POST /api/admin/products/[id]/options/generate', () => {
     expect(json.data.options[0].name).toBe('Color')
     expect(json.data.options[1].name).toBe('Size')
     expect(json.data.variantsLinked).toBe(3)
-    expect(vi.mocked(revalidateTag)).toHaveBeenCalledWith('products', {})
     expect(vi.mocked(invalidateProductCaches)).toHaveBeenCalledWith('p1')
   })
 

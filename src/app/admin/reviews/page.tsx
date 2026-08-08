@@ -438,6 +438,7 @@ const ReviewsFilters = ({
       {RATING_FILTERS.map(({ label, value }) => (
         <button
           key={value}
+          type="button"
           onClick={() => onRatingChange(value)}
           className={`rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap transition ${
             ratingFilter === value

@@ -16,6 +16,11 @@ vi.mock('@/lib/logger', () => ({
   logError: vi.fn(),
 }))
 
+vi.mock('@/lib/cache-tags', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/cache-tags')>()),
+  revalidateCacheTags: vi.fn(),
+}))
+
 import {
   CACHE_KEYS,
   CACHE_TTL,
@@ -37,6 +42,12 @@ import {
 } from '@/lib/cache'
 import { getCachedData, invalidateCache } from '@/lib/redis'
 import { logCacheOperation, logError } from '@/lib/logger'
+import {
+  bestsellersTag,
+  productListTag,
+  productTag,
+  revalidateCacheTags,
+} from '@/lib/cache-tags'
 
 const mockGetCachedData = vi.mocked(getCachedData)
 const mockInvalidateCache = vi.mocked(invalidateCache)
@@ -386,6 +397,35 @@ describe('invalidateProductCaches', () => {
       error,
       context: 'cache_invalidation',
     })
+  })
+
+  it('revalidates the listing tags when no product id is supplied', async () => {
+    await invalidateProductCaches()
+
+    expect(revalidateCacheTags).toHaveBeenCalledWith(
+      [productListTag(), bestsellersTag()],
+      'invalidate_product_caches'
+    )
+  })
+
+  it('revalidates a per-product tag alongside the listing tags', async () => {
+    await invalidateProductCaches(['p1', 'p2'])
+
+    expect(revalidateCacheTags).toHaveBeenCalledWith(
+      [productListTag(), bestsellersTag(), productTag('p1'), productTag('p2')],
+      'invalidate_product_caches'
+    )
+  })
+
+  it('still revalidates tags when the Redis invalidation fails', async () => {
+    mockInvalidateCache.mockRejectedValueOnce(new Error('Redis down'))
+
+    await invalidateProductCaches('p1')
+
+    expect(revalidateCacheTags).toHaveBeenCalledWith(
+      [productListTag(), bestsellersTag(), productTag('p1')],
+      'invalidate_product_caches'
+    )
   })
 })
 

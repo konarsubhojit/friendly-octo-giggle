@@ -194,6 +194,30 @@ describe('proxy rate limiting', () => {
     expect(response.status).toBe(503)
   })
 
+  it('returns 503 for strict paths when the limiter call fails', async () => {
+    mockStrictLimit.mockRejectedValue(new Error('upstash down'))
+
+    const response = await proxy(
+      createRequest('/api/auth/register', {
+        'cf-connecting-ip': '203.0.113.71',
+      })
+    )
+
+    expect(response.status).toBe(503)
+    expect(response.headers.get('Retry-After')).toBeTruthy()
+  })
+
+  it('degrades to in-memory limiting when the general limiter call fails', async () => {
+    mockGeneralLimit.mockRejectedValue(new Error('upstash down'))
+
+    const response = await proxy(
+      createRequest('/api/wishlist', { 'cf-connecting-ip': '203.0.113.72' })
+    )
+
+    expect(response.status).not.toBe(503)
+    expect(response.headers.get('X-RateLimit-Limit')).toBe('60')
+  })
+
   it('falls back to in-memory limiting for general paths when limiter is unavailable', async () => {
     mockGetGeneralLimiter.mockReturnValue(null)
 

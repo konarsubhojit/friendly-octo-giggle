@@ -54,7 +54,7 @@ export const urlBase64ToUint8Array = (
   const rawData = atob(base64)
   const output = new Uint8Array(new ArrayBuffer(rawData.length))
   for (let i = 0; i < rawData.length; i += 1) {
-    output[i] = rawData.charCodeAt(i)
+    output[i] = rawData.codePointAt(i) ?? 0
   }
   return output
 }
