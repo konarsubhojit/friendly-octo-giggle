@@ -6,6 +6,7 @@ import type { ProductVariant } from '@/lib/types'
 import toast from 'react-hot-toast'
 import { useCurrency } from '@/contexts/CurrencyContext'
 import { getVariantTotalStock } from '@/features/product/variant-utils'
+import { availableUnits } from '@/lib/stock-availability'
 
 const VariantFormModal = lazy(
   () => import('@/features/admin/components/VariantFormModal')
@@ -293,8 +294,7 @@ const VariantCard = ({
                 </p>
                 <p className="text-xs text-slate-500">
                   {variant.reservedStock ?? 0} reserved ·{' '}
-                  {Math.max(0, variant.stock - (variant.reservedStock ?? 0))}{' '}
-                  available
+                  {availableUnits(variant)} available
                 </p>
               </div>
             </div>
@@ -475,8 +475,7 @@ const VariantList = ({ productId, initialVariants }: VariantListProps) => {
     0
   )
   const totalAvailableStock = variants.reduce(
-    (sum, variant) =>
-      sum + Math.max(0, variant.stock - (variant.reservedStock ?? 0)),
+    (sum, variant) => sum + availableUnits(variant),
     0
   )
   const stockedVariants = variants.filter((variant) => variant.stock > 0).length

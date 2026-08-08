@@ -150,7 +150,12 @@ vi.mock('@/lib/schema', () => ({
     productId: 'productId',
     variantId: 'variantId',
   },
-  productVariants: {},
+  productVariants: {
+    id: 'id',
+    stock: 'stock',
+    reservedStock: 'reservedStock',
+    deletedAt: 'deletedAt',
+  },
   productOptions: {},
   productOptionValues: {},
   productVariantOptionValues: {},
@@ -511,9 +516,11 @@ describe('db.products.findMinimalByIds', () => {
     )
   })
 
-  it('reports availability rather than on-hand units', async () => {
-    // Two of the five units are held by another shopper's checkout request, so
-    // only three are still on sale. On-hand stock is untouched until commit.
+  it('keeps cached catalog listings on on-hand units', async () => {
+    // Listings are served from `"use cache"` scopes whose profiles outlive a
+    // hold, so a reservation-derived figure would be cached long after the
+    // hold settled (plan decision D4). Availability is enforced per request at
+    // the cart and validation reads instead.
     mockProductsFindMany.mockResolvedValue([
       {
         id: 'prod001',
@@ -521,7 +528,7 @@ describe('db.products.findMinimalByIds', () => {
         description: 'Roses',
         category: 'Flowers',
         image: 'rose.jpg',
-        variants: [{ price: 100, stock: 5, reservedStock: 2 }],
+        variants: [{ price: 100, stock: 5 }],
       },
     ])
     const emptySoldCountChain = {
@@ -534,31 +541,7 @@ describe('db.products.findMinimalByIds', () => {
 
     const [result] = await db.products.findMinimalByIds(['prod001'])
 
-    expect(result.stock).toBe(3)
-  })
-
-  it('never reports negative availability', async () => {
-    mockProductsFindMany.mockResolvedValue([
-      {
-        id: 'prod001',
-        name: 'Rose',
-        description: 'Roses',
-        category: 'Flowers',
-        image: 'rose.jpg',
-        variants: [{ price: 100, stock: 1, reservedStock: 4 }],
-      },
-    ])
-    const emptySoldCountChain = {
-      from: vi.fn().mockReturnThis(),
-      innerJoin: vi.fn().mockReturnThis(),
-      where: vi.fn().mockReturnThis(),
-      groupBy: vi.fn().mockResolvedValue([]),
-    }
-    mockSelect.mockReturnValue(emptySoldCountChain)
-
-    const [result] = await db.products.findMinimalByIds(['prod001'])
-
-    expect(result.stock).toBe(0)
+    expect(result.stock).toBe(5)
   })
 
   it('returns empty array for empty IDs list without querying DB', async () => {
@@ -610,6 +593,37 @@ describe('db.products.findMinimalByIds', () => {
     )?.[1] as string[] | undefined
     expect(inArrayStatusesArg).not.toContain('PENDING')
     expect(inArrayStatusesArg).not.toContain('CANCELLED')
+  })
+})
+
+describe('db.carts.findVariantStock', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockSelect.mockReturnValue({ from: mockSelectFrom })
+  })
+
+  it('reports availability net of units other checkout requests hold', async () => {
+    // Two of the five units are already promised to a live checkout request,
+    // so only three can be sold. On-hand stock is untouched until commit.
+    mockSelectWhere.mockResolvedValue([
+      { id: 'var0001', stock: 5, reservedStock: 2, deletedAt: null },
+    ])
+
+    const [variant] = await db.carts.findVariantStock(['var0001'])
+
+    expect(variant.stock).toBe(5)
+    expect(variant.reservedStock).toBe(2)
+    expect(variant.availableStock).toBe(3)
+  })
+
+  it('never reports negative availability', async () => {
+    mockSelectWhere.mockResolvedValue([
+      { id: 'var0001', stock: 1, reservedStock: 4, deletedAt: null },
+    ])
+
+    const [variant] = await db.carts.findVariantStock(['var0001'])
+
+    expect(variant.availableStock).toBe(0)
   })
 })
 

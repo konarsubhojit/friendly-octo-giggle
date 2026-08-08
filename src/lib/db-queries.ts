@@ -128,7 +128,7 @@ export interface MinimalProduct {
   image: string
   /** Lowest variant price; 0 when no active variants exist */
   price: number
-  /** Sum of variant availability (on-hand minus held); 0 when no active variants exist */
+  /** Sum of variant stock; 0 when no active variants exist */
   stock: number
   /** Sum of sold quantities from non-cancelled orders */
   soldCount: number
@@ -141,14 +141,18 @@ function deriveMinimalProduct(row: {
   description: string
   category: string
   image: string
-  variants: Array<{ price: number; stock: number; reservedStock: number }>
+  variants: Array<{ price: number; stock: number }>
 }): MinimalProductDerivedFields {
   const { variants, ...base } = row
   const price =
     variants.length > 0 ? Math.min(...variants.map((v) => v.price)) : 0
-  // Shoppers are shown what they could still buy, so units another checkout
-  // request is already holding are excluded.
-  const stock = variants.reduce((sum, v) => sum + availableUnits(v), 0)
+  // On-hand units on purpose: these listings are served from `"use cache"`
+  // catalog scopes whose profiles outlive a hold by minutes, so a
+  // reservation-derived figure would be cached long after the hold settled
+  // (plan decision D4). Availability is recomputed per request at every point
+  // that can actually reject a shopper — the cart cap, cart validation, and
+  // the reservation grant itself.
+  const stock = variants.reduce((sum, v) => sum + v.stock, 0)
   return { ...base, price, stock }
 }
 
@@ -397,7 +401,7 @@ export const db = {
         with: {
           variants: {
             where: (v, { isNull }) => isNull(v.deletedAt),
-            columns: { price: true, stock: true, reservedStock: true },
+            columns: { price: true, stock: true },
           },
         },
         limit,
@@ -442,7 +446,7 @@ export const db = {
         with: {
           variants: {
             where: (v, { isNull }) => isNull(v.deletedAt),
-            columns: { price: true, stock: true, reservedStock: true },
+            columns: { price: true, stock: true },
           },
         },
       })
