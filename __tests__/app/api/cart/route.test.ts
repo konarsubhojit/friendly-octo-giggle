@@ -312,7 +312,7 @@ describe('Cart API Route', () => {
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
       ;(mockDbProducts.findFirstForCart as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
-        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 0 }],
+        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 0, availableStock: 0 }],
       })
 
       const request = new NextRequest('http://localhost/api/cart', {
@@ -357,7 +357,7 @@ describe('Cart API Route', () => {
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
       ;(mockDbProducts.findFirstForCart as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
-        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10 }],
+        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10, availableStock: 10 }],
       })
       ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({
         id: VALID_CART_ID,
@@ -395,7 +395,7 @@ describe('Cart API Route', () => {
       ;(auth as Mock).mockResolvedValue(null)
       ;(mockDbProducts.findFirstForCart as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
-        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10 }],
+        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10, availableStock: 10 }],
       })
       ;(mockDbCarts.findBySessionId as Mock).mockResolvedValue(null)
       ;(mockDbCarts.createForSessionOrIgnore as Mock).mockResolvedValue({
@@ -438,7 +438,7 @@ describe('Cart API Route', () => {
       ;(auth as Mock).mockResolvedValue({ user: { id: 'missing-user' } })
       ;(mockDbProducts.findFirstForCart as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
-        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10 }],
+        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10, availableStock: 10 }],
       })
       ;(mockDbCarts.findByUserId as Mock).mockResolvedValue(null)
       ;(mockDbUsers.existsById as Mock).mockResolvedValue(false)
@@ -495,7 +495,7 @@ describe('Cart API Route', () => {
       ;(mockDbCarts.delete as Mock).mockResolvedValue(undefined)
       ;(mockDbProducts.findFirstForCart as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
-        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10 }],
+        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10, availableStock: 10 }],
       })
       ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({
         id: VALID_CART_ID,
@@ -641,7 +641,7 @@ describe('Cart API Route', () => {
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
       ;(mockDbProducts.findFirstForCart as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
-        variants: [{ id: VALID_VARIANT_ID, stock: 5 }],
+        variants: [{ id: VALID_VARIANT_ID, stock: 5, availableStock: 5 }],
       })
 
       const otherVariantId = 'var0002'
@@ -697,7 +697,7 @@ describe('Cart API Route', () => {
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
       ;(mockDbProducts.findFirstForCart as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
-        variants: [{ id: VALID_VARIANT_ID, stock: 2 }],
+        variants: [{ id: VALID_VARIANT_ID, stock: 2, availableStock: 2 }],
       })
       ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({
         id: VALID_CART_ID,
@@ -749,7 +749,7 @@ describe('Cart API Route', () => {
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
       ;(mockDbProducts.findFirstForCart as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
-        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10 }],
+        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10, availableStock: 10 }],
       })
       ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({
         id: VALID_CART_ID,
@@ -783,7 +783,7 @@ describe('Cart API Route', () => {
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
       ;(mockDbProducts.findFirstForCart as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
-        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 5 }],
+        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 5, availableStock: 5 }],
       })
       ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({
         id: VALID_CART_ID,
@@ -814,7 +814,7 @@ describe('Cart API Route', () => {
       ;(auth as Mock).mockResolvedValue({ user: { id: 'user123' } })
       ;(mockDbProducts.findFirstForCart as Mock).mockResolvedValue({
         id: VALID_PRODUCT_ID,
-        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10 }],
+        variants: [{ id: VALID_VARIANT_ID_TOP, stock: 10, availableStock: 10 }],
       })
       ;(mockDbCarts.findByUserId as Mock).mockResolvedValue({
         id: VALID_CART_ID,

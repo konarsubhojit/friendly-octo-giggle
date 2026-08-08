@@ -172,8 +172,6 @@ const tableRows = (table: { __table: string }): Record<string, unknown>[] =>
     ? (store.variants as unknown as Record<string, unknown>[])
     : (store.reservations as unknown as Record<string, unknown>[])
 
-class TransactionRollback extends Error {}
-
 const makeClient = () => ({
   select: () => ({
     from: (table: { __table: string }) => {

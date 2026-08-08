@@ -491,3 +491,35 @@ const earliest = (a: Date | null, b: Date | null): Date | null => {
   if (!b) return a
   return a <= b ? a : b
 }
+
+/**
+ * Units a single checkout request is holding, per variant.
+ *
+ * Order validation runs *for* a request that already owns a hold, so plain
+ * `stock - reservedStock` would count that request's own units against it and
+ * reject every legitimate order. Callers add these back to get the quantity
+ * genuinely available to this request. `CONSUMED` rows are excluded: their
+ * units have already left `reservedStock` and `stock` alike.
+ */
+export const getHeldQuantitiesForCheckoutRequest = async (
+  checkoutRequestId: string
+): Promise<Map<string, number>> => {
+  const rows = await primaryDrizzleDb
+    .select({
+      variantId: stockReservations.variantId,
+      quantity: stockReservations.quantity,
+    })
+    .from(stockReservations)
+    .where(
+      and(
+        eq(stockReservations.checkoutRequestId, checkoutRequestId),
+        eq(stockReservations.status, 'HELD')
+      )
+    )
+
+  const held = new Map<string, number>()
+  for (const row of rows) {
+    held.set(row.variantId, (held.get(row.variantId) ?? 0) + row.quantity)
+  }
+  return held
+}

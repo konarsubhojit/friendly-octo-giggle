@@ -42,6 +42,11 @@ import { isPaymentProvider } from './payments/providers'
 import type { VerifiedPayment } from './payments/gateway'
 import type { ShippingMethodName } from './shipping/methods'
 import { toShippingMethod } from './shipping/methods'
+import {
+  consumeForCheckoutRequest,
+  getHeldQuantitiesForCheckoutRequest,
+} from '@/features/orders/services/stock-reservation'
+import { availableUnits } from './stock-availability'
 
 // ─── Shared error types ──────────────────────────────────
 
@@ -123,7 +128,7 @@ export interface MinimalProduct {
   image: string
   /** Lowest variant price; 0 when no active variants exist */
   price: number
-  /** Sum of variant stock; 0 when no active variants exist */
+  /** Sum of variant availability (on-hand minus held); 0 when no active variants exist */
   stock: number
   /** Sum of sold quantities from non-cancelled orders */
   soldCount: number
@@ -136,12 +141,14 @@ function deriveMinimalProduct(row: {
   description: string
   category: string
   image: string
-  variants: Array<{ price: number; stock: number }>
+  variants: Array<{ price: number; stock: number; reservedStock: number }>
 }): MinimalProductDerivedFields {
   const { variants, ...base } = row
   const price =
     variants.length > 0 ? Math.min(...variants.map((v) => v.price)) : 0
-  const stock = variants.reduce((sum, v) => sum + v.stock, 0)
+  // Shoppers are shown what they could still buy, so units another checkout
+  // request is already holding are excluded.
+  const stock = variants.reduce((sum, v) => sum + availableUnits(v), 0)
   return { ...base, price, stock }
 }
 
@@ -390,7 +397,7 @@ export const db = {
         with: {
           variants: {
             where: (v, { isNull }) => isNull(v.deletedAt),
-            columns: { price: true, stock: true },
+            columns: { price: true, stock: true, reservedStock: true },
           },
         },
         limit,
@@ -435,7 +442,7 @@ export const db = {
         with: {
           variants: {
             where: (v, { isNull }) => isNull(v.deletedAt),
-            columns: { price: true, stock: true },
+            columns: { price: true, stock: true, reservedStock: true },
           },
         },
       })
@@ -582,16 +589,37 @@ export const db = {
     /**
      * Find products with their variants for order stock validation.
      * Uses the primary DB to avoid stale reads before stock checks.
+     *
+     * Each variant carries an `availableStock` figure: on-hand minus units held
+     * by *other* checkout requests. The requesting checkout's own hold is added
+     * back, since those units are exactly what it is about to spend.
      */
-    findManyWithVariantsForOrderValidation: async (ids: string[]) => {
-      return primaryDrizzleDb.query.products.findMany({
-        where: and(inArray(products.id, ids), isNull(products.deletedAt)),
-        with: {
-          variants: {
-            where: (variant, operators) => operators.isNull(variant.deletedAt),
+    findManyWithVariantsForOrderValidation: async (
+      ids: string[],
+      checkoutRequestId?: string | null
+    ) => {
+      const [rows, ownHeld] = await Promise.all([
+        primaryDrizzleDb.query.products.findMany({
+          where: and(inArray(products.id, ids), isNull(products.deletedAt)),
+          with: {
+            variants: {
+              where: (variant, operators) => operators.isNull(variant.deletedAt),
+            },
           },
-        },
-      })
+        }),
+        checkoutRequestId
+          ? getHeldQuantitiesForCheckoutRequest(checkoutRequestId)
+          : Promise.resolve(new Map<string, number>()),
+      ])
+
+      return rows.map((row) => ({
+        ...row,
+        variants: row.variants.map((variant) => ({
+          ...variant,
+          availableStock:
+            availableUnits(variant) + (ownHeld.get(variant.id) ?? 0),
+        })),
+      }))
     },
 
     /**
@@ -610,9 +638,12 @@ export const db = {
 
     /**
      * Find a single product with its active variants for cart stock checks.
+     *
+     * Variants carry `availableStock` so the cart caps quantities at what a
+     * shopper could actually buy rather than at on-hand units.
      */
     findFirstForCart: async (productId: string) => {
-      return drizzleDb.query.products.findFirst({
+      const row = await drizzleDb.query.products.findFirst({
         where: and(eq(products.id, productId), isNull(products.deletedAt)),
         with: {
           variants: {
@@ -621,6 +652,16 @@ export const db = {
           },
         },
       })
+
+      if (!row) return row
+
+      return {
+        ...row,
+        variants: row.variants.map((variant) => ({
+          ...variant,
+          availableStock: availableUnits(variant),
+        })),
+      }
     },
   },
 
@@ -958,6 +999,13 @@ export const db = {
           throw new StockConflictError(
             'Unable to reserve stock — item was sold out by a concurrent order'
           )
+        }
+
+        // On-hand and held units move together, in the transaction that commits
+        // the order. The claim-shaped update means a retried pipeline that
+        // reaches here twice consumes nothing the second time.
+        if (input.checkoutRequestId) {
+          await consumeForCheckoutRequest(tx, input.checkoutRequestId)
         }
 
         for (const applied of appliedCoupons) {
@@ -1559,18 +1607,26 @@ export const db = {
       Array<{
         id: string
         stock: number
+        reservedStock: number
+        availableStock: number
         deletedAt: Date | null
       }>
     > => {
       if (variantIds.length === 0) return []
-      return primaryDrizzleDb
+      const rows = await primaryDrizzleDb
         .select({
           id: productVariants.id,
           stock: productVariants.stock,
+          reservedStock: productVariants.reservedStock,
           deletedAt: productVariants.deletedAt,
         })
         .from(productVariants)
         .where(inArray(productVariants.id, variantIds))
+
+      return rows.map((row) => ({
+        ...row,
+        availableStock: availableUnits(row),
+      }))
     },
   },
 }

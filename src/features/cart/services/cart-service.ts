@@ -14,7 +14,7 @@ import type { AddToCartInput } from '@/features/cart/validations'
 
 interface ProductWithVariants {
   id: string
-  variants: Array<{ id: string; stock: number }>
+  variants: Array<{ id: string; availableStock: number }>
 }
 
 interface CartVariantOptionValueRecord {
@@ -132,7 +132,7 @@ const verifyProductStock = async (
   if (!variant) {
     throw new CartRequestError('Variant not found', 404)
   }
-  const availableStock = variant.stock
+  const availableStock = variant.availableStock
 
   if (availableStock <= 0) {
     throw new CartRequestError('This product is currently out of stock', 400)
@@ -395,7 +395,7 @@ const buildStockByVariantId = async (
     // Treat soft-deleted variants as out of stock.
     stockByVariantId.set(
       variant.id,
-      variant.deletedAt ? 0 : Math.max(0, variant.stock)
+      variant.deletedAt ? 0 : variant.availableStock
     )
   }
   return stockByVariantId

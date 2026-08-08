@@ -158,7 +158,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   mocks.products.findFirstForCart.mockResolvedValue({
     id: 'prod1',
-    variants: [{ id: 'var1', stock: 5 }],
+    variants: [{ id: 'var1', stock: 5, availableStock: 5 }],
   })
   mocks.carts.findItem.mockResolvedValue(undefined)
   mocks.carts.findWithRelationsById.mockResolvedValue(cartRecord)
@@ -189,7 +189,7 @@ describe('addItemToCart', () => {
   it('throws when the variant is out of stock', async () => {
     mocks.products.findFirstForCart.mockResolvedValue({
       id: 'prod1',
-      variants: [{ id: 'var1', stock: 0 }],
+      variants: [{ id: 'var1', stock: 0, availableStock: 0 }],
     })
     await expect(
       addItemToCart({ user: { id: 'u1' } } as never, addBody, undefined)
@@ -561,7 +561,7 @@ describe('mergeGuestCartIntoUserCart (extended)', () => {
       items: [],
     })
     mocks.carts.findVariantStock.mockResolvedValue([
-      { id: 'v1', stock: 10, deletedAt: NOW },
+      { id: 'v1', stock: 10, reservedStock: 0, availableStock: 10, deletedAt: NOW },
     ])
     mocks.invalidateCartCache.mockResolvedValue(undefined)
     mocks.removeCartItemsByCartId.mockResolvedValue(undefined)
@@ -585,7 +585,7 @@ describe('mergeGuestCartIntoUserCart (merge paths)', () => {
     mocks.invalidateCartCache.mockResolvedValue(undefined)
     mocks.removeCartItemsByCartId.mockResolvedValue(undefined)
     mocks.carts.findVariantStock.mockResolvedValue([
-      { id: 'v1', stock: 10, deletedAt: null },
+      { id: 'v1', stock: 10, reservedStock: 0, availableStock: 10, deletedAt: null },
     ])
   })
 
@@ -642,7 +642,7 @@ describe('mergeGuestCartIntoUserCart (merge paths)', () => {
       items: [{ ...guestItem, id: 'u-item', cartId: 'user-cart', quantity: 1 }],
     })
     mocks.carts.findVariantStock.mockResolvedValue([
-      { id: 'v1', stock: 1, deletedAt: null },
+      { id: 'v1', stock: 1, reservedStock: 0, availableStock: 1, deletedAt: null },
     ])
 
     await mergeGuestCartIntoUserCart('u1', 'guest-session')
@@ -692,7 +692,7 @@ describe('mergeGuestCartIntoUserCart (merge paths)', () => {
     mocks.carts.findWithItemsByUserId.mockResolvedValue(undefined)
     mocks.carts.promoteToUser.mockResolvedValue(undefined)
     mocks.carts.findVariantStock.mockResolvedValue([
-      { id: 'v1', stock: 1, deletedAt: null },
+      { id: 'v1', stock: 1, reservedStock: 0, availableStock: 1, deletedAt: null },
     ])
 
     await mergeGuestCartIntoUserCart('u1', 'guest-session')
