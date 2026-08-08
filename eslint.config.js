@@ -10,6 +10,18 @@ import nextPlugin from 'eslint-config-next/core-web-vitals'
  *  - no-unused-vars      → catches dead variables (via @typescript-eslint)
  */
 const config = [
+  // Generated and tool-output directories. These are git-ignored build
+  // artifacts (Playwright's `outputDir`, coverage reports, the Next.js build)
+  // and are not source code, so they are not linted.
+  {
+    ignores: [
+      '.next/**',
+      'coverage/**',
+      'test-results/**',
+      'playwright-tests/report/**',
+    ],
+  },
+
   // Next.js core-web-vitals ruleset (includes React, React Hooks, accessibility)
   ...nextPlugin,
 
