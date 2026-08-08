@@ -2,7 +2,7 @@
 
 **Feature Branch**: `018-self-service-returns`  
 **Created**: 2026-08-01  
-**Status**: Draft  
+**Status**: Planned  
 **Epic**: Phase 2 — Correctness and commerce depth  
 **Input**: Let customers request a return for delivered order items, give administrators an approval queue, and connect approved returns to the existing refund and restock machinery.
 
@@ -18,20 +18,47 @@ Consequences, binding on every requirement below:
   `NOT_AS_DESCRIBED` are **out of scope**.
 - Photographic evidence is **mandatory**, not optional — the published policy already requires
   it before any damaged-item claim is reviewed.
-- Approved claims are settled by **refund**, which requires one narrow policy amendment (below).
+- **Images upload in-product; video does not.** The published policy also requires "a short
+  video". Video is collected out-of-band over Instagram direct message, correlated by return ID.
+  See the Evidence Channel decision below.
+- Approved claims are settled by **refund**, which requires a policy amendment (below).
 
-### Residual policy delta — one clause still requires amendment
+### Evidence channel — images in-product, video over Instagram DM
 
-Option B removes the conflict with the published **returns** clause, which already permits
-damaged-item returns. It does **not** remove the conflict with the **refunds** clause, which
-currently reads:
+The published `damagedItems` clause requires three artifacts: **detailed photos, a short video,
+and a description**. This feature accepts photos and description in-product and directs video to
+an Instagram direct message.
 
-> "Refunds are not issued for orders."
-> "Damaged products are handled through review and replacement rather than refund."
+**Why video is not uploaded here**: the existing upload path is image-specific end to end —
+`uploadImage` in `src/lib/image-storage.ts`, magic-byte detection limited to JPEG/PNG/GIF/WebP,
+and a 5 MB `MAX_FILE_SIZE` that no usable phone video fits inside. Supporting video means a
+second storage path, a second size regime, transcoding or playback concerns, and a materially
+larger abuse surface — disproportionate to a media type the admin reviews once. Instagram
+already handles capture, compression, and delivery.
 
-Every success criterion in this specification that involves money (SC-004, FR-010 through
-FR-013) assumes a refund settlement. Two ways to close this, and the choice is still a business
-one:
+**How correlation works**: the customer is shown their return ID after submission with a copy
+control and a direct link to the store's Instagram inbox. They send the video quoting that ID.
+The administrator finds the DM by searching the ID. **No social handle is stored** — see FR-020.
+
+**Where the handle lives**: the handle and its DM link are static constants in
+`src/lib/constants/store.ts`, because they appear in the acknowledged policy copy that a Client
+Component imports synchronously. Whether the channel is _offered_ is an Edge Config feature flag
+(`returnVideoViaInstagram`, default `false`), so an unstaffed inbox can be switched off without a
+deploy. See plan research R15.
+
+### Residual policy delta — three clauses require amendment
+
+Option B narrows the amendment surface but does not eliminate it. The published policy conflicts
+with this feature in three separate places, and all three are carried by T063:
+
+| Clause         | Current text                                                                    | Conflict                                                                         |
+| -------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `refunds`      | "Refunds are not issued for orders." / "...replacement rather than refund."     | **Settlement.** FR-010 to FR-013 and SC-004 assume refund.                       |
+| `returns`      | "Shoppers **must contact support** with detailed photos, a short video..."      | **Channel.** This feature replaces the email channel with in-product submission. |
+| `damagedItems` | "**Email** support@... with detailed photos, a short video, and a description." | **Channel and media.** Photos move in-product; video moves to Instagram DM.      |
+
+Every success criterion involving money (SC-004, FR-010 through FR-013) assumes refund
+settlement. Two ways to close the settlement conflict, and that choice remains a business one:
 
 | Option  | Change required                                                                                                                                                               |
 | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -42,23 +69,28 @@ one:
 FR-013, SC-004, and User Story 3's refund half must be struck and replaced with a replacement
 fulfilment flow.
 
+The **channel** and **media** amendments are not optional under either sub-option — they follow
+from shipping an in-product claim form at all.
+
 ## Baseline (verified 2026-08-01)
 
 - Refunds already exist as an admin-initiated capability. The `Refund` table records provider, `paymentTransactionId`, `gatewayRefundId`, amount, status (`PENDING`, `PROCESSED`, `FAILED`), reason, `initiatedById`, and `processedAt`, and is served by `src/features/orders/services/refund-service.ts`.
 - Pre-shipment cancellation is shipped (PR #427) and restocks through `src/features/orders/services/order-restock.ts` with status-transition enforcement.
 - **The gap**: once an order reaches `DELIVERED`, a customer has no in-product path to start a damaged-item claim. Every post-delivery claim is an out-of-band support request — the policy directs the customer to email support with photos and a video — that an admin must then translate into a manual settlement.
-- The published policy in `src/lib/constants/checkout-policies.ts` and `specs/003-order-policy-dialog` **permits damaged-item returns but forbids refunds**, and is acknowledged by the customer at checkout. The damaged-item process it describes — submit evidence, await review, ship the product back at the customer's cost — is exactly the lifecycle this feature automates. Only the settlement mechanism differs, hence the B-1 amendment above.
+- The published policy in `src/lib/constants/checkout-policies.ts` and `specs/003-order-policy-dialog` **permits damaged-item returns but forbids refunds**, and is acknowledged by the customer at checkout. The damaged-item process it describes — submit evidence, await review, ship the product back at the customer's cost — is exactly the lifecycle this feature automates. The settlement mechanism, the submission channel, and the video requirement all differ, hence the three-clause amendment above.
+- The policy is restated on **four additional surfaces** that must stay in step, two of which hardcode their copy rather than deriving it from `CHECKOUT_POLICIES`: `src/app/(public)/returns/page.tsx` (the `RETURN_STEPS` array and the "Refunds are not issued" reminder are both hardcoded), `src/app/(public)/help/page.tsx` (the return-policy FAQ answer is hardcoded), `src/app/(public)/checkout/review/page.tsx`, and `src/features/cart/components/OrderPolicyConfirmDialog.tsx`. Amending the constant alone leaves the hardcoded copy stale.
+- There is **no social handle constant** anywhere in the codebase; `SUPPORT_EMAIL` in `src/lib/constants/checkout-policies.ts` is the only contact detail. The Instagram handle is new and belongs in `src/lib/constants/store.ts` alongside `STORE_NAME`.
 - Supporting infrastructure exists: order status enum ending at `DELIVERED`/`CANCELLED`, image upload through Vercel Blob and Azure Blob (`src/lib/image-storage.ts`), the notification preference centre and email/push channels, `adminAuditLogs`, and granular admin permissions in `src/lib/constants/roles.ts`.
 
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Request a return for a delivered item (Priority: P1)
 
-A customer can open a delivered order, select the items and quantities to return, choose a damage reason, attach photographic evidence, and submit a claim without emailing support.
+A customer can open a delivered order, select the items and quantities to return, choose a damage reason, attach photographic evidence, and submit a claim without emailing support. After submitting, they are told how to send the required video over Instagram.
 
 **Why this priority**: This is the missing customer-facing capability. Everything else in this specification exists to process what this story creates.
 
-**Independent Test**: Sign in as a customer with a delivered order, submit a damage claim for one item with a photo, and confirm the request is persisted and visible in order history.
+**Independent Test**: Sign in as a customer with a delivered order, submit a damage claim for one item with a photo, and confirm the request is persisted, visible in order history, and followed by an Instagram video prompt carrying the return ID.
 
 **Acceptance Scenarios**:
 
@@ -67,6 +99,8 @@ A customer can open a delivered order, select the items and quantities to return
 3. **Given** an order outside the return window or not yet delivered, **When** the customer views it, **Then** no return action is offered and the reason is explained.
 4. **Given** an item already fully returned, **When** the customer requests again, **Then** the already-returned quantity is excluded from the selectable amount.
 5. **Given** a return request is submitted, **When** it is accepted, **Then** the customer receives a confirmation through their preferred, permitted channel.
+6. **Given** a submitted return, **When** the confirmation is shown, **Then** the return ID, a control to copy it, and a direct link to the store's Instagram inbox are presented with an instruction to send the video quoting that ID.
+7. **Given** the customer attempts to attach a video file to the form, **When** the file is selected, **Then** it is rejected with a message directing them to Instagram rather than a generic type error.
 
 ---
 
@@ -128,6 +162,8 @@ A customer can see where their return stands and what happens next, without cont
 
 - The return window must be evaluated against delivery date, not order date, and must be configurable per category.
 - A request submitted with no evidence image must be rejected before any row is written.
+- A customer attempting to attach a video must be told where to send it, not merely told the type is unsupported.
+- The Instagram handle must resolve to a real, monitored inbox before the channel is enabled; a dead link is worse than the email fallback it replaces. The feature flag defaults to off so that shipping the code and enabling the channel are separate decisions.
 - Uploaded evidence is untrusted input: type, size, and count must be validated, and files must never be executed or served from an application origin that could enable script execution.
 - A return whose refund exceeds the amount actually captured for those items must be rejected.
 - Restocking a soft-deleted variant must be handled explicitly rather than silently discarded.
@@ -144,7 +180,7 @@ A customer can see where their return stands and what happens next, without cont
 - **FR-001**: Customers MUST be able to request a return for items in a `DELIVERED` order within a configurable return window measured from delivery.
 - **FR-002**: The return request MUST capture per-item quantities and a reason drawn from the damage-only reason set: damaged in transit, defective on arrival, or wrong item received. Change-of-mind and fit reasons MUST NOT be offered.
 - **FR-003**: Requestable quantity MUST exclude quantities already returned or pending return for the same order item.
-- **FR-004**: Every return request MUST carry at least one evidence image and at most five, each validated for type and size and stored through the existing image-storage abstraction. A request without evidence MUST be rejected, because the published policy requires evidence before any damage claim is reviewed.
+- **FR-004**: Every return request MUST carry at least one evidence **image** and at most five, each validated for type and size and stored through the existing image-storage abstraction. A request without evidence MUST be rejected, because the published policy requires evidence before any damage claim is reviewed. Video files MUST NOT be accepted by this endpoint.
 - **FR-005**: Every return operation MUST enforce ownership server-side; a customer MUST NOT read or mutate another customer's return.
 - **FR-006**: The return lifecycle MUST be an explicit state machine with enforced transitions, and invalid transitions MUST be rejected.
 - **FR-007**: Administrators MUST have a returns queue guarded by a granular admin permission consistent with `src/lib/constants/roles.ts`.
@@ -158,7 +194,9 @@ A customer can see where their return stands and what happens next, without cont
 - **FR-015**: Return status, reason, and refunded amount MUST be visible to the customer in order history and order detail.
 - **FR-016**: Schema changes MUST ship as a reviewed Drizzle migration with indexes for order, user, and status lookups.
 - **FR-017**: Returns MUST be included in the existing admin CSV export capability.
-- **FR-018**: `docs/features.md` and `specs/003-order-policy-dialog` MUST be updated, and the `refunds` and `damagedItems` clauses in `src/lib/constants/checkout-policies.ts` MUST be amended per the B-1 decision, so the published policy and the implemented mechanism agree.
+- **FR-018**: `docs/features.md` and `specs/003-order-policy-dialog` MUST be updated, and the `refunds`, `returns`, and `damagedItems` clauses in `src/lib/constants/checkout-policies.ts` MUST be amended — for settlement (B-1), submission channel, and video channel respectively — so the published policy and the implemented mechanism agree. Every surface that restates the policy, including the hardcoded copy in `src/app/(public)/returns/page.tsx` and `src/app/(public)/help/page.tsx`, MUST be updated in the same change.
+- **FR-019**: After a return is submitted, the customer MUST be shown the return ID, a control to copy it, and a direct link to the store's Instagram inbox, with an instruction to send the required video quoting that ID. The link MUST open in a new tab with `rel="noopener noreferrer"`. The prompt MUST be gated on the `returnVideoViaInstagram` feature flag; when the flag is off, the customer MUST instead be directed to email the video to the support address, so the channel is never simply absent.
+- **FR-020**: The system MUST NOT store the customer's social handle or any Instagram identifier. Correlation between a direct message and a return MUST rely solely on the customer quoting the return ID, so the feature introduces no new personal data.
 
 ### Key Entities
 
@@ -180,10 +218,14 @@ A customer can see where their return stands and what happens next, without cont
 - **SC-006**: Return status changes reach customers only through channels their notification preferences permit.
 - **SC-007**: Uploaded evidence outside the permitted type, size, or count is rejected, and a request carrying no evidence at all is rejected.
 - **SC-008**: Service-layer coverage for return processing meets the 85% threshold for `src/features/**/services/**`.
+- **SC-009**: Every customer who submits a return is given the return ID and a working route to send the required video, without needing to consult the policy page.
+- **SC-010**: No Instagram handle or other social identifier is persisted by the feature.
 
 ## Out of Scope
 
 - **Change-of-mind, fit, and "not as described" returns.** This feature covers damaged, defective, and wrong-item claims only (see Scope Decision).
+- **In-product video upload.** Video is collected over Instagram direct message; the upload endpoint accepts images only. Adding video would require a second storage path, a separate size regime, and playback handling — see the Evidence Channel decision.
+- **Automated ingestion of Instagram messages.** No API integration, no inbox polling, no linking of a DM to a return record. Correlation is manual, by return ID.
 - Carrier integration, return shipping labels, and pickup scheduling. The published policy makes return shipping the customer's cost and responsibility.
 - Exchanges for a different product or variant; this specification covers returns and refunds only.
 - Automated fraud scoring of return requests.

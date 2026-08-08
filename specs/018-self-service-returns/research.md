@@ -46,15 +46,30 @@ narrows the amendment surface from a full returns-policy rewrite to a single cla
 - `returnReasonEnum` collapses to `['DAMAGED', 'DEFECTIVE', 'WRONG_ITEM']`.
 - Evidence becomes **mandatory** (minimum one image, maximum five). This is not an added
   restriction — the policy already requires photographic evidence before review.
+- The policy's **video** requirement is met out-of-band over Instagram DM rather than by
+  in-product upload — see R15.
 - Carrier integration and return labels stay out of scope, which the policy independently
   confirms by making return shipping the customer's cost.
 - The state machine, restock, refund calculation, idempotency, and COD design are **unaffected**.
 
-### Residual delta: the refunds clause still requires amendment
+### Residual delta: three clauses require amendment
 
 Option B was described in the first analysis as matching current terms with no amendment. That
-was imprecise and is corrected here. B satisfies the **returns** clause but not the **refunds**
-clause, which still says refunds are not issued and that damage is settled by replacement.
+was imprecise and is corrected here — twice over. B narrows the amendment surface but does not
+eliminate it, and the conflict is wider than the refunds clause alone:
+
+| Clause         | Conflicting text                                                         | Why it conflicts                                                    |
+| -------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| `refunds`      | "Refunds are not issued for orders."                                     | **Settlement** — FR-010 to FR-013 and SC-004 assume refund          |
+| `returns`      | "Shoppers **must contact support** with detailed photos, a short video…" | **Channel** — the feature replaces email with in-product submission |
+| `damagedItems` | "**Email** support@… with detailed photos, a short video, and…"          | **Channel and media** — photos in-product, video via Instagram DM   |
+
+The earlier claim that Option B "removes the conflict with the returns clause" holds only for
+that clause's first sentence. Its second sentence mandates the submission **channel**, which
+this feature exists to change — so the clause conflicts too. All three are carried by T063.
+
+The settlement conflict admits two resolutions. The channel and media amendments follow
+unavoidably from shipping an in-product claim form and are not optional under either:
 
 | Sub-option | Change                                                                                                                                 | Effect on this spec                                                                |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
@@ -399,21 +414,95 @@ transaction orchestration) thin enough to cover with a handful of mocked-transac
 
 ---
 
+## R15 — Video evidence channel
+
+**Decision**: The upload endpoint accepts **images only**. The policy-mandated video is collected
+over **Instagram direct message**, correlated to the return by the customer quoting the return
+ID. No handle is stored, no Instagram API is integrated.
+
+**Why not in-product upload**: the existing path is image-specific at every layer, and widening
+it is not a configuration change:
+
+| Layer                         | Current state                                  | What video would require                                        |
+| ----------------------------- | ---------------------------------------------- | --------------------------------------------------------------- |
+| `src/lib/upload-constants.ts` | `MAX_FILE_SIZE = 5 * 1024 * 1024` (5 MB)       | A separate, far larger cap — no usable phone video fits in 5 MB |
+| `VALID_IMAGE_TYPES`           | JPEG, JPG, PNG, WebP, GIF                      | A parallel video type list and magic-byte signatures            |
+| `src/lib/image-storage.ts`    | `uploadImage(file, options)` — image-named API | A second upload path or a rename that touches every caller      |
+| Admin review UI               | Thumbnail grid                                 | A player, poster frames, and streaming considerations           |
+| Abuse surface                 | Bounded by 5 MB images                         | Large-file uploads on a customer-authenticated route            |
+
+That is a disproportionate cost for a media type an administrator reviews once. Instagram
+already solves capture, compression, transport, and playback.
+
+**Why Instagram specifically**: the store has no other social presence in the codebase — a
+`grep` for `instagram|twitter|facebook|SOCIAL` across `src/` returns nothing but two unrelated
+matches for "social login". Instagram is being introduced deliberately as the video channel.
+
+### Where the handle lives — static constant, not Edge Config
+
+**Decision**: `INSTAGRAM_HANDLE` and the derived DM URL are **static constants** in
+`src/lib/constants/store.ts`, beside `STORE_NAME`. A separate Edge Config **feature flag**
+(`featureFlags.returnVideoViaInstagram`) controls whether the channel is offered at all.
+
+Edge Config was evaluated for the handle itself and rejected on two grounds:
+
+**1. A client component consumes the policy copy synchronously.**
+`src/features/cart/components/OrderPolicyConfirmDialog.tsx` is a `'use client'` component that
+statically imports `CHECKOUT_POLICIES` and `SUPPORT_EMAIL`. Edge Config is server-only and
+async — `EDGE_CONFIG` is a secret connection string that must never reach the browser. Sourcing
+the handle from Edge Config would mean it could not appear in the `damagedItems` copy that T063
+amends, or `CHECKOUT_POLICIES` would have to become an async server fetch. That refactor ripples
+through checkout, `/returns`, `/help`, and the confirm dialog — far outside this feature, and
+for a value that changes approximately never.
+
+**2. The handle appears in accepted terms.** T063 amends `damagedItems` to name the Instagram
+destination, and the customer acknowledges that text at checkout via
+`CHECKOUT_POLICY_ACKNOWLEDGMENT`. Making it dashboard-mutable would let the destination for
+customer damage evidence be redirected with no deploy, no code review, and no audit trail. A
+static constant keeps that change on the reviewed path.
+
+**What Edge Config _is_ used for**: `featureFlags.returnVideoViaInstagram`, a boolean. The
+handle is brand identity; whether the inbox is currently staffed is **operational state**, which
+is exactly what the constitution designates Edge Config for. When the flag is off, the UI falls
+back to the `SUPPORT_EMAIL` instruction and the prompt is not rendered. This is the kill switch
+for the operational risk below, and it defaults to `false` so the channel is opt-in.
+
+**Deep link**: `https://ig.me/m/<handle>` opens the direct-message composer for an account,
+falling back to the web inbox when the app is absent. Instagram does not support prefilled
+message text, so the return ID cannot be injected into the composer — hence the copy control in
+FR-019. The link is external and therefore requires `target="_blank"` with
+`rel="noopener noreferrer"`, per constitution accessibility rules.
+
+**Why no stored handle** (FR-020): storing the customer's Instagram username would create a new
+category of personal data, require a privacy-policy change, and add a field that is unverifiable
+— nothing stops a customer entering someone else's handle. Correlation by return ID is
+sufficient: the ID is already unique, already shown to the customer, and already the key the
+administrator searches by. Rejected alternative: an `instagramHandle` column on `ReturnRequest`.
+
+**Operational precondition**: the handle must resolve to a monitored inbox before the flag is
+turned on. This replaces an email address that demonstrably works with a channel that may not,
+so a dead or unmonitored link is a regression rather than an improvement. The
+`returnVideoViaInstagram` flag defaults to `false` precisely so that shipping the code and
+enabling the channel are separate decisions.
+
+---
+
 ## Summary of Decisions
 
-| ID  | Decision                                                                    | Status      |
-| --- | --------------------------------------------------------------------------- | ----------- |
-| R1  | Damaged-item scope (Option B); B-1 clause amendment tracked as T063         | ✅ Resolved |
-| R2  | 7-day window in Edge Config keyed by category **name**; `deliveredAt` added | ✅ Resolved |
-| R3  | Shipping refunded only on full-order return                                 | ✅ Resolved |
-| R4  | `allocateMoney` largest-remainder helper                                    | ✅ Resolved |
-| R5  | COD manual-settlement refund row; `paymentTransactionId` nullable           | ✅ Resolved |
-| R6  | Permission `orders:returns` for `ADMIN` + `SUPPORT`                         | ✅ Resolved |
-| R7  | Restock touches `stock` only, never `reservedStock`                         | ✅ Resolved |
-| R8  | `ReturnRequest.stockRestoredAt` guarded claim                               | ✅ Resolved |
-| R9  | Unique `ReturnRequest.refundId` guards refund issuance                      | ✅ Resolved |
-| R10 | Event + function in `src/features/orders/inngest/emails.ts`                 | ✅ Resolved |
-| R11 | Shared upload validator; orphaned-evidence model; blob serving              | ✅ Resolved |
-| R12 | Five states, five actions; `receive`/`refund` split for retry               | ✅ Resolved |
-| R13 | Cancel-after-return impossible; assert with a regression test               | ✅ Resolved |
-| R14 | Pure-function concentration to meet the 85% service threshold               | ✅ Resolved |
+| ID  | Decision                                                                                                                        | Status      |
+| --- | ------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| R1  | Damaged-item scope (Option B); B-1 clause amendment tracked as T063                                                             | ✅ Resolved |
+| R2  | 7-day window in Edge Config keyed by category **name**; `deliveredAt` added                                                     | ✅ Resolved |
+| R3  | Shipping refunded only on full-order return                                                                                     | ✅ Resolved |
+| R4  | `allocateMoney` largest-remainder helper                                                                                        | ✅ Resolved |
+| R5  | COD manual-settlement refund row; `paymentTransactionId` nullable                                                               | ✅ Resolved |
+| R6  | Permission `orders:returns` for `ADMIN` + `SUPPORT`                                                                             | ✅ Resolved |
+| R7  | Restock touches `stock` only, never `reservedStock`                                                                             | ✅ Resolved |
+| R8  | `ReturnRequest.stockRestoredAt` guarded claim                                                                                   | ✅ Resolved |
+| R9  | Unique `ReturnRequest.refundId` guards refund issuance                                                                          | ✅ Resolved |
+| R10 | Event + function in `src/features/orders/inngest/emails.ts`                                                                     | ✅ Resolved |
+| R11 | Shared upload validator; orphaned-evidence model; blob serving                                                                  | ✅ Resolved |
+| R12 | Five states, five actions; `receive`/`refund` split for retry                                                                   | ✅ Resolved |
+| R13 | Cancel-after-return impossible; assert with a regression test                                                                   | ✅ Resolved |
+| R14 | Pure-function concentration to meet the 85% service threshold                                                                   | ✅ Resolved |
+| R15 | Images in-product; video via Instagram DM by return ID; handle static in `store.ts` with an Edge Config flag gating the channel | ✅ Resolved |

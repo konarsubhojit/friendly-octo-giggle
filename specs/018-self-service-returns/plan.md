@@ -42,43 +42,51 @@ clause still says refunds are not issued — carried as task T063 rather than as
 **Project Type**: Web application — Next.js App Router monolith under `src/`
 **Performance Goals**: Returns queue list p95 < 400 ms at 10k returns; return submission p95 < 800 ms including evidence upload
 **Constraints**: No route segment config (`dynamic`/`revalidate`/`runtime`) — Cache Components is enabled; no Redis read inside a `"use cache"` scope; all money arithmetic through `src/lib/money.ts` minor-unit helpers
-**Scale/Scope**: 3 new tables, 2 enums, 7 API routes, 1 admin page, 2 customer UI surfaces, 1 Inngest event + function, 1 CSV export route
+**Scale/Scope**: 3 new tables, 2 enums, 7 API routes, 1 admin page, 3 customer UI surfaces, 1 Inngest event + function, 1 CSV export route, 4 existing policy surfaces to re-sync
 
 **Resolved unknowns** (detail in [research.md](./research.md)):
 
-| Unknown                                | Resolution                                                               |
-| -------------------------------------- | ------------------------------------------------------------------------ |
-| Scope of the reason set                | Damage categories only — `DAMAGED`, `DEFECTIVE`, `WRONG_ITEM` (Option B) |
-| Evidence requirement                   | Mandatory — minimum one image, maximum five                              |
-| Return window length & configurability | Edge Config `returnsConfig`, keyed by category **name**, 7-day default   |
-| Shipping refund rule                   | Shipping refunded only on a full-order return; never on partial          |
-| Discount allocation on partial return  | New `allocateMoney` largest-remainder helper in `src/lib/money.ts`       |
-| COD settlement path                    | Manual-settlement refund row + admin "mark settled" action, no gateway   |
-| Permission name                        | `orders:returns`, granted to `ADMIN` and `SUPPORT`                       |
-| Reservation interaction                | Restock increments `stock` only; `reservedStock` untouched               |
+| Unknown                                | Resolution                                                                      |
+| -------------------------------------- | ------------------------------------------------------------------------------- |
+| Scope of the reason set                | Damage categories only — `DAMAGED`, `DEFECTIVE`, `WRONG_ITEM` (Option B)        |
+| Evidence requirement                   | Mandatory — minimum one image, maximum five                                     |
+| Video evidence                         | **Not uploaded** — collected over Instagram DM, correlated by return ID         |
+| Instagram handle location              | Static in `src/lib/constants/store.ts` — appears in client-imported policy copy |
+| Instagram channel availability         | Edge Config `featureFlags.returnVideoViaInstagram`, default `false`             |
+| Return window length & configurability | Edge Config `returnsConfig`, keyed by category **name**, 7-day default          |
+| Shipping refund rule                   | Shipping refunded only on a full-order return; never on partial                 |
+| Discount allocation on partial return  | New `allocateMoney` largest-remainder helper in `src/lib/money.ts`              |
+| COD settlement path                    | Manual-settlement refund row + admin "mark settled" action, no gateway          |
+| Permission name                        | `orders:returns`, granted to `ADMIN` and `SUPPORT`                              |
+| Reservation interaction                | Restock increments `stock` only; `reservedStock` untouched                      |
 
 **Open — non-blocking, requires sign-off before merge**:
 
-- **T063 (policy wording)**: Option B satisfies the published _returns_ clause but not the
-  _refunds_ clause, which still reads "Refunds are not issued for orders." A narrow amendment to
-  the `refunds` and `damagedItems` clauses (decision B-1) is required so the shipped mechanism
-  and the accepted terms agree. This is wording sign-off, not a design question, so it runs in
-  parallel with implementation rather than gating it.
+- **T063 (policy wording)**: three published clauses conflict with the shipped mechanism —
+  `refunds` on settlement, `returns` on submission channel, and `damagedItems` on both channel
+  and video handling. All three need amended wording so the accepted terms match what ships.
+  This is wording sign-off, not a design question, so it runs in parallel with implementation
+  rather than gating it.
+- **T071 (Instagram inbox)**: the handle must resolve to a real, monitored account before the
+  `returnVideoViaInstagram` flag is switched on. This replaces a working email channel with one
+  that may not be staffed, so an unmonitored inbox is a regression rather than an improvement.
+  The flag defaults to `false`, so shipping the code and enabling the channel are separate
+  decisions and this is not a merge gate.
 
 ## Constitution Check
 
 _GATE: Must pass before Phase 0 research. Re-checked after Phase 1 design._
 
-| Principle                              | Assessment                                                                                                                                                                                                                                          | Status |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| I. Server-First Rendering              | Admin returns queue is a Server Component calling `requireAdminPermission`; `'use client'` confined to the return request form, evidence uploader, and queue action buttons. Customer return status renders server-side inside order detail.        | PASS   |
-| II. Type Safety End-to-End             | All boundaries validated with Zod under `src/features/orders/validations.ts`; no raw SQL outside the generated migration; return status modelled as a `pgEnum` plus a derived TS union.                                                             | PASS   |
-| III. Testing Discipline                | Service-layer tests target the 85% `src/features/**/services/**` threshold; Playwright specs cover request → approve → receive → refund. State-machine and allocation logic are pure functions, tested exhaustively.                                | PASS   |
-| IV. Serverless & Caching Architecture  | Return status notification via Inngest (`order/return.status.changed`) with inline fallback, registered in `registry.ts`. Redis invalidation via `invalidateUserOrderCaches` / `invalidateAdminOrderCaches`. No new `"use cache"` scope introduced. | PASS   |
-| V. Security by Default                 | Ownership enforced server-side on every customer operation; admin routes use `checkAdminAuth('orders:returns')`; evidence upload reuses magic-byte and size validation and is served from blob storage, never an app origin.                        | PASS   |
-| VI. Observability & Structured Logging | All routes wrapped with `withApiLogging`; errors through `handleApiError` (which already calls `unstable_rethrow`); business events logged for `return_requested`, `return_decided`, `return_received`, `return_refunded`.                          | PASS   |
-| VII. Simplicity & YAGNI                | Five states, no customer-withdraw state, no grading workflow, no carrier integration, no orphaned-evidence sweeper. One new money helper, added because proportional discount allocation is otherwise impossible to do correctly.                   | PASS   |
-| VIII. DRY Shared Utilities             | Refund creation delegates to the existing `refundOrder`; audit via `recordAdminAuditLog`; CSV via `streamCsvResponse` and `batchedCsvRows`; upload via `uploadImage`. Only genuinely new logic is written.                                          | PASS   |
+| Principle                              | Assessment                                                                                                                                                                                                                                                                                | Status |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| I. Server-First Rendering              | Admin returns queue is a Server Component calling `requireAdminPermission`; `'use client'` confined to the return request form, evidence uploader, and queue action buttons. Customer return status renders server-side inside order detail.                                              | PASS   |
+| II. Type Safety End-to-End             | All boundaries validated with Zod under `src/features/orders/validations.ts`; no raw SQL outside the generated migration; return status modelled as a `pgEnum` plus a derived TS union.                                                                                                   | PASS   |
+| III. Testing Discipline                | Service-layer tests target the 85% `src/features/**/services/**` threshold; Playwright specs cover request → approve → receive → refund. State-machine and allocation logic are pure functions, tested exhaustively.                                                                      | PASS   |
+| IV. Serverless & Caching Architecture  | Return status notification via Inngest (`order/return.status.changed`) with inline fallback, registered in `registry.ts`. Redis invalidation via `invalidateUserOrderCaches` / `invalidateAdminOrderCaches`. No new `"use cache"` scope introduced.                                       | PASS   |
+| V. Security by Default                 | Ownership enforced server-side on every customer operation; admin routes use `checkAdminAuth('orders:returns')`; evidence upload reuses magic-byte and size validation and is served from blob storage, never an app origin.                                                              | PASS   |
+| VI. Observability & Structured Logging | All routes wrapped with `withApiLogging`; errors through `handleApiError` (which already calls `unstable_rethrow`); business events logged for `return_requested`, `return_decided`, `return_received`, `return_refunded`.                                                                | PASS   |
+| VII. Simplicity & YAGNI                | Five states, no customer-withdraw state, no grading workflow, no carrier integration, no orphaned-evidence sweeper, **no video pipeline and no Instagram API integration**. One new money helper, added because proportional discount allocation is otherwise impossible to do correctly. | PASS   |
+| VIII. DRY Shared Utilities             | Refund creation delegates to the existing `refundOrder`; audit via `recordAdminAuditLog`; CSV via `streamCsvResponse` and `batchedCsvRows`; upload via `uploadImage`. Only genuinely new logic is written.                                                                                | PASS   |
 
 **Post-Phase-1 re-check**: PASS. The design added no route segment config, no nested
 Redis-in-cache-scope, and no new heavy import chains. `restockReturnItems` is a new module
@@ -108,6 +116,8 @@ src/
 ├── app/
 │   ├── (public)/orders/[id]/
 │   │   └── page.tsx                          # MODIFY — surface return action + status
+│   ├── (public)/returns/page.tsx             # MODIFY — hardcoded RETURN_STEPS + refunds copy
+│   ├── (public)/help/page.tsx                # MODIFY — hardcoded return-policy FAQ answer
 │   ├── admin/returns/
 │   │   ├── page.tsx                          # NEW — Server Component, requireAdminPermission
 │   │   └── error.tsx                         # NEW
@@ -116,15 +126,16 @@ src/
 │       ├── returns/[id]/route.ts             # NEW — GET one (customer, ownership-gated)
 │       └── admin/
 │           ├── returns/route.ts              # NEW — GET queue
-│           ├── returns/[id]/route.ts         # NEW — PATCH decide / receive / settle
+│           ├── returns/[id]/route.ts         # NEW — PATCH decide / receive / refund / settle
 │           └── export/returns/route.ts       # NEW — CSV export
 ├── features/orders/
 │   ├── components/
 │   │   ├── ReturnRequestForm.tsx             # NEW — 'use client'
-│   │   ├── ReturnEvidenceUploader.tsx        # NEW — 'use client'
+│   │   ├── ReturnEvidenceUploader.tsx        # NEW — 'use client', images only
+│   │   ├── ReturnVideoPrompt.tsx             # NEW — 'use client', return ID + copy + IG link
 │   │   └── ReturnStatusPanel.tsx             # NEW — Server Component
 │   ├── services/
-│   │   ├── return-service.ts                 # NEW — create, decide, receive, settle
+│   │   ├── return-service.ts                 # NEW — create, decide, receive, refund, settle
 │   │   ├── return-state-machine.ts           # NEW — pure transition table
 │   │   ├── return-refund-calculator.ts       # NEW — pure allocation logic
 │   │   ├── return-restock.ts                 # NEW — idempotent partial restock
@@ -137,15 +148,18 @@ src/
 │   └── validations.ts                        # MODIFY — return Zod schemas
 ├── features/admin/components/
 │   └── AdminReturnCard.tsx                   # NEW — 'use client'
+├── features/cart/components/
+│   └── OrderPolicyConfirmDialog.tsx          # VERIFY — derives from CHECKOUT_POLICIES
 ├── lib/
 │   ├── schema.ts                             # MODIFY — 3 tables, 2 enums, refunds.returnRequestId
 │   ├── money.ts                              # MODIFY — add allocateMoney
-│   ├── edge-config.ts                        # MODIFY — add returnsConfig
+│   ├── edge-config.ts                        # MODIFY — returnsConfig + returnVideoViaInstagram flag
 │   ├── upload-constants.ts                   # MODIFY — hoist MAX_FORM_DATA_BODY_SIZE
 │   ├── upload-validation.ts                  # NEW — shared magic-byte validator
 │   ├── constants/roles.ts                    # MODIFY — add 'orders:returns'
 │   ├── constants/returns.ts                  # NEW — status/reason tuples
-│   ├── constants/checkout-policies.ts        # MODIFY — reconcile published policy (R1)
+│   ├── constants/store.ts                    # MODIFY — INSTAGRAM_HANDLE + DM deep link (static)
+│   ├── constants/checkout-policies.ts        # MODIFY — amend 3 clauses (R1)
 │   ├── inngest/registry.ts                   # MODIFY — register return function
 │   ├── email/templates.ts                    # MODIFY — returnStatusUpdateTemplate
 │   └── notifications/order-notifications.ts  # MODIFY — deliverReturnStatusNotification

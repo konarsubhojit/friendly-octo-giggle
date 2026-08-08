@@ -130,6 +130,16 @@ submissions cannot both consume the last returnable unit:
 }
 ```
 
+The client renders the Instagram video prompt from this response (FR-019): the `id` is the
+correlation key the customer must quote, and the destination URL is a build-time constant from
+`src/lib/constants/store.ts`. **The URL is not returned by the API** — it is not per-request
+data, and shipping it in every response would invite treating it as server-controlled when it is
+not.
+
+Whether the prompt renders at all is gated on the `returnVideoViaInstagram` Edge Config flag,
+read server-side and passed down as a prop. When it is off the customer is directed to email the
+video to `SUPPORT_EMAIL` instead, so the video instruction is never simply missing.
+
 ### Errors
 
 | Status | Condition                                                                                                                     |
@@ -154,9 +164,15 @@ submissions cannot both consume the last returnable unit:
 
 ## `POST /api/orders/{orderId}/returns/evidence`
 
-Upload one evidence image and receive an identifier to attach to a subsequent return request.
-Uploading is separated from creation so the customer can add images progressively without
-holding an open transaction.
+Upload one evidence **image** and receive an identifier to attach to a subsequent return
+request. Uploading is separated from creation so the customer can add images progressively
+without holding an open transaction.
+
+**Images only.** This endpoint does not accept video. The policy-mandated video is sent over
+Instagram direct message and never touches this route — see [research.md](../research.md) R15.
+A video upload attempt is rejected at the magic-byte check like any other disallowed type; the
+client is responsible for turning that rejection into a "send it on Instagram instead" message
+rather than a bare type error (spec US1 scenario 7).
 
 **The uploaded row is created orphaned** — `ReturnEvidence.returnRequestId` is `NULL` until
 `POST …/returns` attaches it. `userId` and `orderId` are set at upload time and carry ownership
@@ -177,7 +193,8 @@ row to join through. See [data-model.md](../data-model.md) `ReturnEvidence`.
   `src/app/api/upload/route.ts`, moved to `src/lib/upload-constants.ts` as part of the extraction
 - File size ≤ `MAX_FILE_SIZE` → `413`
 - **Magic-byte** MIME detection restricted to JPEG, PNG, GIF, WebP → `400`. The declared
-  `Content-Type` is never trusted.
+  `Content-Type` is never trusted. Video containers (MP4, MOV, WebM) are **not** in this list and
+  are rejected here by design.
 - At most 5 orphaned rows per (`userId`, `orderId`) → `409`
 
 ### Response `201`

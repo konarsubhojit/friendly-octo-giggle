@@ -37,6 +37,8 @@
 
 - [ ] T002 [P] Add `'orders:returns'` to `ADMIN_PERMISSIONS` and grant it to `SUPPORT` in the `ROLE_PERMISSIONS` map in [src/lib/constants/roles.ts](src/lib/constants/roles.ts) (`ADMIN` already receives all permissions)
 - [ ] T003 [P] Add `returnsConfig` to [src/lib/edge-config.ts](src/lib/edge-config.ts): the `ReturnsConfig` interface (`defaultWindowDays: 7`, `categoryWindowDays` keyed by **category name**, `nonReturnableCategoryNames`), `DEFAULT_RETURNS_CONFIG`, a `getReturnsConfig()` reader, and entries in both the `EdgeConfigData` type and the `getAllEdgeConfig` batch read — mirroring `shippingConfig` end to end
+- [ ] T003a [P] Add `returnVideoViaInstagram: boolean` to the `FeatureFlags` interface and `DEFAULT_FEATURE_FLAGS` in [src/lib/edge-config.ts](src/lib/edge-config.ts), defaulting to **`false`** so the channel is opt-in and shipping the code does not enable an unstaffed inbox ([research.md](./research.md) R15)
+- [ ] T003b [P] Add `INSTAGRAM_HANDLE` and a derived `INSTAGRAM_DM_URL` (`https://ig.me/m/<handle>`) to [src/lib/constants/store.ts](src/lib/constants/store.ts) beside `STORE_NAME`. **Static, not Edge Config** — the handle appears in policy copy that the Client Component `OrderPolicyConfirmDialog` imports synchronously, and Edge Config is server-only and async
 - [ ] T004 [P] Create `src/lib/constants/returns.ts` with `RETURN_STATUSES` and `RETURN_REASONS` const tuples plus their derived TS unions, so schema, Zod, and UI share one source. Per Option B, `RETURN_REASONS` is exactly `['DAMAGED', 'DEFECTIVE', 'WRONG_ITEM']`
 
 ---
@@ -53,7 +55,7 @@
 - [ ] T006 Add `deliveredAt` timestamp to the `orders` table and `returnRequestId` varchar(7) FK to the `refunds` table, and relax `refunds.paymentTransactionId` from `.notNull()` to nullable per [data-model.md](./data-model.md) M1/M2/M4, in [src/lib/schema.ts](src/lib/schema.ts)
 - [ ] T007 Add `returnRequestsRelations`, `returnItemsRelations`, `returnEvidenceRelations`, and extend `ordersRelations` with `returns: many(returnRequests)` in [src/lib/schema.ts](src/lib/schema.ts)
 - [ ] T008 Generate the migration with `npm run db:generate`, review the SQL, and hand-edit `drizzle/0017_self_service_returns.sql` to add the `deliveredAt` backfill (`UPDATE "Order" SET "deliveredAt" = "updatedAt" WHERE status = 'DELIVERED'`) with the comment recording that it is an approximation for historical rows, and to make index creation on the non-empty `Order` and `Refund` tables `CONCURRENTLY`
-- [ ] T009 Apply the migration with `npm run db:migrate` and verify the new tables, indexes, and constraints exist. Constitution workflow step 6 also names `scripts/sql/bootstrap-drizzle-initial.sql` and `npm run db:bootstrap`; **neither exists in this repository** — `scripts/sql/` holds only `catalog-data.sql`, and `package.json` defines only `db:generate`, `db:migrate`, `db:push`, `db:studio` — so that clause is stale constitution content and is skipped deliberately
+- [ ] T009 Apply the migration with `npm run db:migrate` and verify the new tables, indexes, and constraints exist, then commit the schema and the migration together per constitution workflow step 6
 
 ### Pure Functions — tests first
 
@@ -83,6 +85,7 @@
 - [ ] T017 [P] [US1] Write failing service tests in [**tests**/features/orders/services/return-service.test.ts](__tests__/features/orders/services/return-service.test.ts) covering: ownership rejection, order not `DELIVERED`, window expired, excluded category, requested quantity exceeding returnable, refund total exceeding the order's remaining captured balance, and `REJECTED` returns releasing held quantity
 - [ ] T018 [P] [US1] Write failing route tests in `__tests__/app/api/orders/returns.test.ts` asserting 401 without session, 404 for another customer's order, 400 on Zod failure, 409 with the correct `code` discriminator, and 201 on success
 - [ ] T018a [P] [US1] Write failing tests for `POST …/returns/evidence` in `__tests__/app/api/orders/return-evidence.test.ts` asserting rejection of a disallowed type by magic byte, a file over `MAX_FILE_SIZE` (413), and a sixth upload for the same (`userId`, `orderId`) pair (409). Also assert that `POST …/returns` rejects a request with an empty `evidenceIds`, and one whose ids all belong to another customer, with `400` — covers SC-007
+- [ ] T018b [P] [US1] Write failing component tests for `ReturnVideoPrompt` in `__tests__/features/orders/components/ReturnVideoPrompt.test.tsx`: renders the return ID and an `ig.me` link carrying `rel="noopener noreferrer"` when the flag is on, and renders the `SUPPORT_EMAIL` fallback with no Instagram link when it is off — covers SC-009
 
 ### Implementation for User Story 1
 
@@ -94,9 +97,10 @@
 - [ ] T024 [US1] Implement `GET` and `POST /api/orders/[id]/returns` in `src/app/api/orders/[id]/returns/route.ts` per [contracts/customer-returns.md](./contracts/customer-returns.md), wrapped in `withApiLogging`, responding through `apiSuccess`/`handleApiError`, with `Cache-Control: private, no-store` — T018 must pass
 - [ ] T025 [US1] Add `serializeCustomerReturn` to [src/lib/serializers.ts](src/lib/serializers.ts) that explicitly omits `decidedById`, `receivedById`, `stockRestoredAt`, `refundId`, `gatewayRefundId`, `errorMessage`, `paymentTransactionId`, and variant stock fields — never spread the row
 - [ ] T026 [US1] Implement `GET /api/returns/[id]` in `src/app/api/returns/[id]/route.ts`, returning **404** (not 403) for another customer's return so the endpoint does not confirm the identifier exists
-- [ ] T027 [P] [US1] Build `ReturnEvidenceUploader.tsx` in `src/features/orders/components/` as a Client Component posting to the T023 endpoint, with client-side type/size pre-checks that never substitute for the server check
-- [ ] T028 [US1] Build `ReturnRequestForm.tsx` in `src/features/orders/components/` as a Client Component with per-item quantity steppers bounded by `returnableQuantity`, a damage-reason selector offering only the three Option B reasons, a submit control disabled until at least one evidence image is attached, and `formatPrice()` from `useCurrency()` for all amounts — no raw `$` or `.toFixed(2)`
-- [ ] T029 [US1] Surface the return action and submitted returns on [src/app/(public)/orders/[id]/page.tsx](<src/app/(public)/orders/%5Bid%5D/page.tsx>), keeping the page a Server Component and confining `'use client'` to T027/T028
+- [ ] T027 [P] [US1] Build `ReturnEvidenceUploader.tsx` in `src/features/orders/components/` as a Client Component posting to the T023 endpoint, with client-side type/size pre-checks that never substitute for the server check. When the selected file is a video, show a message pointing at the Instagram channel rather than a bare "unsupported type" error (spec US1 scenario 7)
+- [ ] T027a [P] [US1] Build `ReturnVideoPrompt.tsx` in `src/features/orders/components/` as a Client Component showing the return ID, a copy-to-clipboard control, and a link to `INSTAGRAM_DM_URL` opened with `target="_blank"` and `rel="noopener noreferrer"`. It takes the flag value as a prop; when false it renders the `SUPPORT_EMAIL` fallback instruction instead of the Instagram link — the video instruction is never simply absent (FR-019)
+- [ ] T028 [US1] Build `ReturnRequestForm.tsx` in `src/features/orders/components/` as a Client Component with per-item quantity steppers bounded by `returnableQuantity`, a damage-reason selector offering only the three Option B reasons, a submit control disabled until at least one evidence image is attached, and `formatPrice()` from `useCurrency()` for all amounts — no raw `$` or `.toFixed(2)`. On success it renders `ReturnVideoPrompt` with the new return ID
+- [ ] T029 [US1] Surface the return action and submitted returns on [src/app/(public)/orders/[id]/page.tsx](<src/app/(public)/orders/%5Bid%5D/page.tsx>), keeping the page a Server Component, reading `returnVideoViaInstagram` via `getFeatureFlags()` there and passing it down as a prop, and confining `'use client'` to T027/T027a/T028
 - [ ] T030 [US1] Add cache invalidation (`invalidateUserOrderCaches`, `invalidateAdminOrderCaches`) and `return_requested` business-event logging via [src/lib/logger.ts](src/lib/logger.ts) to the creation path
 
 **Checkpoint**: A customer can submit a return end to end. Nothing can yet action it.
@@ -192,10 +196,12 @@
 ## Phase 7: Polish & Cross-Cutting Concerns
 
 - [ ] T062 [P] Implement `GET /api/admin/export/returns` in `src/app/api/admin/export/returns/route.ts` using `streamCsvResponse` and `batchedCsvRows` from [src/features/admin/services/admin-csv.ts](src/features/admin/services/admin-csv.ts) with the fixed column order from [contracts/admin-returns.md](./contracts/admin-returns.md) (FR-017)
-- [ ] T063 Amend the `refunds` and `damagedItems` clauses in [src/lib/constants/checkout-policies.ts](src/lib/constants/checkout-policies.ts) per decision **B-1**, so that approved damage claims may be settled by refund where replacement is unavailable, and the published promise matches the shipped mechanism (FR-018). Requires product/legal sign-off on the wording before merge
+- [ ] T063 Amend **three** clauses in [src/lib/constants/checkout-policies.ts](src/lib/constants/checkout-policies.ts) so the published promise matches the shipped mechanism (FR-018): `refunds` per decision **B-1** (approved damage claims may be settled by refund where replacement is unavailable); `returns` to replace "must contact support" with in-product submission; and `damagedItems` to describe photos in-product plus video over Instagram. Requires product/legal sign-off on the wording before merge
+- [ ] T063a Re-sync every surface that restates the policy, two of which **hardcode their copy** rather than deriving it from `CHECKOUT_POLICIES`: the `RETURN_STEPS` array and the "Refunds are not issued" reminder in [src/app/(public)/returns/page.tsx](<src/app/(public)/returns/page.tsx>), the return-policy FAQ answer in [src/app/(public)/help/page.tsx](<src/app/(public)/help/page.tsx>), and verify that [src/app/(public)/checkout/review/page.tsx](<src/app/(public)/checkout/review/page.tsx>) and [src/features/cart/components/OrderPolicyConfirmDialog.tsx](src/features/cart/components/OrderPolicyConfirmDialog.tsx) still render correctly from the amended constant. Amending the constant alone leaves the hardcoded copy stale and contradictory
+- [ ] T063b Confirm the Instagram account named by `INSTAGRAM_HANDLE` exists, is monitored, and that `https://ig.me/m/<handle>` resolves to its inbox — **before** `returnVideoViaInstagram` is switched on in Edge Config. This channel replaces a working email address, so an unstaffed inbox is a regression. Not a merge gate: the flag defaults to `false`
 - [ ] T064 [P] Update [docs/features.md](docs/features.md) and `specs/003-order-policy-dialog` to describe the returns lifecycle (FR-018)
 - [ ] T065 [P] Add accessibility attributes across the new UI: `htmlFor`/`id` on every label, `aria-label` on icon-only controls, `aria-expanded`/`aria-haspopup`/`role="menu"` on the queue action menus, `aria-hidden` on decorative elements, and real `<button>`/`<a>` elements rather than ARIA-roled divs
-- [ ] T066 [P] Write `playwright-tests/returns.spec.ts` covering the full lifecycle, the keyboard path through the request form, and axe-core accessibility assertions on the customer form and admin queue; capture screenshots per constitution Principle III
+- [ ] T066 [P] Write `playwright-tests/returns.spec.ts` covering the full lifecycle, the keyboard path through the request form, the Instagram prompt in both flag states, and axe-core accessibility assertions on the customer form and admin queue; capture screenshots per constitution Principle III
 - [ ] T067 Verify coverage meets the 85%/76%/85%/85% threshold for `src/features/**/services/**` with `npm run test:coverage` (SC-008)
 - [ ] T068 Run `sonarqube_analyze_file` on every added and modified file, and `sonarqube_list_potential_security_issues` on all API routes plus the evidence upload handler; resolve every BLOCKER and CRITICAL
 - [ ] T069 Run the full gate — `npm run lint`, `npx tsc --noEmit -p tsconfig.check.json`, `npm test`, `npm run build`, `npm run docs:check` — and the manual verification path in [quickstart.md](./quickstart.md)
@@ -306,16 +312,16 @@ Phases 1–5 (T002–T051, including T018a and T046a). This is the smallest set 
 
 ## Summary
 
-| Phase            | Tasks            | Count  |
-| ---------------- | ---------------- | ------ |
-| 0 — Decision     | T001             | 1      |
-| 1 — Setup        | T002–T004        | 3      |
-| 2 — Foundational | T005–T016        | 12     |
-| 3 — US1 (P1)     | T017–T030, T018a | 15     |
-| 4 — US2 (P1)     | T031–T039        | 9      |
-| 5 — US3 (P1)     | T040–T051, T046a | 13     |
-| 6 — US4 (P2)     | T052–T061        | 10     |
-| 7 — Polish       | T062–T070        | 9      |
-| **Total**        |                  | **72** |
+| Phase            | Tasks                     | Count  |
+| ---------------- | ------------------------- | ------ |
+| 0 — Decision     | T001                      | 1      |
+| 1 — Setup        | T002–T004, T003a, T003b   | 5      |
+| 2 — Foundational | T005–T016                 | 12     |
+| 3 — US1 (P1)     | T017–T030, T018a/b, T027a | 17     |
+| 4 — US2 (P1)     | T031–T039                 | 9      |
+| 5 — US3 (P1)     | T040–T051, T046a          | 13     |
+| 6 — US4 (P2)     | T052–T061                 | 10     |
+| 7 — Polish       | T062–T070, T063a, T063b   | 11     |
+| **Total**        |                           | **78** |
 
-Test tasks: 16. Parallelisable tasks: 28.
+Test tasks: 17. Parallelisable tasks: 32.

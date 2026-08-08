@@ -16,12 +16,21 @@ workflow, not a general returns capability:
   fit reasons — the enum is the enforcement point for a policy constraint.
 - **At least one evidence image is mandatory.** The published policy requires photographic
   evidence before any damage claim is reviewed.
+- **Images only. Video goes to Instagram DM.** The policy also requires a short video; it is
+  collected out-of-band and correlated by return ID ([research.md](./research.md) R15). The
+  upload route rejects video by design.
 - Return shipping is the customer's cost and responsibility, per the published policy. No carrier
   integration, no labels.
 
-One policy amendment (T063) is still outstanding: the `refunds` clause says refunds are not
-issued, and it must be amended to permit refund settlement for approved damage claims. That is
-wording sign-off and does not block implementation — but it does block merge.
+Two items are outstanding but do not block implementation:
+
+- **T063 / T063a — policy wording.** Three clauses conflict with what ships: `refunds` on
+  settlement, `returns` on submission channel, `damagedItems` on channel and video. Two public
+  pages hardcode the copy rather than reading `CHECKOUT_POLICIES`, so amending the constant alone
+  is not enough. Wording sign-off blocks merge, not development.
+- **T063b — Instagram inbox.** The handle must resolve to a monitored account before
+  `returnVideoViaInstagram` is enabled. The flag defaults to `false`, so this gates the rollout,
+  not the merge.
 
 ---
 
@@ -204,6 +213,13 @@ Capture screenshots of the customer return form, the customer status panel, and 
 - **Do not recompute refund amounts at refund time.** They are frozen at request time (D3).
   Re-validate against the remaining balance, but never recalculate.
 - **Do not trust `Content-Type` on evidence uploads.** Use the shared magic-byte validator.
+- **Do not widen the upload route to accept video.** `MAX_FILE_SIZE` is 5 MB and `uploadImage`
+  is image-specific; video belongs on Instagram DM. A video selection should produce a "send it
+  on Instagram" message, not a bare type error.
+- **Do not put the Instagram handle in Edge Config.** It appears in policy copy that the Client
+  Component `OrderPolicyConfirmDialog` imports synchronously, and Edge Config is server-only and
+  async. The handle is static in `store.ts`; only the `returnVideoViaInstagram` flag is dynamic.
+- **Do not store a customer's Instagram handle.** Correlation is by return ID only (FR-020).
 - **Do not return 403 for another customer's return.** Return 404 — 403 confirms the identifier
   exists.
 - **Do not format prices with `$` or `.toFixed(2)`.** Use `formatPrice()` from `useCurrency()`.
