@@ -10,7 +10,7 @@ architecture and workflow details.
 2. Install dependencies: `npm install`
 3. Copy `.env.example` to `.env.local` and fill in the required values (see
    [Getting Started](./docs/getting-started.md)).
-4. Apply the database schema: `npm run db:bootstrap && npm run db:migrate`
+4. Apply the database schema: `npm run db:migrate`
 5. Start the dev server: `npm run dev`
 
 ## Branching and commits
@@ -41,9 +41,6 @@ Pull requests should:
 Never edit an applied migration. Modify `src/lib/schema.ts`, then run
 `npm run db:generate`, review the generated SQL in `drizzle/`, and apply it with
 `npm run db:migrate`. Keep backfills idempotent so they can be replayed safely.
-Also refresh `scripts/sql/bootstrap-drizzle-initial.sql` so `npm run db:bootstrap`
-still produces the latest schema — see
-[docs/development.md](docs/development.md#keeping-the-bootstrap-script-in-sync).
 
 ## Code style
 
