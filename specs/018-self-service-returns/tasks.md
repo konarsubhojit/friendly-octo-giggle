@@ -14,15 +14,20 @@
 
 ---
 
-## ⛔ Phase 0: Blocking Business Decision
+## ✅ Phase 0: Scope Decision (CLOSED)
 
-**This phase gates every other phase. Do not start Phase 1 until T001 is closed.**
+- [x] T001 Resolve the published-policy conflict in [research.md](./research.md) R1. **Decided 2026-08-08: Option B — damaged-item returns only.** Recorded in [spec.md](./spec.md) "Scope Decision" and [research.md](./research.md) R1.
 
-- [ ] T001 Resolve the published-policy conflict in [research.md](./research.md) R1 — the shipped copy in [src/lib/constants/checkout-policies.ts](src/lib/constants/checkout-policies.ts) states "Refunds are not issued for orders" and "Orders cannot be returned unless the product is received in damaged condition", which every customer accepts at checkout. Obtain a product/legal decision between Option A (amend the policy to permit windowed returns and refunds), Option B (damaged-item returns only), or Option C (replacement instead of refund). Record the decision in [spec.md](./spec.md) Baseline.
+**What Option B binds**:
 
-**Impact of the decision on downstream tasks**: Option B narrows `returnReasonEnum` in T005 to `['DAMAGED','DEFECTIVE','WRONG_ITEM']` and makes evidence mandatory in T024/T030. Option C deletes T033–T039 and all of US3's refund half.
+- `returnReasonEnum` is `['DAMAGED', 'DEFECTIVE', 'WRONG_ITEM']` (T004, T005). No change-of-mind or fit reasons.
+- Evidence is **mandatory**, minimum one image and maximum five (T016, T023, T024, T028).
+- Carrier integration and return labels stay out of scope — the policy makes return shipping the customer's cost.
+- The state machine, restock, refund calculation, idempotency, and COD paths are **unaffected**.
 
-**Checkpoint**: Decision recorded. Proceed.
+**Residual, non-blocking**: Option B satisfies the published _returns_ clause but not the _refunds_ clause, which still reads "Refunds are not issued for orders." A narrow amendment to the `refunds` and `damagedItems` clauses (decision B-1) is required and is carried as **T063**, not as a gate. If B-2 (settle by replacement) is chosen instead, FR-010 through FR-013 and SC-004 must be struck and the feature re-planned rather than patched.
+
+**Checkpoint**: Decision recorded. Phase 1 may start.
 
 ---
 
@@ -32,7 +37,7 @@
 
 - [ ] T002 [P] Add `'orders:returns'` to `ADMIN_PERMISSIONS` and grant it to `SUPPORT` in the `ROLE_PERMISSIONS` map in [src/lib/constants/roles.ts](src/lib/constants/roles.ts) (`ADMIN` already receives all permissions)
 - [ ] T003 [P] Add `returnsConfig` to [src/lib/edge-config.ts](src/lib/edge-config.ts): the `ReturnsConfig` interface (`defaultWindowDays: 7`, `categoryWindowDays` keyed by **category name**, `nonReturnableCategoryNames`), `DEFAULT_RETURNS_CONFIG`, a `getReturnsConfig()` reader, and entries in both the `EdgeConfigData` type and the `getAllEdgeConfig` batch read — mirroring `shippingConfig` end to end
-- [ ] T004 [P] Create `src/lib/constants/returns.ts` with `RETURN_STATUSES` and `RETURN_REASONS` const tuples plus their derived TS unions, so schema, Zod, and UI share one source
+- [ ] T004 [P] Create `src/lib/constants/returns.ts` with `RETURN_STATUSES` and `RETURN_REASONS` const tuples plus their derived TS unions, so schema, Zod, and UI share one source. Per Option B, `RETURN_REASONS` is exactly `['DAMAGED', 'DEFECTIVE', 'WRONG_ITEM']`
 
 ---
 
@@ -44,11 +49,11 @@
 
 ### Schema & Migration
 
-- [ ] T005 Add `returnStatusEnum` and `returnReasonEnum` pgEnums, and the `returnRequests`, `returnItems`, `returnEvidence` tables with all columns, indexes, unique constraints, and check constraints specified in [data-model.md](./data-model.md), to [src/lib/schema.ts](src/lib/schema.ts). `ReturnEvidence.returnRequestId` is **nullable** — evidence is uploaded before the return exists — with `userId` and `orderId` NOT NULL and a `(userId, orderId)` index
+- [ ] T005 Add `returnStatusEnum` and `returnReasonEnum` pgEnums — the reason enum restricted to `['DAMAGED', 'DEFECTIVE', 'WRONG_ITEM']` per Option B — and the `returnRequests`, `returnItems`, `returnEvidence` tables with all columns, indexes, unique constraints, and check constraints specified in [data-model.md](./data-model.md), to [src/lib/schema.ts](src/lib/schema.ts). `ReturnEvidence.returnRequestId` is **nullable** — evidence is uploaded before the return exists — with `userId` and `orderId` NOT NULL and a `(userId, orderId)` index
 - [ ] T006 Add `deliveredAt` timestamp to the `orders` table and `returnRequestId` varchar(7) FK to the `refunds` table, and relax `refunds.paymentTransactionId` from `.notNull()` to nullable per [data-model.md](./data-model.md) M1/M2/M4, in [src/lib/schema.ts](src/lib/schema.ts)
 - [ ] T007 Add `returnRequestsRelations`, `returnItemsRelations`, `returnEvidenceRelations`, and extend `ordersRelations` with `returns: many(returnRequests)` in [src/lib/schema.ts](src/lib/schema.ts)
 - [ ] T008 Generate the migration with `npm run db:generate`, review the SQL, and hand-edit `drizzle/0017_self_service_returns.sql` to add the `deliveredAt` backfill (`UPDATE "Order" SET "deliveredAt" = "updatedAt" WHERE status = 'DELIVERED'`) with the comment recording that it is an approximation for historical rows, and to make index creation on the non-empty `Order` and `Refund` tables `CONCURRENTLY`
-- [ ] T009 Apply the migration with `npm run db:migrate` and verify it applies cleanly against an empty database (constitution workflow step 6)
+- [ ] T009 Apply the migration with `npm run db:migrate` and verify the new tables, indexes, and constraints exist. Constitution workflow step 6 also names `scripts/sql/bootstrap-drizzle-initial.sql` and `npm run db:bootstrap`; **neither exists in this repository** — `scripts/sql/` holds only `catalog-data.sql`, and `package.json` defines only `db:generate`, `db:migrate`, `db:push`, `db:studio` — so that clause is stale constitution content and is skipped deliberately
 
 ### Pure Functions — tests first
 
@@ -61,7 +66,7 @@
 
 ### Validation Schemas
 
-- [ ] T016 Add `CreateReturnRequestSchema` and the `DecideReturnSchema` discriminated union — including the `refund` action — from [data-model.md](./data-model.md) to [src/features/orders/validations.ts](src/features/orders/validations.ts)
+- [ ] T016 Add `CreateReturnRequestSchema` — with `evidenceIds` **required**, `.min(1).max(5)` per Option B — and the `DecideReturnSchema` discriminated union including the `refund` action, from [data-model.md](./data-model.md) to [src/features/orders/validations.ts](src/features/orders/validations.ts)
 
 **Checkpoint**: Schema migrated, pure logic proven, validation defined. User stories can begin.
 
@@ -77,20 +82,20 @@
 
 - [ ] T017 [P] [US1] Write failing service tests in [**tests**/features/orders/services/return-service.test.ts](__tests__/features/orders/services/return-service.test.ts) covering: ownership rejection, order not `DELIVERED`, window expired, excluded category, requested quantity exceeding returnable, refund total exceeding the order's remaining captured balance, and `REJECTED` returns releasing held quantity
 - [ ] T018 [P] [US1] Write failing route tests in `__tests__/app/api/orders/returns.test.ts` asserting 401 without session, 404 for another customer's order, 400 on Zod failure, 409 with the correct `code` discriminator, and 201 on success
-- [ ] T018a [P] [US1] Write failing tests for `POST …/returns/evidence` in `__tests__/app/api/orders/return-evidence.test.ts` asserting rejection of a disallowed type by magic byte, a file over `MAX_FILE_SIZE` (413), and a sixth upload for the same (`userId`, `orderId`) pair (409) — covers SC-007
+- [ ] T018a [P] [US1] Write failing tests for `POST …/returns/evidence` in `__tests__/app/api/orders/return-evidence.test.ts` asserting rejection of a disallowed type by magic byte, a file over `MAX_FILE_SIZE` (413), and a sixth upload for the same (`userId`, `orderId`) pair (409). Also assert that `POST …/returns` rejects a request with an empty `evidenceIds`, and one whose ids all belong to another customer, with `400` — covers SC-007
 
 ### Implementation for User Story 1
 
 - [ ] T019 [US1] Set `deliveredAt` alongside `status` when the transition target is `DELIVERED` in [src/app/api/admin/orders/[id]/route.ts](src/app/api/admin/orders/%5Bid%5D/route.ts) — the return window is measured from this column
 - [ ] T020 [US1] Implement `getReturnEligibility(orderId, userId)` in `src/features/orders/services/return-service.ts`, computing returnable quantity per order item (excluding only `REJECTED` returns), per-item window expiry resolved from `returnsConfig` by the item's **category name** (`products.category` is free text with no FK — never key by id), and the eligibility reason discriminator
-- [ ] T021 [US1] Implement `createReturnRequest` in `src/features/orders/services/return-service.ts` inside a transaction that locks the order row `FOR UPDATE`, re-validates every invariant under the lock, computes frozen `refundableAmount` per item via T015, inserts the `ReturnRequest` and `ReturnItem` rows, then sets `returnRequestId` on the `ReturnEvidence` rows matching `evidenceIds` **and** the caller's `userId` and `orderId` — ignoring non-matching ids silently rather than erroring — T017 must pass
+- [ ] T021 [US1] Implement `createReturnRequest` in `src/features/orders/services/return-service.ts` inside a transaction that locks the order row `FOR UPDATE`, re-validates every invariant under the lock, computes frozen `refundableAmount` per item via T015, inserts the `ReturnRequest` and `ReturnItem` rows, then sets `returnRequestId` on the `ReturnEvidence` rows matching `evidenceIds` **and** the caller's `userId` and `orderId` — ignoring non-matching ids silently, but rejecting the whole request with `400` when none survives the filter, since evidence is mandatory — T017 must pass
 - [ ] T022 [US1] Extract the magic-byte MIME check, size caps, and extension normalisation from [src/app/api/upload/route.ts](src/app/api/upload/route.ts) into a shared `src/lib/upload-validation.ts`, hoist the private `MAX_FORM_DATA_BODY_SIZE` const from that route into [src/lib/upload-constants.ts](src/lib/upload-constants.ts), and re-point the existing route at both, leaving its `checkAdminAuth('products:write')` gate unchanged
 - [ ] T023 [US1] Implement `POST /api/orders/[id]/returns/evidence` in `src/app/api/orders/[id]/returns/evidence/route.ts` using the shared validator from T022, `auth()` ownership gating, and `uploadImage` from [src/lib/image-storage.ts](src/lib/image-storage.ts). The row is inserted **orphaned** (`returnRequestId` null) with `userId` and `orderId` set, capped at 5 orphaned rows per (`userId`, `orderId`) — T018a must pass
 - [ ] T024 [US1] Implement `GET` and `POST /api/orders/[id]/returns` in `src/app/api/orders/[id]/returns/route.ts` per [contracts/customer-returns.md](./contracts/customer-returns.md), wrapped in `withApiLogging`, responding through `apiSuccess`/`handleApiError`, with `Cache-Control: private, no-store` — T018 must pass
 - [ ] T025 [US1] Add `serializeCustomerReturn` to [src/lib/serializers.ts](src/lib/serializers.ts) that explicitly omits `decidedById`, `receivedById`, `stockRestoredAt`, `refundId`, `gatewayRefundId`, `errorMessage`, `paymentTransactionId`, and variant stock fields — never spread the row
 - [ ] T026 [US1] Implement `GET /api/returns/[id]` in `src/app/api/returns/[id]/route.ts`, returning **404** (not 403) for another customer's return so the endpoint does not confirm the identifier exists
 - [ ] T027 [P] [US1] Build `ReturnEvidenceUploader.tsx` in `src/features/orders/components/` as a Client Component posting to the T023 endpoint, with client-side type/size pre-checks that never substitute for the server check
-- [ ] T028 [US1] Build `ReturnRequestForm.tsx` in `src/features/orders/components/` as a Client Component with per-item quantity steppers bounded by `returnableQuantity`, a reason selector, and `formatPrice()` from `useCurrency()` for all amounts — no raw `$` or `.toFixed(2)`
+- [ ] T028 [US1] Build `ReturnRequestForm.tsx` in `src/features/orders/components/` as a Client Component with per-item quantity steppers bounded by `returnableQuantity`, a damage-reason selector offering only the three Option B reasons, a submit control disabled until at least one evidence image is attached, and `formatPrice()` from `useCurrency()` for all amounts — no raw `$` or `.toFixed(2)`
 - [ ] T029 [US1] Surface the return action and submitted returns on [src/app/(public)/orders/[id]/page.tsx](<src/app/(public)/orders/%5Bid%5D/page.tsx>), keeping the page a Server Component and confining `'use client'` to T027/T028
 - [ ] T030 [US1] Add cache invalidation (`invalidateUserOrderCaches`, `invalidateAdminOrderCaches`) and `return_requested` business-event logging via [src/lib/logger.ts](src/lib/logger.ts) to the creation path
 
@@ -187,7 +192,7 @@
 ## Phase 7: Polish & Cross-Cutting Concerns
 
 - [ ] T062 [P] Implement `GET /api/admin/export/returns` in `src/app/api/admin/export/returns/route.ts` using `streamCsvResponse` and `batchedCsvRows` from [src/features/admin/services/admin-csv.ts](src/features/admin/services/admin-csv.ts) with the fixed column order from [contracts/admin-returns.md](./contracts/admin-returns.md) (FR-017)
-- [ ] T063 Amend `CHECKOUT_POLICIES` in [src/lib/constants/checkout-policies.ts](src/lib/constants/checkout-policies.ts) to match the T001 decision, so the published promise and the shipped mechanism agree (FR-018)
+- [ ] T063 Amend the `refunds` and `damagedItems` clauses in [src/lib/constants/checkout-policies.ts](src/lib/constants/checkout-policies.ts) per decision **B-1**, so that approved damage claims may be settled by refund where replacement is unavailable, and the published promise matches the shipped mechanism (FR-018). Requires product/legal sign-off on the wording before merge
 - [ ] T064 [P] Update [docs/features.md](docs/features.md) and `specs/003-order-policy-dialog` to describe the returns lifecycle (FR-018)
 - [ ] T065 [P] Add accessibility attributes across the new UI: `htmlFor`/`id` on every label, `aria-label` on icon-only controls, `aria-expanded`/`aria-haspopup`/`role="menu"` on the queue action menus, `aria-hidden` on decorative elements, and real `<button>`/`<a>` elements rather than ARIA-roled divs
 - [ ] T066 [P] Write `playwright-tests/returns.spec.ts` covering the full lifecycle, the keyboard path through the request form, and axe-core accessibility assertions on the customer form and admin queue; capture screenshots per constitution Principle III
@@ -202,8 +207,8 @@
 
 ### Phase Dependencies
 
-- **Phase 0 (Decision)**: Blocks everything. T001 must close first.
-- **Phase 1 (Setup)**: After T001. All three tasks parallel.
+- **Phase 0 (Decision)**: **Closed.** Option B recorded 2026-08-08.
+- **Phase 1 (Setup)**: Ready to start. All three tasks parallel.
 - **Phase 2 (Foundational)**: After Phase 1. **Blocks all user stories.**
 - **Phase 3 (US1)**: After Phase 2.
 - **Phase 4 (US2)**: After US1 — there is nothing to triage until returns exist.
@@ -227,7 +232,7 @@ T016                                   (parallel with all pure-function work)
 
 ### Critical path
 
-`T001 → T005–T009 → T013/T015 → T021 → T024 → T033 → T036 → T044 → T046 → T046a → T069`
+`T005–T009 → T013/T015 → T021 → T024 → T033 → T036 → T044 → T046 → T046a → T069`
 
 ---
 
@@ -273,17 +278,16 @@ T055  email/templates.ts
 
 ### Minimum shippable increment
 
-Phases 0–5 (T001–T051, including T018a and T046a). This is the smallest set that delivers commercial value: a customer can return an item, an administrator can triage it, and the goods and money settle correctly. Stopping before Phase 5 ships a feature that takes customer requests and cannot fulfil them, which is worse than shipping nothing.
+Phases 1–5 (T002–T051, including T018a and T046a). This is the smallest set that delivers commercial value: a customer can file a damage claim, an administrator can triage it, and the goods and money settle correctly. Stopping before Phase 5 ships a feature that takes customer claims and cannot fulfil them, which is worse than shipping nothing.
 
 ### Recommended sequence
 
-1. **T001** — close the policy decision. Everything downstream is shaped by it.
-2. **Phase 1 + 2** — schema and pure logic. Verify `npm run db:migrate` and full green tests before touching a route.
-3. **Phase 3** — validate with a real customer session over HTTPS. Confirm the 404-not-403 ownership behaviour explicitly.
-4. **Phase 4** — validate with `SUPPORT` and `ADMIN` accounts, and with a staff account lacking the permission.
-5. **Phase 5** — **the highest-risk phase.** Verify idempotency by replaying every mutation and asserting stock and refund counts are unchanged. Test COD separately from gateway orders.
-6. **Phase 6** — verify the notification actually fires; an unregistered Inngest function is silent.
-7. **Phase 7** — gates, review, remediate.
+1. **Phase 1 + 2** — schema and pure logic. Apply the migration and get a fully green test run before touching a route.
+2. **Phase 3** — validate with a real customer session over HTTPS. Confirm the 404-not-403 ownership behaviour and the mandatory-evidence rejection explicitly.
+3. **Phase 4** — validate with `SUPPORT` and `ADMIN` accounts, and with a staff account lacking the permission.
+4. **Phase 5** — **the highest-risk phase.** Verify idempotency by replaying every mutation and asserting stock and refund counts are unchanged. Test COD separately from gateway orders.
+5. **Phase 6** — verify the notification actually fires; an unregistered Inngest function is silent.
+6. **Phase 7** — gates, review, remediate. **T063 needs product/legal sign-off on the amended policy wording**; start that conversation early rather than at the merge gate.
 
 ### Highest-risk tasks
 
@@ -314,4 +318,4 @@ Phases 0–5 (T001–T051, including T018a and T046a). This is the smallest set 
 | 7 — Polish       | T062–T070        | 9      |
 | **Total**        |                  | **72** |
 
-Test tasks: 16. Parallelisable tasks: 25.
+Test tasks: 16. Parallelisable tasks: 28.

@@ -1,7 +1,9 @@
 <!--
   Sync Impact Report
   ==================
-  Version change: 2.0.0 → 3.0.0
+
+  Amendment (2.0.0 → 3.0.0)
+  -------------------------------
   Bump rationale: MAJOR — Principle IV's background-jobs mandate is
     replaced wholesale. The previous rule required QStash via
     `lib/qstash.ts` with service endpoints under `app/api/services/`
@@ -58,9 +60,7 @@
     - Development Workflow & Quality Gates — type check corrected
       to `npx tsc --noEmit -p tsconfig.check.json` (the project's
       actual check config, as run in `.github/workflows/build.yml`),
-      schema-change step extended to refresh
-      `scripts/sql/bootstrap-drizzle-initial.sql`, and a new gate 9
-      added for `npm run docs:check`.
+      and a new gate 9 added for `npm run docs:check`.
   Added sections: None
   Removed sections: None
   Templates requiring updates:
@@ -234,8 +234,10 @@ files to isolate dependency graphs.
 - **Database**: PostgreSQL via Neon Serverless, accessed only
   through Drizzle ORM (`src/lib/db.ts`). Schema changes MUST
   generate a Drizzle migration (`npm run db:generate`) — direct DB
-  modification is prohibited. `npm run db:migrate` applies the
-  full current schema to an empty or partially migrated database.
+  modification is prohibited. `npm run db:migrate` applies pending
+  migrations in timestamp order; `npm run db:push` pushes the
+  schema directly without producing a migration file and MUST NOT
+  be used against a shared or production database.
 - **IDs**: Base62 7-character short IDs via `src/lib/short-id.ts`
   (`varchar(7)` in DB) for products, orders, carts, and related
   entities.
@@ -331,4 +333,4 @@ project documentation. Amendments require:
 Runtime development guidance is maintained in
 `.github/copilot-instructions.md` and `docs/development.md`.
 
-**Version**: 3.0.0 | **Ratified**: 2026-03-19 | **Last Amended**: 2026-08-07
+**Version**: 3.0.1 | **Ratified**: 2026-03-19 | **Last Amended**: 2026-08-08

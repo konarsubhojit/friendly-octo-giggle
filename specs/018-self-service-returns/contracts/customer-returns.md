@@ -88,10 +88,10 @@ against one order, each covering different quantities.
 
 ```jsonc
 {
-  "reason": "DAMAGED",
+  "reason": "DAMAGED", // DAMAGED | DEFECTIVE | WRONG_ITEM — damage categories only
   "customerNote": "Handle arrived cracked.",
   "items": [{ "orderItemId": "a1B2c3D", "quantity": 1 }],
-  "evidenceIds": ["e1F2g3H"],
+  "evidenceIds": ["e1F2g3H"], // REQUIRED — at least one, at most five
 }
 ```
 
@@ -110,7 +110,9 @@ submissions cannot both consume the last returnable unit:
 6. Insert `ReturnRequest` + `ReturnItem` rows, then set `returnRequestId` on the
    `ReturnEvidence` rows whose `id` is in `evidenceIds` **and** whose `userId` and `orderId`
    match the caller and the order. Non-matching ids are silently ignored, never rejected, so
-   the endpoint cannot be used to probe for valid identifiers.
+   the endpoint cannot be used to probe for valid identifiers. **If no id survives that filter,
+   the whole request is rejected with `400`** — evidence is mandatory and a caller must not be
+   able to satisfy the requirement with ids it does not own.
 7. Publish `order/return.status.changed` with `status: 'REQUESTED'`.
 8. Invalidate `invalidateUserOrderCaches(userId)` and `invalidateAdminOrderCaches(orderId)`.
 
@@ -132,7 +134,7 @@ submissions cannot both consume the last returnable unit:
 
 | Status | Condition                                                                                                                     |
 | ------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| `400`  | Zod validation failure; item not on this order                                                                                |
+| `400`  | Zod validation failure; item not on this order; no evidence supplied, or none of the supplied ids is owned by the caller      |
 | `401`  | No session                                                                                                                    |
 | `404`  | Order does not exist or is not owned by caller                                                                                |
 | `409`  | Order not `DELIVERED`; window expired; requested quantity exceeds returnable; refund total exceeds remaining captured balance |

@@ -7,13 +7,15 @@ verified fact about existing code that constrains the design.
 
 ---
 
-## R1 — Published policy contradicts the feature (BLOCKING)
+## R1 — Published policy vs. feature scope (RESOLVED — Option B)
 
-**Status**: ⛔ Unresolved — requires a business decision, not a technical one.
+**Status**: ✅ Resolved 2026-08-08 — scoped to damaged-item returns. One narrow policy
+amendment (B-1) remains as a tracked task, not a blocker.
 
-**Finding**: The spec's Baseline claims the published policy "already governs cancellation,
-returns, and refunds" and that "return terms are a shipped promise without a shipped
-mechanism". The actual text in `src/lib/constants/checkout-policies.ts` says the opposite:
+**Finding**: The spec's original Baseline claimed the published policy "already governs
+cancellation, returns, and refunds" and that "return terms are a shipped promise without a
+shipped mechanism". The actual text in `src/lib/constants/checkout-policies.ts` said something
+materially different:
 
 ```text
 returns:  "Orders cannot be returned unless the product is received in damaged condition."
@@ -22,31 +24,46 @@ returns:  "Orders cannot be returned unless the product is received in damaged c
 
 refunds:  "Refunds are not issued for orders."
           "Damaged products are handled through review and replacement rather than refund."
+
+damagedItems:
+          "If the damage claim is approved, you will be asked to send the product back
+           before a replacement is sent."
+          "You are responsible for the shipping cost to send the damaged product back."
 ```
 
-Every customer accepts this text at checkout via `CHECKOUT_POLICY_ACKNOWLEDGMENT`. The feature
-as specified — self-service returns for any delivered item, settled by refund — is prohibited
-by the terms the customer agreed to.
+Every customer accepts this text at checkout via `CHECKOUT_POLICY_ACKNOWLEDGMENT`.
 
-**Why this blocks**: Shipping a refund mechanism while the accepted terms say "refunds are not
-issued" creates a contradiction between contract and product. Resolving it after launch means
-changing terms retroactively for orders already placed.
+**Decision**: **Option B** — restrict the feature to damaged, defective, and wrong-item claims.
 
-**Options**:
+**Rationale**: the published `damagedItems` process — submit photographic evidence, await
+admin review, ship the product back at the customer's own cost — is a near-exact description of
+the lifecycle this feature automates. Option B therefore does not fight the policy; it
+mechanises a workflow the policy already prescribes and that today runs over email. It also
+narrows the amendment surface from a full returns-policy rewrite to a single clause.
 
-| Option                                                                               | Consequence                                                                                                                 |
-| ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| **A** — Amend the policy to permit returns and refunds within a window (recommended) | Requires legal/commercial sign-off. `CHECKOUT_POLICIES` and `specs/003-order-policy-dialog` updated in the same change.     |
-| **B** — Scope the feature to damaged-item returns only                               | Matches current terms with no amendment. Reason set narrows to damage categories; evidence becomes mandatory, not optional. |
-| **C** — Settle approved returns with replacement instead of refund                   | Matches current terms exactly, but contradicts FR-010 through FR-013 and removes the entire refund half of the spec.        |
+**Consequences**:
 
-**Recommendation**: Option A. The spec's Success Criteria (SC-004 reconciliation, FR-013 COD
-settlement) only make sense under a refund model. Escalate to the product owner before Phase 3;
-capture the decision in the spec's Baseline and amend `CHECKOUT_POLICIES` as part of FR-018.
+- `returnReasonEnum` collapses to `['DAMAGED', 'DEFECTIVE', 'WRONG_ITEM']`.
+- Evidence becomes **mandatory** (minimum one image, maximum five). This is not an added
+  restriction — the policy already requires photographic evidence before review.
+- Carrier integration and return labels stay out of scope, which the policy independently
+  confirms by making return shipping the customer's cost.
+- The state machine, restock, refund calculation, idempotency, and COD design are **unaffected**.
 
-**Impact if Option B is chosen instead**: `ReturnReason` collapses to damage categories,
-`ReturnEvidence` becomes required (minimum one image), and the return window may be shorter.
-The state machine, restock, and refund design are otherwise unaffected.
+### Residual delta: the refunds clause still requires amendment
+
+Option B was described in the first analysis as matching current terms with no amendment. That
+was imprecise and is corrected here. B satisfies the **returns** clause but not the **refunds**
+clause, which still says refunds are not issued and that damage is settled by replacement.
+
+| Sub-option | Change                                                                                                                                 | Effect on this spec                                                                |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| **B-1**    | Amend the `refunds` and `damagedItems` clauses to permit refund settlement for approved damage claims where replacement is unavailable | None. The specification stands as written.                                         |
+| **B-2**    | Settle by replacement only, matching current text verbatim                                                                             | Removes FR-010 through FR-013, SC-004, and US3's refund half. Materially Option C. |
+
+**B-1 is assumed throughout.** It is carried as task T063 under FR-018, not as a gate. If B-2 is
+chosen, this specification requires substantial rework and should be re-planned rather than
+patched.
 
 ---
 
@@ -284,7 +301,9 @@ transaction the customer initiated, not marketing.
 (JPEG/PNG/GIF/WebP), the same `MAX_FILE_SIZE` cap from `src/lib/upload-constants.ts` and
 `MAX_FORM_DATA_BODY_SIZE` — which is currently a **private const inside
 `src/app/api/upload/route.ts`** and must be moved into `upload-constants.ts` as part of the
-extraction — plus a per-order cap of 5 orphaned uploads.
+extraction — plus a per-order cap of 5 orphaned uploads and a **minimum of one image per
+request** (R1 Option B: the published policy requires evidence before any damage claim is
+reviewed, so a request with no evidence is rejected at the boundary).
 
 **Rationale**: The existing `/api/upload` route is gated on `checkAdminAuth('products:write')`
 and cannot be opened to customers. The validation logic, however, is exactly right and must not
@@ -382,19 +401,19 @@ transaction orchestration) thin enough to cover with a handful of mocked-transac
 
 ## Summary of Decisions
 
-| ID  | Decision                                                                    | Status               |
-| --- | --------------------------------------------------------------------------- | -------------------- |
-| R1  | Policy conflict — amend published terms (Option A recommended)              | ⛔ Awaiting business |
-| R2  | 7-day window in Edge Config keyed by category **name**; `deliveredAt` added | ✅ Resolved          |
-| R3  | Shipping refunded only on full-order return                                 | ✅ Resolved          |
-| R4  | `allocateMoney` largest-remainder helper                                    | ✅ Resolved          |
-| R5  | COD manual-settlement refund row; `paymentTransactionId` nullable           | ✅ Resolved          |
-| R6  | Permission `orders:returns` for `ADMIN` + `SUPPORT`                         | ✅ Resolved          |
-| R7  | Restock touches `stock` only, never `reservedStock`                         | ✅ Resolved          |
-| R8  | `ReturnRequest.stockRestoredAt` guarded claim                               | ✅ Resolved          |
-| R9  | Unique `ReturnRequest.refundId` guards refund issuance                      | ✅ Resolved          |
-| R10 | Event + function in `src/features/orders/inngest/emails.ts`                 | ✅ Resolved          |
-| R11 | Shared upload validator; orphaned-evidence model; blob serving              | ✅ Resolved          |
-| R12 | Five states, five actions; `receive`/`refund` split for retry               | ✅ Resolved          |
-| R13 | Cancel-after-return impossible; assert with a regression test               | ✅ Resolved          |
-| R14 | Pure-function concentration to meet the 85% service threshold               | ✅ Resolved          |
+| ID  | Decision                                                                    | Status      |
+| --- | --------------------------------------------------------------------------- | ----------- |
+| R1  | Damaged-item scope (Option B); B-1 clause amendment tracked as T063         | ✅ Resolved |
+| R2  | 7-day window in Edge Config keyed by category **name**; `deliveredAt` added | ✅ Resolved |
+| R3  | Shipping refunded only on full-order return                                 | ✅ Resolved |
+| R4  | `allocateMoney` largest-remainder helper                                    | ✅ Resolved |
+| R5  | COD manual-settlement refund row; `paymentTransactionId` nullable           | ✅ Resolved |
+| R6  | Permission `orders:returns` for `ADMIN` + `SUPPORT`                         | ✅ Resolved |
+| R7  | Restock touches `stock` only, never `reservedStock`                         | ✅ Resolved |
+| R8  | `ReturnRequest.stockRestoredAt` guarded claim                               | ✅ Resolved |
+| R9  | Unique `ReturnRequest.refundId` guards refund issuance                      | ✅ Resolved |
+| R10 | Event + function in `src/features/orders/inngest/emails.ts`                 | ✅ Resolved |
+| R11 | Shared upload validator; orphaned-evidence model; blob serving              | ✅ Resolved |
+| R12 | Five states, five actions; `receive`/`refund` split for retry               | ✅ Resolved |
+| R13 | Cancel-after-return impossible; assert with a regression test               | ✅ Resolved |
+| R14 | Pure-function concentration to meet the 85% service threshold               | ✅ Resolved |

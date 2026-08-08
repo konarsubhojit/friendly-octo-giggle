@@ -2,11 +2,11 @@
 
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 
 type VerificationState = 'idle' | 'loading' | 'success' | 'error'
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
   const searchParams = useSearchParams()
   const token = searchParams.get('token') ?? ''
   const identifier = searchParams.get('identifier') ?? ''
@@ -111,5 +111,32 @@ export default function VerifyEmailPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+function VerifyEmailFallback() {
+  return (
+    <div className="min-h-screen bg-warm-gradient flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-md w-full bg-[var(--surface)]/80 backdrop-blur-sm rounded-xl shadow-warm border border-[var(--border-warm)] p-6 sm:p-8 text-center">
+        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--foreground)] mb-2">
+          Verify Email
+        </h1>
+        <p className="text-[var(--text-secondary)]">Loading…</p>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * `useSearchParams` reads request data, so its consumer must sit inside a
+ * `Suspense` boundary. Without one, `cacheComponents: true` cannot prerender
+ * the route at all and the render fails — which strands the client-side
+ * navigation that lands here after registration on the previous page.
+ */
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<VerifyEmailFallback />}>
+      <VerifyEmailContent />
+    </Suspense>
   )
 }

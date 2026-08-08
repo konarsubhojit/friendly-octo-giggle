@@ -6,28 +6,64 @@
 **Epic**: Phase 2 — Correctness and commerce depth  
 **Input**: Let customers request a return for delivered order items, give administrators an approval queue, and connect approved returns to the existing refund and restock machinery.
 
+## Scope Decision (2026-08-08) — damaged-item returns only
+
+This feature is scoped to **Option B**: self-service returns are available only for items received
+in damaged, defective, or incorrect condition. It is not a general change-of-mind returns
+capability.
+
+Consequences, binding on every requirement below:
+
+- The reason set is restricted to damage categories. `CHANGED_MIND`, `SIZE_OR_FIT`, and
+  `NOT_AS_DESCRIBED` are **out of scope**.
+- Photographic evidence is **mandatory**, not optional — the published policy already requires
+  it before any damaged-item claim is reviewed.
+- Approved claims are settled by **refund**, which requires one narrow policy amendment (below).
+
+### Residual policy delta — one clause still requires amendment
+
+Option B removes the conflict with the published **returns** clause, which already permits
+damaged-item returns. It does **not** remove the conflict with the **refunds** clause, which
+currently reads:
+
+> "Refunds are not issued for orders."
+> "Damaged products are handled through review and replacement rather than refund."
+
+Every success criterion in this specification that involves money (SC-004, FR-010 through
+FR-013) assumes a refund settlement. Two ways to close this, and the choice is still a business
+one:
+
+| Option  | Change required                                                                                                                                                               |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **B-1** | Amend the `refunds` and `damagedItems` clauses to permit refund as a settlement for approved damage claims where replacement is unavailable. Narrow, one-paragraph amendment. |
+| **B-2** | Settle approved claims by replacement only, matching the current text verbatim. This removes the entire refund half of the feature and is materially Option C.                |
+
+**B-1 is assumed by the rest of this specification.** If B-2 is chosen instead, FR-010 through
+FR-013, SC-004, and User Story 3's refund half must be struck and replaced with a replacement
+fulfilment flow.
+
 ## Baseline (verified 2026-08-01)
 
 - Refunds already exist as an admin-initiated capability. The `Refund` table records provider, `paymentTransactionId`, `gatewayRefundId`, amount, status (`PENDING`, `PROCESSED`, `FAILED`), reason, `initiatedById`, and `processedAt`, and is served by `src/features/orders/services/refund-service.ts`.
 - Pre-shipment cancellation is shipped (PR #427) and restocks through `src/features/orders/services/order-restock.ts` with status-transition enforcement.
-- **The gap**: once an order reaches `DELIVERED`, a customer has no in-product path to start a return. Every post-delivery return is an out-of-band support request that an admin must translate into a manual refund.
-- The published policy in `src/lib/constants/checkout-policies.ts` and `specs/003-order-policy-dialog` already governs cancellation, returns, and refunds, and it is acknowledged by the customer at checkout — so return terms are a shipped promise without a shipped mechanism.
+- **The gap**: once an order reaches `DELIVERED`, a customer has no in-product path to start a damaged-item claim. Every post-delivery claim is an out-of-band support request — the policy directs the customer to email support with photos and a video — that an admin must then translate into a manual settlement.
+- The published policy in `src/lib/constants/checkout-policies.ts` and `specs/003-order-policy-dialog` **permits damaged-item returns but forbids refunds**, and is acknowledged by the customer at checkout. The damaged-item process it describes — submit evidence, await review, ship the product back at the customer's cost — is exactly the lifecycle this feature automates. Only the settlement mechanism differs, hence the B-1 amendment above.
 - Supporting infrastructure exists: order status enum ending at `DELIVERED`/`CANCELLED`, image upload through Vercel Blob and Azure Blob (`src/lib/image-storage.ts`), the notification preference centre and email/push channels, `adminAuditLogs`, and granular admin permissions in `src/lib/constants/roles.ts`.
 
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Request a return for a delivered item (Priority: P1)
 
-A customer can open a delivered order, select the items and quantities to return, choose a reason, and submit a request without contacting support.
+A customer can open a delivered order, select the items and quantities to return, choose a damage reason, attach photographic evidence, and submit a claim without emailing support.
 
 **Why this priority**: This is the missing customer-facing capability. Everything else in this specification exists to process what this story creates.
 
-**Independent Test**: Sign in as a customer with a delivered order, submit a return for one item, and confirm the request is persisted and visible in order history.
+**Independent Test**: Sign in as a customer with a delivered order, submit a damage claim for one item with a photo, and confirm the request is persisted and visible in order history.
 
 **Acceptance Scenarios**:
 
 1. **Given** a delivered order inside the return window, **When** the customer opens it, **Then** a return action is available for eligible items.
-2. **Given** the return form, **When** the customer selects items, quantities, and a reason, **Then** the request is persisted and acknowledged on screen.
+2. **Given** the return form, **When** the customer selects items, quantities, a damage reason, and attaches at least one image, **Then** the request is persisted and acknowledged on screen.
 3. **Given** an order outside the return window or not yet delivered, **When** the customer views it, **Then** no return action is offered and the reason is explained.
 4. **Given** an item already fully returned, **When** the customer requests again, **Then** the already-returned quantity is excluded from the selectable amount.
 5. **Given** a return request is submitted, **When** it is accepted, **Then** the customer receives a confirmation through their preferred, permitted channel.
@@ -67,7 +103,7 @@ When returned goods are received, the units re-enter inventory and the customer 
 3. **Given** a partial return, **When** the refund amount is computed, **Then** it reflects the returned items' paid price including their share of any applied discount, and follows the documented shipping-refund rule.
 4. **Given** a refund that the gateway rejects, **When** the failure is recorded, **Then** the return remains actionable and the failure reason is visible to admins.
 5. **Given** a return processed more than once, **When** the duplicate is attempted, **Then** neither the restock nor the refund is applied twice.
-6. **Given** an order paid by Cash on Delivery, **When** a return is approved, **Then** the documented settlement path for non-captured payments is followed rather than a gateway refund.
+6. **Given** an order paid by Cash on Delivery, **When** the refund for a received return is issued, **Then** the documented settlement path for non-captured payments is followed rather than a gateway refund.
 
 ---
 
@@ -91,13 +127,14 @@ A customer can see where their return stands and what happens next, without cont
 ### Edge Cases
 
 - The return window must be evaluated against delivery date, not order date, and must be configurable per category.
+- A request submitted with no evidence image must be rejected before any row is written.
 - Uploaded evidence is untrusted input: type, size, and count must be validated, and files must never be executed or served from an application origin that could enable script execution.
 - A return whose refund exceeds the amount actually captured for those items must be rejected.
 - Restocking a soft-deleted variant must be handled explicitly rather than silently discarded.
 - A return request for an order that is subsequently cancelled must not double-refund.
 - Concurrent admin actions on the same return must not produce conflicting states.
 - Returns must not restock items the customer never sent back; restock happens at received, not at approved.
-- If `016-inventory-reservation` has shipped, restocked units must re-enter on-hand stock without disturbing live reservations.
+- If `016-inventory-reservation` has shipped, restocked units must re-enter on-hand stock without disturbing live reservations. (Verified shipped — see plan research R7.)
 - Customers must only ever see and act on their own returns; ownership must be enforced server-side on every operation.
 
 ## Requirements _(mandatory)_
@@ -105,9 +142,9 @@ A customer can see where their return stands and what happens next, without cont
 ### Functional Requirements
 
 - **FR-001**: Customers MUST be able to request a return for items in a `DELIVERED` order within a configurable return window measured from delivery.
-- **FR-002**: The return request MUST capture per-item quantities and a reason from a defined reason set.
+- **FR-002**: The return request MUST capture per-item quantities and a reason drawn from the damage-only reason set: damaged in transit, defective on arrival, or wrong item received. Change-of-mind and fit reasons MUST NOT be offered.
 - **FR-003**: Requestable quantity MUST exclude quantities already returned or pending return for the same order item.
-- **FR-004**: Customers MUST be able to attach evidence images, validated for type, size, and count and stored through the existing image-storage abstraction.
+- **FR-004**: Every return request MUST carry at least one evidence image and at most five, each validated for type and size and stored through the existing image-storage abstraction. A request without evidence MUST be rejected, because the published policy requires evidence before any damage claim is reviewed.
 - **FR-005**: Every return operation MUST enforce ownership server-side; a customer MUST NOT read or mutate another customer's return.
 - **FR-006**: The return lifecycle MUST be an explicit state machine with enforced transitions, and invalid transitions MUST be rejected.
 - **FR-007**: Administrators MUST have a returns queue guarded by a granular admin permission consistent with `src/lib/constants/roles.ts`.
@@ -121,13 +158,13 @@ A customer can see where their return stands and what happens next, without cont
 - **FR-015**: Return status, reason, and refunded amount MUST be visible to the customer in order history and order detail.
 - **FR-016**: Schema changes MUST ship as a reviewed Drizzle migration with indexes for order, user, and status lookups.
 - **FR-017**: Returns MUST be included in the existing admin CSV export capability.
-- **FR-018**: `docs/features.md` and `specs/003-order-policy-dialog` MUST be updated so the published policy and the implemented mechanism agree.
+- **FR-018**: `docs/features.md` and `specs/003-order-policy-dialog` MUST be updated, and the `refunds` and `damagedItems` clauses in `src/lib/constants/checkout-policies.ts` MUST be amended per the B-1 decision, so the published policy and the implemented mechanism agree.
 
 ### Key Entities
 
 - **ReturnRequest**: A customer-initiated request against one order, with status, reason, timestamps, and the acting administrator for each decision.
 - **ReturnItem**: A requested quantity of one order item, carrying the computed refundable amount for that quantity.
-- **ReturnEvidence**: An uploaded image attached to a return request, validated and stored through the image-storage abstraction.
+- **ReturnEvidence**: An uploaded image, validated and stored through the image-storage abstraction. Created before the return exists and attached to it on submission, so it carries its own owner and order scope during that window.
 - **Refund**: The existing refund record, extended with a link to the return that caused it.
 - **Return Window**: The configurable, category-aware period after delivery during which a return may be requested. Not a database entity — it is runtime configuration held in Edge Config with a hardcoded fallback, keyed by category name (see plan research R2).
 
@@ -141,12 +178,13 @@ A customer can see where their return stands and what happens next, without cont
 - **SC-004**: Refund amounts for partial returns reconcile against the amount originally captured for those items.
 - **SC-005**: No customer can read or modify another customer's return request.
 - **SC-006**: Return status changes reach customers only through channels their notification preferences permit.
-- **SC-007**: Uploaded evidence outside the permitted type, size, or count is rejected.
+- **SC-007**: Uploaded evidence outside the permitted type, size, or count is rejected, and a request carrying no evidence at all is rejected.
 - **SC-008**: Service-layer coverage for return processing meets the 85% threshold for `src/features/**/services/**`.
 
 ## Out of Scope
 
-- Carrier integration, return shipping labels, and pickup scheduling.
+- **Change-of-mind, fit, and "not as described" returns.** This feature covers damaged, defective, and wrong-item claims only (see Scope Decision).
+- Carrier integration, return shipping labels, and pickup scheduling. The published policy makes return shipping the customer's cost and responsibility.
 - Exchanges for a different product or variant; this specification covers returns and refunds only.
 - Automated fraud scoring of return requests.
 - Warehouse inspection or grading workflows beyond a received or not-received decision.
@@ -154,5 +192,5 @@ A customer can see where their return stands and what happens next, without cont
 ## Dependencies
 
 - Extends the shipped refund and cancellation work from PR #427 and the restock service.
-- Interacts with `016-inventory-reservation`; if that ships first, restock must respect reservation-aware availability.
+- Depends on `016-inventory-reservation`, which **has shipped**: restock must increment on-hand `stock` without disturbing `reservedStock` or any live reservation row.
 - Pairs naturally with `022-loyalty-and-store-credit`, which can offer store credit as a refund alternative.

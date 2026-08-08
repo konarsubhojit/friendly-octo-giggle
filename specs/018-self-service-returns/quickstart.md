@@ -7,17 +7,21 @@ How to build, run, and verify this feature. Read [plan.md](./plan.md) first for 
 
 ---
 
-## ⛔ Before you start
+## Scope: damaged-item returns only
 
-**[research.md](./research.md) R1 is unresolved and blocks implementation.** The published
-checkout policy currently states _"Refunds are not issued for orders"_ and _"Orders cannot be
-returned unless the product is received in damaged condition."_ Building refund-settled
-self-service returns contradicts the terms every customer accepts at checkout.
+This feature implements **Option B** ([research.md](./research.md) R1). It is a damage-claim
+workflow, not a general returns capability:
 
-Get a decision from the product owner on Option A (amend the policy), B (damaged-item returns
-only), or C (replacement instead of refund) before writing code. Option B narrows
-`ReturnReason` and makes evidence mandatory; Option C removes the refund half of the feature
-entirely.
+- Reasons are limited to `DAMAGED`, `DEFECTIVE`, and `WRONG_ITEM`. Do not add change-of-mind or
+  fit reasons — the enum is the enforcement point for a policy constraint.
+- **At least one evidence image is mandatory.** The published policy requires photographic
+  evidence before any damage claim is reviewed.
+- Return shipping is the customer's cost and responsibility, per the published policy. No carrier
+  integration, no labels.
+
+One policy amendment (T063) is still outstanding: the `refunds` clause says refunds are not
+issued, and it must be amended to permit refund settlement for approved damage claims. That is
+wording sign-off and does not block implementation — but it does block merge.
 
 ---
 
@@ -90,10 +94,12 @@ publishes, no function consumes it, no error is raised.
 `ReturnStatusPanel` (Server Component) and `ReturnRequestForm` / `ReturnEvidenceUploader`
 (Client) on order detail; `src/app/admin/returns/page.tsx` plus `AdminReturnCard`.
 
-### 7. Documentation
+### 7. Documentation and policy
 
-Update `docs/features.md` and `specs/003-order-policy-dialog`, and amend
-`src/lib/constants/checkout-policies.ts` per the R1 decision (FR-018).
+Update `docs/features.md` and `specs/003-order-policy-dialog`, and amend the `refunds` and
+`damagedItems` clauses in `src/lib/constants/checkout-policies.ts` per decision B-1 (FR-018,
+T063). The amendment needs product/legal sign-off on the wording — start that conversation
+early, not at the merge gate.
 
 ---
 
@@ -125,31 +131,33 @@ Run `npm run dev` (HTTPS, self-signed cert at `https://localhost:3000`).
 
 1. **Seed state** — place an order, then move it to `DELIVERED` via
    `PATCH /api/admin/orders/{id}`. Confirm `deliveredAt` is now populated.
-2. **Request** — open the order as the customer. The return action appears. Submit a return for
-   1 of 3 units with an evidence image.
-3. **Eligibility** — reload. The item now shows `returnableQuantity: 2`. Requesting 3 returns
+2. **Request** — open the order as the customer. The return action appears. Submit a claim for
+   1 of 3 units with a damage reason and one evidence image.
+3. **Evidence is mandatory** — attempt a submission with no image. Expect `400`. Attempt one
+   whose `evidenceIds` belong to another customer. Expect `400`, not a silent success.
+4. **Eligibility** — reload. The item now shows `returnableQuantity: 2`. Requesting 3 returns
    `409 / QUANTITY_EXCEEDED`.
-4. **Ownership** — sign in as a different customer and `GET /api/returns/{id}`. Expect **404**,
+5. **Ownership** — sign in as a different customer and `GET /api/returns/{id}`. Expect **404**,
    not 403.
-5. **Queue** — sign in as admin, open `/admin/returns`. The request is listed with its evidence.
-6. **Approve** — approve with a reason. Confirm the customer sees `APPROVED`, an audit row
+6. **Queue** — sign in as admin, open `/admin/returns`. The claim is listed with its evidence.
+7. **Approve** — approve with a reason. Confirm the customer sees `APPROVED`, an audit row
    exists, and an email is delivered (or logged as suppressed if preferences forbid it).
-7. **Receive** — mark received. Confirm:
+8. **Receive** — mark received. Confirm:
    - `ProductVariant.stock` increased by exactly 1
    - `ProductVariant.reservedStock` is **unchanged**
    - status is `RECEIVED` and **no refund row was created** — receive moves inventory only
-8. **Refund** — issue the refund as a separate action. Confirm a `Refund` row exists with
+9. **Refund** — issue the refund as a separate action. Confirm a `Refund` row exists with
    `returnRequestId` set, `ReturnRequest.refundId` matches it, and status is `REFUNDED`.
-9. **Idempotency** — replay both calls. Expect `409` on the receive replay, and verify stock did
-   **not** increase again and no second refund row appeared.
-10. **Retry recovery** — force a gateway failure, confirm the return stays at `RECEIVED` with
+10. **Idempotency** — replay both calls. Expect `409` on the receive replay, and verify stock did
+    **not** increase again and no second refund row appeared.
+11. **Retry recovery** — force a gateway failure, confirm the return stays at `RECEIVED` with
     `refundId` unset and `Refund.errorMessage` visible, then re-issue `refund` and confirm it
     succeeds. **This is the scenario the receive/refund split exists for.**
-11. **Rejection** — submit a second return, reject it, and confirm the held quantity is released
+12. **Rejection** — submit a second return, reject it, and confirm the held quantity is released
     (`returnableQuantity` returns to 2).
-12. **Evidence cap** — upload 6 images against one order. Expect `409` on the sixth. Confirm the
+13. **Evidence cap** — upload 6 images against one order. Expect `409` on the sixth. Confirm the
     first five rows have `returnRequestId` null until the return is created.
-13. **COD** — repeat against a COD order. Confirm no gateway call, a `PENDING` refund with a
+14. **COD** — repeat against a COD order. Confirm no gateway call, a `PENDING` refund with a
     `MANUAL_SETTLEMENT:` reason, and that `settle` flips it to `PROCESSED`.
 
 Capture screenshots of the customer return form, the customer status panel, and the admin queue
@@ -174,6 +182,11 @@ Capture screenshots of the customer return form, the customer status panel, and 
 
 ## Traps
 
+- **Do not widen `returnReasonEnum`.** The three damage reasons are a policy constraint, not a
+  product choice. Adding `CHANGED_MIND` puts the product back out of line with the accepted
+  terms without anyone noticing.
+- **Do not make evidence optional.** Minimum one image, and at least one must survive the
+  ownership filter — otherwise a caller satisfies `min(1)` with ids it does not own.
 - **Do not reuse `restockOrderItems`.** It claims `orders.stockRestoredAt`, a single order-level
   flag. Calling it for a return consumes the order's claim and silently blocks any future
   restock for that order.

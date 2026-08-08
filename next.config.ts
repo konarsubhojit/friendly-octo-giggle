@@ -58,6 +58,21 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // `/` is an alias for the storefront listing. This is issued at the routing
+  // layer as a real 308 rather than by a `redirect()` inside a page component:
+  // under `cacheComponents: true` a render-time redirect on an otherwise
+  // static route prerenders an empty shell and expresses the redirect only in
+  // the RSC payload, so a cold document load renders a blank page instead of
+  // navigating. A config redirect never reaches the renderer.
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/shop',
+        permanent: true,
+      },
+    ]
+  },
   async headers() {
     return [
       {

@@ -26,11 +26,11 @@ extended rather than reused blindly:
    Cash on Delivery orders have no captured payment and `codGateway.refund()` throws by
    design, so COD returns take a documented manual-settlement path rather than a gateway call.
 
-**A blocking policy conflict must be resolved before implementation begins.** The published
-policy in `src/lib/constants/checkout-policies.ts` states _"Refunds are not issued for orders"_
-and _"Orders cannot be returned unless the product is received in damaged condition"_. The spec
-assumes the policy already promises returns. It does not — it promises the opposite. See
-[research.md](./research.md) R1.
+**Scope: damaged-item returns only.** Per the Option B decision ([research.md](./research.md)
+R1), the reason set is restricted to `DAMAGED`, `DEFECTIVE`, and `WRONG_ITEM`, and photographic
+evidence is mandatory. This mechanises the damage-claim workflow the published policy already
+prescribes and that today runs over email. One narrow policy amendment remains — the `refunds`
+clause still says refunds are not issued — carried as task T063 rather than as a gate.
 
 ## Technical Context
 
@@ -46,20 +46,24 @@ assumes the policy already promises returns. It does not — it promises the opp
 
 **Resolved unknowns** (detail in [research.md](./research.md)):
 
-| Unknown                                | Resolution                                                             |
-| -------------------------------------- | ---------------------------------------------------------------------- |
-| Return window length & configurability | Edge Config `returnsConfig`, keyed by category **name**, 7-day default |
-| Shipping refund rule                   | Shipping refunded only on a full-order return; never on partial        |
-| Discount allocation on partial return  | New `allocateMoney` largest-remainder helper in `src/lib/money.ts`     |
-| COD settlement path                    | Manual-settlement refund row + admin "mark settled" action, no gateway |
-| Permission name                        | `orders:returns`, granted to `ADMIN` and `SUPPORT`                     |
-| Reservation interaction                | Restock increments `stock` only; `reservedStock` untouched             |
+| Unknown                                | Resolution                                                               |
+| -------------------------------------- | ------------------------------------------------------------------------ |
+| Scope of the reason set                | Damage categories only — `DAMAGED`, `DEFECTIVE`, `WRONG_ITEM` (Option B) |
+| Evidence requirement                   | Mandatory — minimum one image, maximum five                              |
+| Return window length & configurability | Edge Config `returnsConfig`, keyed by category **name**, 7-day default   |
+| Shipping refund rule                   | Shipping refunded only on a full-order return; never on partial          |
+| Discount allocation on partial return  | New `allocateMoney` largest-remainder helper in `src/lib/money.ts`       |
+| COD settlement path                    | Manual-settlement refund row + admin "mark settled" action, no gateway   |
+| Permission name                        | `orders:returns`, granted to `ADMIN` and `SUPPORT`                       |
+| Reservation interaction                | Restock increments `stock` only; `reservedStock` untouched               |
 
-**Open — requires a business decision before Phase 3**:
+**Open — non-blocking, requires sign-off before merge**:
 
-- **R1 (BLOCKING)**: The published checkout policy forbids returns and refunds outright. Building
-  this feature without amending that copy ships a product whose behaviour contradicts the terms
-  the customer accepted at checkout. This is a legal/commercial decision, not a technical one.
+- **T063 (policy wording)**: Option B satisfies the published _returns_ clause but not the
+  _refunds_ clause, which still reads "Refunds are not issued for orders." A narrow amendment to
+  the `refunds` and `damagedItems` clauses (decision B-1) is required so the shipped mechanism
+  and the accepted terms agree. This is wording sign-off, not a design question, so it runs in
+  parallel with implementation rather than gating it.
 
 ## Constitution Check
 
@@ -150,9 +154,6 @@ src/
 drizzle/
 └── 0017_self_service_returns.sql             # NEW — generated, reviewed
 
-scripts/sql/
-└── bootstrap-drizzle-initial.sql             # MODIFY — refreshed per constitution step 6
-
 __tests__/features/orders/services/
 ├── return-state-machine.test.ts              # NEW
 ├── return-refund-calculator.test.ts          # NEW
@@ -232,6 +233,7 @@ nullable — see [data-model.md](./data-model.md) M4.
 
 ## Phase Status
 
-- [x] Phase 0 — research complete ([research.md](./research.md)); one item (R1) escalated as a business decision
+- [x] Phase 0 — research complete ([research.md](./research.md)); R1 resolved as Option B (damaged-item returns only)
 - [x] Phase 1 — data model, contracts, quickstart generated
-- [ ] Phase 2 — task breakdown (run `/speckit.tasks`)
+- [x] Phase 2 — task breakdown ([tasks.md](./tasks.md), 72 tasks)
+- [ ] Phase 3 — implementation (run `/speckit.implement`)
