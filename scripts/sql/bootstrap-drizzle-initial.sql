@@ -1888,9 +1888,9 @@ WHERE NOT EXISTS (
 
 -- 0013_abandoned_cart_reminders
 INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
-SELECT '76a7409fd380278c705031a124d6ec2c45074a32aa5bd40727018669e8064d08', 1753574832000
+SELECT '50f3b0ab7a94f3e8eb060aa8a45e6f1272186c47490fca1fbb0176b957ebc9c7', 1785055842529
 WHERE NOT EXISTS (
-  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1753574832000
+  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1785055842529
 );
 
 -- 0014_partially_refunded_payment_status
@@ -1912,6 +1912,13 @@ INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
 SELECT 'e4c7dc4d13b911d67954ef2ce25fd608918c5463195fa675e2291752a48fe44b', 1786158485623
 WHERE NOT EXISTS (
   SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1786158485623
+);
+
+-- 0017_rich_slayback
+INSERT INTO drizzle.__drizzle_migrations (hash, created_at)
+SELECT '568be23e7ec00eead7568b8fdf48488c0b0e22779495280dc5dca5f0badab3a9', 1786168231443
+WHERE NOT EXISTS (
+  SELECT 1 FROM drizzle.__drizzle_migrations WHERE created_at = 1786168231443
 );
 
 DROP FUNCTION drizzle.ensure_public_enum(text, text);
