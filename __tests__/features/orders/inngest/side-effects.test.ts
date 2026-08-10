@@ -18,12 +18,13 @@ const internals = (fn: unknown) => fn as unknown as FnInternals
 const validate = async (schema: unknown, data: unknown) => {
   const standard = (
     schema as {
-      ['~standard']: {
+      ['~standard']?: {
         validate: (value: unknown) => Promise<{ issues?: readonly unknown[] }>
       }
     }
   )['~standard']
-  return standard.validate(data)
+  expect(standard).toBeDefined()
+  return standard!.validate(data)
 }
 
 describe('order side-effect invoke contracts', () => {
@@ -43,7 +44,7 @@ describe('order side-effect invoke contracts', () => {
     expect(result.issues).toBeDefined()
   })
 
-  it('states the cache-invalidation invoke contract', async () => {
+  it('lets a cache-invalidation invoke carry the order id and product ids', async () => {
     const triggers = internals(invalidateOrderCachesFunction).opts.triggers
     expect(triggers).toContain(orderCacheInvalidateInvoke)
 
@@ -52,5 +53,12 @@ describe('order side-effect invoke contracts', () => {
       productIds: ['p1'],
     })
     expect(result.issues).toBeUndefined()
+  })
+
+  it('rejects a cache-invalidation invoke without product ids', async () => {
+    const result = await validate(orderCacheInvalidateInvoke.schema, {
+      orderId: 'aB3xY7z',
+    })
+    expect(result.issues).toBeDefined()
   })
 })
