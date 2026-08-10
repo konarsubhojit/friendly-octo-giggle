@@ -1,4 +1,4 @@
-import { eventType } from 'inngest'
+import { eventType, invoke } from 'inngest'
 import { z } from 'zod'
 import { SHIPPING_METHODS } from '@/lib/shipping/methods'
 import { RETURN_STATUSES } from '@/lib/constants/returns'
@@ -129,4 +129,25 @@ export const orderCacheInvalidateRequested = eventType(
       productIds: z.array(z.string().min(1)),
     }),
   }
+)
+
+/**
+ * Payload a direct invocation of the search-index function must carry.
+ *
+ * An invoke names the order to mirror and nothing else, matching the id-only
+ * shape of `search/order.index.requested`.
+ */
+export const orderSearchIndexInvoke = invoke(
+  z.object({
+    orderId: z.string().min(1),
+  })
+)
+
+/** Payload a direct invocation of the cache-invalidation function must carry. */
+export const orderCacheInvalidateInvoke = invoke(
+  z.object({
+    orderId: z.string().min(1),
+    userId: z.string().min(1).nullish(),
+    productIds: z.array(z.string().min(1)),
+  })
 )

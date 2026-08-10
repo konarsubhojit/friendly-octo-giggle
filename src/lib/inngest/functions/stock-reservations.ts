@@ -8,8 +8,8 @@ import {
 } from '@/features/orders/services/stock-reservation'
 
 /**
- * Two retries. A sweep that fails is not urgent — the next run is five minutes
- * away and claims exactly the same rows — but a transient connection error
+ * Two retries. A sweep that fails is not urgent — the next run is thirty
+ * minutes away and claims exactly the same rows — but a transient connection error
  * should not cost a whole interval either.
  */
 export const RESERVATION_EXPIRY_RETRIES = 2
@@ -27,7 +27,7 @@ export const expireStockReservationsFunction = inngest.createFunction(
   {
     id: 'expire-stock-reservations',
     name: 'Expire stock reservations',
-    triggers: [cron('*/5 * * * *')],
+    triggers: [cron('*/30 * * * *')],
     retries: RESERVATION_EXPIRY_RETRIES,
   },
   async ({ step }) => {

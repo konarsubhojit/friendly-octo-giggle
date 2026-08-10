@@ -47,7 +47,7 @@ export const RESERVATION_TTL_MINUTES = (() => {
  * Rows a single expiry sweep may claim.
  *
  * Bounded so a backlog cannot exhaust the function timeout; the cron runs
- * every five minutes, so a backlog drains rather than accumulating.
+ * every thirty minutes, so a backlog drains rather than accumulating.
  */
 export const RESERVATION_EXPIRY_BATCH_SIZE = 500
 

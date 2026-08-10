@@ -52,9 +52,9 @@ beforeEach(() => {
 })
 
 describe('expireStockReservationsFunction', () => {
-  it('sweeps every five minutes with a bounded retry budget', () => {
+  it('sweeps every thirty minutes with a bounded retry budget', () => {
     expect(internals.opts.id).toBe('expire-stock-reservations')
-    expect(internals.opts.triggers).toEqual([{ cron: '*/5 * * * *' }])
+    expect(internals.opts.triggers).toEqual([{ cron: '*/30 * * * *' }])
     expect(internals.opts.retries).toBe(RESERVATION_EXPIRY_RETRIES)
   })
 

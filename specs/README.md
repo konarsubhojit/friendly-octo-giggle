@@ -70,12 +70,12 @@ Every specification directory carries a `spec.md`. Directories 001-012 and 014-0
 
 One real correctness defect, then the commerce capability whose absence is most visible to customers.
 
-| Spec | Capability                   | Problem it addresses                                                                                                                                                                                                   |
-| ---- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 016  | Inventory reservation        | Stock is validated at checkout request but decremented later, leaving a measured oversell window — **implemented**; holds are taken at request acceptance, consumed with the order, and expired by a five-minute sweep |
-| 017  | Personalized recommendations | Recommendations are static; browsing and purchase history are not used                                                                                                                                                 |
-| 018  | Self-service returns         | Refunds are admin-only; customers have no return request path                                                                                                                                                          |
-| 019  | Stock and price alerts       | Out-of-stock demand and price sensitivity are entirely uncaptured                                                                                                                                                      |
+| Spec | Capability                   | Problem it addresses                                                                                                                                                                                                     |
+| ---- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 016  | Inventory reservation        | Stock is validated at checkout request but decremented later, leaving a measured oversell window — **implemented**; holds are taken at request acceptance, consumed with the order, and expired by a thirty-minute sweep |
+| 017  | Personalized recommendations | Recommendations are static; browsing and purchase history are not used                                                                                                                                                   |
+| 018  | Self-service returns         | Refunds are admin-only; customers have no return request path                                                                                                                                                            |
+| 019  | Stock and price alerts       | Out-of-stock demand and price sensitivity are entirely uncaptured                                                                                                                                                        |
 
 ### Epic — Phase 3: AI, interaction quality, and revenue levers
 
