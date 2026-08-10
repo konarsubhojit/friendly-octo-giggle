@@ -133,13 +133,15 @@ An operator can see webhook deliveries, identify ones that never completed, and 
 
 ### Functional Requirements
 
+Existing identifiers are stable: FR-001 through FR-020 keep the numbers they were drafted with, so plans, tasks, and review notes referencing them remain valid. The 2026-08-10 scope revision found that FR-001 through FR-004 are already satisfied and that a new, higher-priority requirement precedes them. Rather than renumber the whole list, the new requirements are numbered FR-000a through FR-000c and are listed first, reflecting their priority.
+
+- **FR-000a**: The checkout payment step MUST present the configured providers as an explicit shopper choice, replacing the current static placeholder. _(New, 2026-08-10; highest priority in this specification.)_
+- **FR-000b**: The selected provider MUST be validated server-side against the registered provider list before it is persisted on a checkout request or order.
+- **FR-000c**: Each offered option MUST state when payment is collected, so a prepaid provider and a settles-on-delivery provider are not presented as equivalent.
 - **FR-001**: The payment status model MUST distinguish partially refunded from fully refunded orders. _(Satisfied: `PARTIALLY_REFUNDED` exists in `paymentStatusEnum`; retained as a regression requirement.)_
 - **FR-002**: Refund settlement MUST derive payment status from the actual refunded total against the amount paid, not set a terminal state unconditionally. _(Satisfied in `refund-service.ts`; retained as a regression requirement.)_
 - **FR-003**: Existing orders MUST report a payment status matching their actual refund history. _(Satisfied; the establishing migration has already run and MUST NOT be re-applied.)_
 - **FR-004**: Admin order filtering and CSV export MUST expose the partially refunded state. _(Satisfied; retained as a regression requirement.)_
-- **FR-004a**: The checkout payment step MUST present the configured providers as an explicit shopper choice, replacing the current static placeholder.
-- **FR-004b**: The selected provider MUST be validated server-side against the registered provider list before it is persisted on a checkout request or order.
-- **FR-004c**: Each offered option MUST state when payment is collected, so a prepaid provider and a settles-on-delivery provider are not presented as equivalent.
 - **FR-005**: Concurrent refunds MUST NOT collectively exceed an order's refundable balance.
 - **FR-006**: A second payment provider MUST be added purely as a new `PaymentGateway` implementation plus a registry and capability entry, with no change to order, checkout, or refund services.
 - **FR-007**: Each provider MUST verify its own payment signatures and webhook signatures through the gateway interface.
