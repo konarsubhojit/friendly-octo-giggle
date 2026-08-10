@@ -2,17 +2,23 @@
 
 **Feature Branch**: `019-stock-and-price-alerts`  
 **Created**: 2026-08-01  
-**Status**: Draft  
+**Last reviewed**: 2026-08-10  
+**Status**: Draft — ready to plan  
 **Epic**: Phase 2 — Correctness and commerce depth  
 **Input**: Let shoppers subscribe to a product variant and be notified when it returns to stock or drops in price, delivered through the existing email and web-push channels under the existing notification preference centre.
 
-## Baseline (verified 2026-08-01)
+## Baseline (verified 2026-08-10)
 
-- The delivery infrastructure is already shipped and in production use: web push (RFC 8291) with per-device `PushSubscription` records and automatic cleanup of expired endpoints, the modular email system under `src/lib/email/` with provider retries and failed-email persistence, and Inngest for durable, retryable dispatch.
-- The consent infrastructure is already shipped: `NotificationPreference` carries independent `transactional` and `marketing` booleans for email, push, and SMS, and a preference centre exists at `src/app/(public)/account/NotificationsSection.tsx`.
-- The abandoned-cart reminder feature (PR #428) establishes the exact pattern this feature follows: a scheduled scan function, a per-recipient send function, and a uniqueness constraint (`AbandonedCartReminder_cartId_reminderNumber_key`) that makes duplicate sends impossible.
-- **The gap**: an out-of-stock product page offers no way to register interest. The demand signal is discarded, and the shopper must remember to return.
-- Today the only capture mechanism for out-of-stock intent is the wishlist, which is a passive list with no notification behavior.
+Re-verified against the working tree at `f257e72`. Everything this specification depends on has now shipped; the feature itself is still entirely absent.
+
+- **Delivery infrastructure — shipped.** Web push (RFC 8291) lives in `src/lib/notifications/push.ts` (`sendPushToUser`, `isPushConfigured`, `getVapidPublicKey`), backed by the `PushSubscription` table and `src/features/account/services/push-subscription-service.ts`. Expired endpoints are already self-healing: a 404 or 410 from the push service calls `deletePushSubscriptionByEndpoint`. Email is the modular system under `src/lib/email/` — dual providers (`google_smtp`, `mailersend`) with fallback, `sendWithRetry` in `retry.ts`, and `FailedEmail` persistence with `saveFailedEmail`, `retryFailedEmail`, and `batchRetryFailedEmails`.
+- **Consent infrastructure — shipped.** `NotificationPreference` carries six independent booleans: `transactionalEmail`, `transactionalPush`, `transactionalSms`, `marketingEmail`, `marketingPush`, `marketingSms`, defaulting to transactional email only. `src/features/account/services/notification-preferences.ts` exposes `isChannelEnabled` and `resolveNotificationRecipient`, which are the gate every send must pass through.
+- **The pattern to copy — shipped.** Abandoned-cart recovery is the exact shape of this feature: `scanAbandonedCartsFunction` on `cron('*/20 * * * *')`, an event-triggered `sendAbandonedCartReminderFunction`, and the `AbandonedCartReminder` table whose `(cartId, reminderNumber)` uniqueness makes a duplicate send structurally impossible. Sixteen functions are registered in `src/lib/inngest/registry.ts`; this feature adds a scan and a send to that registry.
+- **Reservation-aware availability — shipped (016).** `src/lib/stock-availability.ts` exports `availableUnits(variant) = max(0, stock - (reservedStock ?? 0))`, and `StockReservation` rows are expired by `expireStockReservationsFunction` on `cron('*/30 * * * *')`. FR-006 is therefore no longer conditional: `availableUnits` is the availability definition dispatch must use, and raw `stock` is the wrong number.
+- **Returns — shipped (018).** Approved returns restock through `src/features/orders/services/return-restock.ts`, which means a restock event can now originate from a return as well as from an admin stock edit. Dispatch must not assume the admin edit is the only trigger.
+- **The gap — unchanged.** No `StockAlertSubscription`, `PriceAlert`, or equivalent table exists in `src/lib/schema.ts`; no route under `src/app/api` accepts a subscription; no service or component offers one. An out-of-stock product page still discards the demand signal.
+- The only capture mechanism for out-of-stock intent remains the wishlist, which is a passive list with no notification behavior.
+- **Currency note.** Price-drop content must render through the shared money helpers. Rates are refreshed daily by `refreshExchangeRatesFunction` (`src/lib/inngest/functions/exchange-rates.ts`) with hardcoded fallbacks in `src/lib/currency.ts`; a price-drop email must not embed a rate it captured at scan time.
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -89,7 +95,8 @@ An administrator can see subscription demand and dispatch outcomes.
 ### Edge Cases
 
 - A restock followed immediately by a sell-out must not notify shoppers into a dead end; dispatch must re-verify availability at send time.
-- If `016-inventory-reservation` has shipped, availability must be evaluated as reservation-aware available quantity, not raw on-hand stock.
+- Availability must be evaluated as `availableUnits` from `src/lib/stock-availability.ts` — stock net of held reservations — never raw on-hand stock, otherwise a variant fully spoken for by in-flight checkouts will generate alerts into a dead end.
+- A restock arising from an approved return's restock step must trigger alerts on the same path as an admin stock edit.
 - A subscription for a soft-deleted product or variant must be suppressed and cleaned up.
 - Expired or revoked push endpoints must be cleaned up by the existing mechanism rather than retried indefinitely.
 - A bulk price update or a large restock must not produce an unbounded send burst; dispatch must be batched and rate-aware.
@@ -108,7 +115,7 @@ An administrator can see subscription demand and dispatch outcomes.
 - **FR-003**: Subscriptions MUST be unique per user, variant, and alert type, enforced by a database constraint.
 - **FR-004**: A scheduled Inngest function MUST detect qualifying restock and price-drop events and dispatch notifications in bounded batches.
 - **FR-005**: Dispatch MUST re-verify the triggering condition at send time and MUST skip subscriptions that no longer qualify.
-- **FR-006**: Availability MUST be evaluated as reservation-aware available quantity where reservations exist.
+- **FR-006**: Availability MUST be evaluated with `availableUnits` from `src/lib/stock-availability.ts`, so held reservations are subtracted before a variant is treated as back in stock.
 - **FR-007**: A price drop MUST only qualify when it meets or exceeds a configurable threshold.
 - **FR-008**: Each subscription MUST produce at most one notification, enforced by a uniqueness constraint in the pattern of `AbandonedCartReminder`.
 - **FR-009**: Delivery MUST respect `NotificationPreference` for every channel, and MUST send nothing when no permitted channel remains.
@@ -151,5 +158,6 @@ An administrator can see subscription demand and dispatch outcomes.
 
 ## Dependencies
 
-- Reuses the shipped web-push, email, notification-preference, and Inngest infrastructure.
-- Should follow `016-inventory-reservation` so availability is evaluated correctly.
+- Reuses the shipped web-push, email, notification-preference, and Inngest infrastructure; the scan/send/uniqueness triad from abandoned-cart recovery is the reference implementation.
+- `016-inventory-reservation` has shipped, so `availableUnits` is available and is the required availability definition. No blocking dependency remains.
+- `018-self-service-returns` has shipped and introduces a second restock origin that dispatch must observe.

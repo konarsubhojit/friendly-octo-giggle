@@ -2,26 +2,35 @@
 
 **Feature Branch**: `023-payment-methods-expansion`  
 **Created**: 2026-08-01  
-**Status**: Draft  
+**Last reviewed**: 2026-08-10  
+**Status**: Draft — ready to plan; scope revised, see below  
 **Epic**: Phase 3 — AI, interaction quality, and revenue levers  
-**Input**: Extend the payment layer behind its existing gateway abstraction with a second provider, additional checkout methods, an accurate partial-refund payment state, and operator tooling to reconcile and replay webhook deliveries.
+**Input**: Extend the payment layer behind its existing gateway abstraction with a second provider, a shopper-facing method selection at checkout, additional checkout methods, and operator tooling to reconcile and replay webhook deliveries.
 
-## Baseline (verified 2026-08-01)
+## Baseline (verified 2026-08-10)
 
-- A clean gateway abstraction already exists. `PaymentGateway` in `src/lib/payments/gateway.ts` defines `ensureConfigured`, `createOrder`, `verifyPayment`, `verifyWebhook`, and `refund`; `src/lib/payments/registry.ts` resolves implementations by provider; `src/lib/payments/providers.ts` is a dependency-free capability table safe to import from schema, validations, and client bundles. Adding a provider is an additive change by design.
-- Exactly two providers are registered: `RAZORPAY` and `COD`, with capabilities `requiresSignature` and `settlesOnDelivery`.
-- Webhook processing is already idempotent. `WebhookEvent` carries a unique `(provider, eventId)` constraint so a duplicate delivery loses the insert race, and a nullable `processedAt` lets a delivery that died mid-flight be reclaimed by a later retry rather than being swallowed as a duplicate.
-- Refunds already support partial amounts. `refundOrder` computes a refundable balance from `amountPaid` minus reserved refund rows and accepts an explicit `amount`.
-- **Defect found**: `settleRefund` sets `orders.paymentStatus` to `REFUNDED` unconditionally, including for a partial refund that leaves a balance outstanding. `paymentStatusEnum` has no `PARTIALLY_REFUNDED` member, so a partially refunded order is indistinguishable from a fully refunded one in order lists, admin filters, and CSV exports.
-- There is no stored payment instrument, no saved-card concept, and no operator view of webhook deliveries.
+Re-verified against the working tree at `f257e72`. **The correctness defect this specification was built around has been fixed since the original draft**, and a different, larger gap has surfaced in its place: the checkout has no payment-method selection at all.
+
+- **Gateway abstraction — confirmed clean.** `PaymentGateway` in `src/lib/payments/gateway.ts` declares `provider`, `ensureConfigured()`, `createOrder()`, `verifyPayment()`, `verifyWebhook()`, and `refund()`. `src/lib/payments/registry.ts` resolves an implementation by provider name. `src/lib/payments/providers.ts` is a deliberately dependency-free capability table (`PAYMENT_PROVIDERS`, `PAYMENT_PROVIDER_CAPABILITIES`, `requiresPaymentSignature`, `settlesPaymentOnDelivery`) safe to import from schema, validations, and client bundles, and both helpers fail closed on an unknown provider. Adding a provider remains an additive change by design.
+- **Registered providers — still exactly two.** `RAZORPAY` and `COD`, with capabilities `requiresSignature` and `settlesOnDelivery`.
+- **Webhook idempotency — confirmed.** `WebhookEvent` carries a unique `(provider, eventId)`; `claimWebhookEvent` in `src/features/payments/services/payment-webhook-service.ts` lets the first claim win and permits a stale claim older than five minutes with a null `processedAt` to be reclaimed, so a delivery that died mid-flight is recovered rather than swallowed. Routes: `POST /api/payments/webhook` (legacy, defaults to Razorpay) and `POST /api/payments/webhook/[provider]`. Razorpay verification is HMAC-SHA256 with a timing-safe comparison; COD's `verifyWebhook` throws by design.
+- **Partial refunds — RESOLVED, no longer a defect.** `paymentStatusEnum` now includes `PARTIALLY_REFUNDED`; `refund-service.ts` derives the status as `prepared.refundableBalance > 0 ? 'PARTIALLY_REFUNDED' : 'REFUNDED'`; `prepareRefund` locks the order, sums non-failed refunds, and rejects over-refunding; `Refund.returnRequestId` is uniquely constrained; `AdminOrderCard` and `Badge` render the state, and `src/features/orders/validations.ts` accepts it. **User Story 1 and FR-001 through FR-004 below are therefore already satisfied.** They are retained as regression requirements, not as work.
+- **The new headline gap — there is no payment method selection.** `src/app/(public)/checkout/payment/page.tsx` renders a static placeholder: a dashed box labelled `Payment gateway (coming soon)` saying "Online payment integration is coming soon… payment details will be confirmed via email". The shopper never chooses a provider or a method; `checkoutRequest.paymentProvider` is populated from the request payload (`src/features/cart/services/checkout-service.ts`), not from a deliberate shopper choice. A fully functioning Razorpay gateway is wired up behind a checkout that will not offer it.
+- **No operator webhook surface.** `WebhookEvent` rows are written and claimed but never displayed; there is no admin page, no route under `/api/admin` for deliveries, and therefore no way to notice or replay a delivery that never completed.
+- **No stored instruments.** No UPI, wallet, net-banking, EMI, card-vaulting, tokenization, or saved-payment-method support exists anywhere in the tree — a definitive search result, not an inference.
+- **Audit target exists.** `AdminAuditLog` is available for FR-015's replay records, but it has no human-readable surface until `024-admin-console-revamp` builds one.
+
+### Scope revision (2026-08-10)
+
+The original priority order opened with the partial-refund defect. That is fixed, so priorities shift: **User Story 5 (payment method selection at checkout) is now P1 and must land first** — every other story in this specification is unreachable by a shopper until the checkout offers a method. User Story 1 is demoted to a regression guarantee.
 
 ## User Scenarios & Testing _(mandatory)_
 
-### User Story 1 - Partially refunded orders report accurately (Priority: P1)
+### User Story 1 - Partially refunded orders report accurately (Priority: P3 — already satisfied, retained as a regression guarantee)
 
 An order that has been refunded in part is distinguishable from one refunded in full, everywhere it is reported.
 
-**Why this priority**: This is an existing correctness defect, not a new capability. It misreports financial state today, and every later story in this specification builds on the same state model.
+**Why this priority**: This was the specification's opening defect. It was fixed before this specification was planned — `PARTIALLY_REFUNDED` exists in the enum, refund settlement derives the status from the remaining refundable balance, and the admin surfaces render it. The story is kept so the behavior is covered by explicit acceptance criteria and cannot silently regress while the provider work below churns the same service.
 
 **Independent Test**: Refund part of a paid order and confirm the order reports a partially refunded state with the outstanding balance visible, while a full refund reports as fully refunded.
 
@@ -30,7 +39,26 @@ An order that has been refunded in part is distinguishable from one refunded in 
 1. **Given** a paid order, **When** part of its value is refunded, **Then** its payment state reports as partially refunded and the remaining refundable balance is shown.
 2. **Given** a partially refunded order, **When** the remaining balance is refunded, **Then** its payment state reports as fully refunded.
 3. **Given** partially and fully refunded orders, **When** an admin filters or exports orders, **Then** the two are distinguishable.
-4. **Given** existing orders at the time of the change, **When** the migration runs, **Then** their reported state is derived from their actual refund total and no order changes meaning.
+4. **Given** orders that predate the partially-refunded state, **When** they are reported, **Then** their reported state matches their actual refund total; the migration establishing this has already run and MUST NOT be re-applied.
+
+---
+
+### User Story 5 - A shopper can choose how to pay (Priority: P1 — now the first story to land)
+
+At the payment step a shopper is offered the payment options the platform actually supports, chooses one, and completes the purchase through it.
+
+**Why this priority**: This is the gap that makes every other story in this specification unreachable. A fully implemented Razorpay gateway, signature verification, webhook settlement, and refund path all exist behind a checkout step that renders a static "coming soon" placeholder and never asks the shopper to choose. Adding a second provider or extra methods before this exists would add capability nobody can reach.
+
+**Independent Test**: Open the payment step, confirm both configured options are offered with distinct labels, complete a purchase through each, and confirm the resulting order records the provider that was actually used.
+
+**Acceptance Scenarios**:
+
+1. **Given** configured providers, **When** a shopper reaches the payment step, **Then** each configured provider is offered as a selectable option with a clear label and a statement of when payment is taken.
+2. **Given** a shopper selects a prepaid provider, **When** they confirm, **Then** the gateway payment flow is initiated and the order settles only on verified payment.
+3. **Given** a shopper selects Cash on Delivery, **When** they confirm, **Then** the order is created in a pending-payment state that settles on delivery, consistent with the provider's `settlesOnDelivery` capability.
+4. **Given** a provider that is not configured in the environment, **When** the payment step renders, **Then** that provider is not offered, and no error is shown for the providers that are configured.
+5. **Given** the shopper's selection, **When** the checkout request is created, **Then** the recorded `paymentProvider` reflects the shopper's explicit choice, validated server-side against the registered provider list, and never a value trusted verbatim from the client without validation.
+6. **Given** exactly one provider is configured, **When** the payment step renders, **Then** it is selected by default and the step does not present a meaningless single-option choice.
 
 ---
 
@@ -105,10 +133,13 @@ An operator can see webhook deliveries, identify ones that never completed, and 
 
 ### Functional Requirements
 
-- **FR-001**: The payment status model MUST distinguish partially refunded from fully refunded orders.
-- **FR-002**: Refund settlement MUST derive payment status from the actual refunded total against the amount paid, not set a terminal state unconditionally.
-- **FR-003**: Existing orders MUST be migrated so their reported payment status matches their actual refund history.
-- **FR-004**: Admin order filtering and CSV export MUST expose the partially refunded state.
+- **FR-001**: The payment status model MUST distinguish partially refunded from fully refunded orders. _(Satisfied: `PARTIALLY_REFUNDED` exists in `paymentStatusEnum`; retained as a regression requirement.)_
+- **FR-002**: Refund settlement MUST derive payment status from the actual refunded total against the amount paid, not set a terminal state unconditionally. _(Satisfied in `refund-service.ts`; retained as a regression requirement.)_
+- **FR-003**: Existing orders MUST report a payment status matching their actual refund history. _(Satisfied; the establishing migration has already run and MUST NOT be re-applied.)_
+- **FR-004**: Admin order filtering and CSV export MUST expose the partially refunded state. _(Satisfied; retained as a regression requirement.)_
+- **FR-004a**: The checkout payment step MUST present the configured providers as an explicit shopper choice, replacing the current static placeholder.
+- **FR-004b**: The selected provider MUST be validated server-side against the registered provider list before it is persisted on a checkout request or order.
+- **FR-004c**: Each offered option MUST state when payment is collected, so a prepaid provider and a settles-on-delivery provider are not presented as equivalent.
 - **FR-005**: Concurrent refunds MUST NOT collectively exceed an order's refundable balance.
 - **FR-006**: A second payment provider MUST be added purely as a new `PaymentGateway` implementation plus a registry and capability entry, with no change to order, checkout, or refund services.
 - **FR-007**: Each provider MUST verify its own payment signatures and webhook signatures through the gateway interface.
@@ -138,6 +169,7 @@ An operator can see webhook deliveries, identify ones that never completed, and 
 
 ### Measurable Outcomes
 
+- **SC-000**: A shopper can select a payment provider at checkout and complete a purchase through each configured provider, with the order recording the provider actually used.
 - **SC-001**: A partially refunded order is distinguishable from a fully refunded one in the admin UI, filters, and CSV export.
 - **SC-002**: No order's refunds can exceed its amount paid, including under concurrent refund attempts.
 - **SC-003**: A complete purchase, webhook settlement, and refund succeed through the new provider without modification to shared order or checkout services.
@@ -157,6 +189,8 @@ An operator can see webhook deliveries, identify ones that never completed, and 
 
 ## Dependencies
 
-- Builds on the shipped `PaymentGateway` abstraction, registry, webhook idempotency table, and partial-refund service.
+- Builds on the shipped `PaymentGateway` abstraction, registry, capability table, webhook idempotency claim, and partial-refund service — all verified present, so no blocking dependency remains.
+- The partial-refund correctness work this specification originally owned has already shipped; only the regression guarantees remain.
 - Pairs with `022-loyalty-and-store-credit`, which introduces store credit as a settlement path alongside gateway refunds.
-- Interacts with `018-self-service-returns`, which increases refund volume and therefore the value of accurate partial-refund reporting.
+- Interacts with `018-self-service-returns`, which has shipped and increases refund volume, raising the value of accurate partial-refund reporting.
+- The webhook reconciliation view (User Story 4) should follow `024-admin-console-revamp` so it is built on the unified admin list surface and its replay records land in an audit view a human can read, rather than adding one more bespoke admin screen that then has to be converted.

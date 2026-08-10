@@ -2,18 +2,24 @@
 
 **Feature Branch**: `022-loyalty-and-store-credit`  
 **Created**: 2026-08-01  
-**Status**: Draft  
+**Last reviewed**: 2026-08-10  
+**Status**: Draft — ready to plan  
 **Epic**: Phase 3 — AI, interaction quality, and revenue levers  
 **Input**: Introduce a ledger-backed balance system that earns loyalty points on purchases, issues store credit as a refund alternative, and supports purchasable gift cards, all redeemable at checkout through the existing discount application pipeline.
 
-## Baseline (verified 2026-08-01)
+## Baseline (verified 2026-08-10)
 
-- A complete discount engine is shipped (PR #426). `Coupon` supports `PERCENTAGE`, `FIXED_AMOUNT`, `FREE_SHIPPING`, and `BOGO`, with `minCartValue`, `maxDiscountAmount`, category and product scoping, global and per-user usage limits, stackability, and validity windows. `CouponRedemption` rows are inserted in the same transaction as the order.
-- Money is handled with an exact-decimal `money` column type (PR #422), which is a prerequisite for a financial ledger — floating-point balances would be unacceptable here.
-- Refunds are shipped with provider, amount, status, and audit fields, and `018-self-service-returns` extends them to customer-initiated returns.
-- Order pricing is centralized in `src/features/orders/services/order-pricing.ts`, and the cart pricing summary already renders discount lines.
-- **The gap**: there is no concept of a customer-owned balance. Every discount is coupon-shaped — externally issued, not earned, not owned, and not refundable into.
-- Prices are stored in INR as the base currency, with display conversion, so a balance must have one unambiguous stored currency.
+Re-verified against the working tree at `f257e72`. Every prerequisite this specification named has now shipped, and the refund surface it plugs into is richer than the original draft assumed.
+
+- **Discount engine — shipped.** `Coupon` supports `PERCENTAGE`, `FIXED_AMOUNT`, `FREE_SHIPPING`, and `BOGO`, with `minCartValue`, `maxDiscountAmount`, `scopedCategories`, `scopedProductIds`, `usageLimit`, `perUserLimit`, `usageCount`, `stackable`, and `startsAt`/`endsAt` validity windows. `CouponRedemption` rows carry `couponId`, `userId`, `orderId`, and `discountAmount`, and are inserted in the same transaction as the order.
+- **Exact-decimal money — shipped.** The `money` column type is `numeric(12,2)`; all arithmetic runs through `src/lib/money.ts` (`roundMoney`, `sumMoney`, `multiplyMoney`, `allocateMoney`, `convertMoney`). `allocateMoney` in particular is the largest-remainder distributor this specification's redemption rounding rule should reuse rather than reinvent.
+- **Order money columns — confirmed.** `Order` carries `subtotalAmount`, `shippingAmount`, `taxAmount`, `discountAmount`, `totalAmount`, `amountPaid`, plus `couponId` and a denormalized `couponCode`. A balance redemption needs its own column or ledger link; it must not be folded into `discountAmount`, or coupon reporting becomes unreadable.
+- **Order pricing — centralized.** `src/features/orders/services/order-pricing.ts` exposes `calculateSubtotal` and `calculateOrderTotals`, composing `quoteShipping` and `calculateTax`. This is the single insertion point for redemption precedence; there is no second total calculation to keep in sync.
+- **Refunds — richer than assumed.** The `Refund` table carries `provider`, `paymentTransactionId`, `gatewayRefundId` (unique), `returnRequestId` (unique — the double-refund guard), `amount`, `status` (`PENDING | PROCESSED | FAILED`), `reason`, `errorMessage`, `initiatedById`, and `processedAt`. `refund-service.ts` supports partial amounts, validates against a computed refundable balance, and sets `paymentStatus` to `PARTIALLY_REFUNDED` or `REFUNDED` correctly. Store credit therefore slots in as an **alternative settlement instrument against an already-correct refundable-balance calculation** — this specification does not need to fix refund arithmetic.
+- **Returns — shipped (018).** `ReturnRequest`, `ReturnItem`, and `ReturnEvidence` exist with a state machine (`return-state-machine.ts`), a refund calculator (`return-refund-calculator.ts`), restock (`return-restock.ts`), and admin triage at `/admin/returns` via `PATCH /api/admin/returns/[id]`. Store-credit issuance is a new settlement branch inside that existing transition, not a new workflow. The COD `settle` transition — a return on a Cash-on-Delivery order that has no gateway refund path — is exactly where store credit has the highest value.
+- **Currency — INR base, display conversion only.** `User.currencyPreference` defaults to `INR`; `refreshExchangeRatesFunction` refreshes USD/EUR/GBP daily with hardcoded fallbacks in `src/lib/currency.ts`. A ledger stored in anything other than INR would inherit that refresh cadence as a correctness dependency, which is unacceptable for financial data.
+- **Audit — shipped.** `AdminAuditLog` exists with `userId`, `entity`, and `createdAt` indexes and is written by `src/features/admin/services/admin-audit-log.ts`. FR-013 and FR-014 write into this table; note that it currently has **no read surface** — see `024-admin-console-revamp`, which builds one.
+- **The gap — unchanged.** No `loyalty`, `credit`, `gift`, `wallet`, `points`, or `balance` table, service, or route exists. Every discount is still coupon-shaped: externally issued, not earned, not owned, and not refundable into.
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -114,6 +120,7 @@ Every change to a balance is an immutable ledger entry, and the balance always e
 - **FR-007**: Earned points MUST be reversed when their originating order is cancelled or refunded.
 - **FR-008**: Gift-card purchases MUST NOT earn points.
 - **FR-009**: Customers MUST be able to redeem balance at checkout, and redemption MUST be written in the same transaction as the order.
+- **FR-009a**: A balance redemption MUST be recorded in a field distinct from `Order.discountAmount`, so coupon discount and balance redemption remain separately reportable.
 - **FR-010**: Redemption MUST be atomic against concurrent redemptions and MUST NOT permit a negative balance.
 - **FR-011**: Balance redemption combined with coupons MUST follow a documented precedence and MUST NOT produce a negative order total.
 - **FR-012**: Redeemed balance MUST be returned when its order fails in the durable checkout pipeline.
@@ -157,6 +164,7 @@ Every change to a balance is an immutable ledger entry, and the balance always e
 
 ## Dependencies
 
-- Builds on the shipped discount engine, exact-decimal money handling, and refund infrastructure.
-- Pairs with `018-self-service-returns`, which is the primary source of store-credit issuance.
-- Interacts with `016-inventory-reservation`, since redeemed balance must be released on the same failure paths as reserved stock.
+- Builds on the shipped discount engine, exact-decimal money handling (`allocateMoney` in particular), and the partial-refund service — all verified present, so no blocking dependency remains.
+- Pairs with `018-self-service-returns`, which has shipped: store credit is a new settlement branch inside the existing return transition, and the COD `settle` path is its highest-value case.
+- Interacts with `016-inventory-reservation`, which has shipped: redeemed balance must be released on the same checkout-failure paths that release a stock reservation.
+- Administrative issuance and adjustment write to `AdminAuditLog`, which has no read surface until `024-admin-console-revamp` builds one. This does not block implementation, but the audit trail is effectively unreadable by humans until then.

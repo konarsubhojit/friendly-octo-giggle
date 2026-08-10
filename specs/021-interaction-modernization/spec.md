@@ -2,17 +2,23 @@
 
 **Feature Branch**: `021-interaction-modernization`  
 **Created**: 2026-08-01  
-**Status**: Draft  
+**Last reviewed**: 2026-08-10  
+**Status**: Draft — ready to plan  
 **Epic**: Phase 3 — AI, interaction quality, and revenue levers  
 **Input**: Adopt the React 19.2 and Next.js 16 interaction primitives already installed — View Transitions, `<Activity>`, and Server Actions with `useActionState` and `useOptimistic` — so navigation is continuous, multi-step state survives, and high-frequency mutations stop round-tripping through Redux thunks.
 
-## Baseline (verified 2026-08-01)
+## Baseline (verified 2026-08-10)
 
-- React `19.2.7` is installed and exports `Activity`. Next.js `16.2.11` supports `experimental.viewTransition`. **None of these are used**: `ViewTransition`, `startViewTransition`, `useOptimistic`, and `useActionState` have zero occurrences in `src/`, and `experimental.viewTransition` is not enabled.
-- Mutations are overwhelmingly client-driven. Only **3** files contain `'use server'` (`src/app/(public)/auth/signin/page.tsx`, `src/features/orders/services/order-mirror.ts`, `src/features/orders/actions/orders.ts`) against **133** files containing `'use client'`.
-- The dominant mutation path is Redux thunk → `src/lib/api-client.ts` → route handler, across the cart, orders, admin, and wishlist slices. `api-client.ts` is a deliberate dependency-inversion boundary with its own thunk tests, so it cannot simply be discarded.
-- Checkout is a four-page funnel (`shipping`, `payment`, `review`, `confirmation`). Navigating between steps unmounts and remounts each step's component tree, discarding in-progress form state and any fetched data.
-- Optimistic behavior exists but is hand-rolled — for example the wishlist slice mutates local state before the request resolves and does not automatically roll back on failure, as recorded in `specs/010-wishlist`.
+Re-verified against the working tree at `f257e72`. `015-build-and-dx-modernization` has since shipped and changed two of this specification's premises: the React Compiler is now on, and checkout step state is no longer entirely discarded.
+
+- **Installed and configured.** `next ^16.3.0`, `react`/`react-dom ^19.2.7`. `next.config.ts` enables `typedRoutes`, `reactCompiler`, and `cacheComponents`, and declares the `catalog`, `product`, and `taxonomy` `cacheLife` profiles. `experimental.viewTransition` is **not** enabled.
+- **Still entirely unused.** `ViewTransition`, `startViewTransition`, `Activity`, `useOptimistic`, `useActionState`, and `useFormStatus` have zero occurrences anywhere in `src/`.
+- **The React Compiler is now on.** Its automatic memoization has already landed, so any INP measurement taken for this specification is a measurement of interaction changes alone — the compiler is part of the baseline, not part of the change. This removes the original sequencing dependency on `015`.
+- **Mutations remain client-driven.** Exactly three files contain `'use server'` — `src/app/(public)/auth/signin/page.tsx`, `src/features/orders/services/order-mirror.ts`, and `src/features/orders/actions/orders.ts`, the last of which is reads, not mutations. The dominant mutation path is still Redux thunk → `src/lib/api-client.ts` → route handler across the cart, orders, admin, and wishlist slices. `api-client.ts` is a deliberate dependency-inversion boundary with its own thunk tests and cannot simply be discarded.
+- **Checkout state is partially preserved — correcting the original baseline.** Checkout is a four-page funnel (`shipping`, `payment`, `review`, `confirmation`) with `CheckoutProgress` tracking `'cart' | 'shipping' | 'payment' | 'review' | 'confirmation'`. `src/features/cart/pending-checkout.ts` persists a `PendingCheckoutSchema` payload — address lines, pin code, city, state, shipping method, customization notes, coupon code — to `sessionStorage` under `PENDING_CHECKOUT_KEY`. What is **not** preserved is everything outside that schema: component-local form state, validation state, focus position, scroll position, and any data a step has already fetched. Each step still unmounts and remounts on navigation and refetches. The honest problem statement is therefore "state is preserved by an ad-hoc serialization layer with a fixed field list, and everything outside that list is lost", not "all state is lost".
+- **`sessionStorage` is the wrong lifetime boundary.** A `sessionStorage` payload survives a sign-out and a subsequent sign-in in the same tab. Any preservation mechanism this specification introduces must be explicit about clearing on order completion and on sign-out, and must not simply inherit the existing behavior.
+- **Optimistic behavior is hand-rolled.** The wishlist slice mutates local state before the request resolves and does not automatically roll back on failure, as recorded in `specs/010-wishlist`.
+- **Streaming and fallbacks are already in place to build on.** Eleven `loading.tsx` files, ten `error.tsx` files, six components in `src/components/skeletons/`, and eleven files using `Suspense`. Cache Components is already enforcing the per-request/cached split, so the revalidation targets FR-012 refers to are the tags in `src/lib/cache-tags.ts`, which already exist.
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -105,7 +111,8 @@ Moving mutations off the thunk and `api-client` path preserves the behavior thos
 - **FR-001**: View Transitions MUST be enabled and applied to storefront navigation between catalog and product views.
 - **FR-002**: View Transitions MUST be feature-detected and MUST degrade to normal navigation when unsupported.
 - **FR-003**: Transition animation MUST be suppressed when the user prefers reduced motion.
-- **FR-004**: Checkout funnel steps MUST preserve entered state across forward and backward navigation.
+- **FR-004**: Checkout funnel steps MUST preserve entered state across forward and backward navigation, including state outside the current `PendingCheckoutSchema` field list.
+- **FR-004a**: The preservation mechanism MUST replace, not layer on top of, the existing `sessionStorage` `PENDING_CHECKOUT_KEY` payload, so that a single mechanism owns funnel state.
 - **FR-005**: Preserved-but-hidden subtrees MUST NOT execute effects that issue requests or produce user-visible side effects.
 - **FR-006**: Preserved funnel state MUST be cleared on order completion and on sign-out.
 - **FR-007**: Cart quantity changes, wishlist toggles, and review submissions MUST be migrated to Server Actions with pending state and optimistic updates.
@@ -149,6 +156,7 @@ Moving mutations off the thunk and `api-client` path preserves the behavior thos
 
 ## Dependencies
 
-- Interaction changes are best verified at the browser level, but the specification that would have made the Playwright suite a CI gate (`013-e2e-in-continuous-integration`) was withdrawn on 2026-08-07; verification is therefore this specification's own responsibility.
-- Should follow `015-build-and-dx-modernization` so compiler-driven memoization changes and interaction changes are measured separately.
-- Interacts with `012-cache-components-and-ppr`, since mutation revalidation targets the cache tags that specification introduces.
+- Interaction changes are best verified at the browser level, but the specification that would have made the Playwright suite a CI gate (`013-e2e-in-continuous-integration`) was withdrawn on 2026-08-07; verification is therefore this specification's own responsibility, including repairing the drifted suite described in `specs/README.md`.
+- `015-build-and-dx-modernization` has shipped, so the React Compiler is already part of the baseline and compiler-driven memoization no longer confounds an INP measurement taken here. The original sequencing dependency is discharged.
+- Interacts with `012-cache-components-and-ppr`, which has shipped: mutation revalidation targets the tags already defined in `src/lib/cache-tags.ts`.
+- No dependency on `019`, `022`, or `023`. Ordering against `024-admin-console-revamp` matters only for FR-002's admin tab-state clause, which should follow the unified admin list surface rather than anticipate it.
