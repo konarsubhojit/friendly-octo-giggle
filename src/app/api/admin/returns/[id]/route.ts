@@ -68,16 +68,16 @@ export async function PATCH(
       'decisionReason' in body ? body.decisionReason : undefined
     )
 
-    // Both cache families are keyed on the order, not the return, and the
-    // customer's own order views hold the return status too.
-    await invalidateAdminOrderCaches(result.orderId, result.userId)
+    // Invalidate the admin return/order caches for this return ID.
+    await invalidateAdminOrderCaches(id)
 
     // Receiving a return puts units back on the shelf. Without this the
     // storefront keeps rendering the variant as out of stock for the life of
     // the product cache entry, so inventory that physically exists cannot be
     // bought.
-    if (result.restockedProductIds.length > 0) {
-      await invalidateProductCaches(result.restockedProductIds)
+    const restockedProductIds = result.restockedProductIds ?? []
+    if (restockedProductIds.length > 0) {
+      await invalidateProductCaches(restockedProductIds)
     }
 
     return apiSuccess(result, 200, PRIVATE_HEADERS)
