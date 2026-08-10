@@ -456,7 +456,7 @@ Every transition is claim-shaped, so replays are harmless:
   decrement, `HELD → CONSUMED` and `reservedStock` drops by the consumed units.
 - **Release** — on terminal checkout failure and on retry exhaustion, best
   effort: a failed release is logged and never masks the original failure.
-- **Expire** — `expire-stock-reservations` runs every five minutes, claims at
+- **Expire** — `expire-stock-reservations` runs every thirty minutes, claims at
   most 500 rows whose `expiresAt` has passed **by the database clock**, and
   returns their units. The 30-minute TTL is far longer than the pipeline's
   worst observed latency, so expiry only ever reclaims abandoned holds.
@@ -572,7 +572,7 @@ no separate cron endpoint to authenticate:
 - `retry-failed-emails` daily at 02:30 UTC
 - `refresh-exchange-rates` every 6 hours
 - `scan-abandoned-carts` daily at 10:00 UTC
-- `expire-stock-reservations` every 5 minutes
+- `expire-stock-reservations` every 30 minutes
 
 Each scan fans out one event per item rather than looping in a single
 invocation, so a slow provider cannot stall the batch and every item retries

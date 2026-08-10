@@ -1,7 +1,9 @@
 import { inngest } from '@/lib/inngest/client'
 import {
+  orderCacheInvalidateInvoke,
   orderCacheInvalidateRequested,
   orderCreated,
+  orderSearchIndexInvoke,
   orderSearchIndexRequested,
 } from '@/features/orders/inngest/events'
 import { indexOrderInRedis } from '@/features/orders/services/order-mirror'
@@ -26,13 +28,14 @@ export const SIDE_EFFECT_RETRIES = 4
  *
  * Triggered by both `order/created` (the new-order path) and an explicit
  * re-index request (the status-change path), so a single implementation covers
- * every writer.
+ * every writer. The invoke trigger declares the payload a direct invocation
+ * must carry: the order id alone.
  */
 export const indexOrderForSearchFunction = inngest.createFunction(
   {
     id: 'index-order-for-search',
     name: 'Index order for search',
-    triggers: [orderCreated, orderSearchIndexRequested],
+    triggers: [orderCreated, orderSearchIndexRequested, orderSearchIndexInvoke],
     retries: SIDE_EFFECT_RETRIES,
     // Serialise per order so a create and a status change racing on the same
     // row cannot interleave and leave the mirror on the older snapshot.
@@ -70,7 +73,11 @@ export const invalidateOrderCachesFunction = inngest.createFunction(
   {
     id: 'invalidate-order-caches',
     name: 'Invalidate order caches',
-    triggers: [orderCreated, orderCacheInvalidateRequested],
+    triggers: [
+      orderCreated,
+      orderCacheInvalidateRequested,
+      orderCacheInvalidateInvoke,
+    ],
     retries: SIDE_EFFECT_RETRIES,
   },
   async ({ event, step }) => {
