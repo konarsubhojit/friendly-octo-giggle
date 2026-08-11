@@ -2,17 +2,24 @@
 
 **Feature Branch**: `020-storefront-ai-assistant`  
 **Created**: 2026-08-01  
-**Status**: Draft  
+**Last reviewed**: 2026-08-10  
+**Status**: Draft — ready to plan  
 **Epic**: Phase 3 — AI, interaction quality, and revenue levers  
 **Input**: Promote the single-product AI chat into a catalog-wide assistant that can search, filter, compare, and — for authenticated shoppers only — answer questions about their own orders, while preserving every privacy guardrail the current assistant already enforces.
 
-## Baseline (verified 2026-08-01)
+## Baseline (verified 2026-08-10)
 
-- An AI assistant is shipped, but it is scoped to one product. `POST /api/ai/products/[id]/chat` builds a retrieval context from a single product and its variants (`src/lib/ai/product-rag.ts`), calls Gemini through `src/lib/ai/gateway.ts`, and streams the response.
-- The shipped guardrails are specific and must be carried forward exactly: guest identity is one-way hashed, conversation history is persisted only for signed-in users, exact stock counts are never disclosed (`stockLabel` maps quantities to `In Stock`, `Low Stock`, `Out of Stock`), labels are sanitized against control characters and length, and `src/proxy.ts` rate-limits `/api/ai` with the strict Upstash limiter.
-- Model behavior is already remotely configurable through Vercel Edge Config (`getAiConfig`, thinking level, max response tokens) with a 60-second in-process cache, and AI responses are cached in `src/lib/ai/ai-cache.ts`.
-- `playwright-tests/ai-stock-privacy.spec.ts` enforces the stock-privacy contract at the browser level.
-- **The gap**: the assistant cannot answer anything that spans products — comparisons, budget-constrained discovery, "which of these is warmest" — because retrieval never leaves the current product. A shopper who does not already know which product they want cannot be helped.
+Re-verified against the working tree at `f257e72`. The assistant has grown considerably since this specification was drafted, and two of its original assumptions are now wrong: the assistant is already order-aware, and it already assembles supplemental commerce context beyond the anchor product. The remaining gap is narrower and sharper than the original draft described.
+
+- **One route, one surface.** `POST /api/ai/products/[id]/chat` is still the only AI endpoint, and `ProductAssistant.tsx` (lazily imported by `ProductClient.tsx`) is still the only surface. Every question is anchored to a product id in the URL, so a shopper who has not yet chosen a product has no way to reach the assistant at all.
+- **The service layer is substantial.** `src/features/ai/services/` now holds ten modules: `chat-request` (parsing, identity, currency), `chat-prompt` (system prompt, token estimation, `sanitizePromptText`, `sanitizeAssistantOutput`), `chat-intent` (`detectIntentSignals`, `detectBlockedPrompt`, `extractComparisonTerms`), `chat-commerce-context`, `chat-history`, `chat-usage`, `chat-cached-answer`, `chat-stream`, `chat-constants`, and `chat-types`.
+- **Supplemental context already exists — but only around the anchor product.** `buildCommerceContext` composes `fetchComparisonContext`, `fetchRecommendationContext`, `fetchReviewSummaryContext`, and `fetchOrderStatusContext`. These are ordinary server-side fetches selected by keyword intent detection, **not** model-invoked tools: there are no function declarations, the model cannot choose what to retrieve, and it cannot iterate. Intent misdetection therefore silently starves the model of context with no recovery path.
+- **Order awareness already shipped.** `fetchOrderStatusContext` answers "where is my order" for authenticated users, scoped server-side by session identity. User Story 3 is consequently a hardening-and-extension story, not a greenfield one — the risky surface it describes is already live and must be audited rather than designed.
+- **Cost and abuse controls already shipped and stricter than the draft assumed.** `chat-constants.ts` sets `DAILY_REQUEST_QUOTA=40`, `DAILY_TOKEN_QUOTA=12000`, a separate `ADVANCED_DAILY_REQUEST_QUOTA=15` for intent-triggered advanced context, `MAX_CONVERSATION_TURNS=6`, `MAX_OUTPUT_TOKENS=400`, `MAX_INPUT_MESSAGE_CHARS=500`, `PRODUCT_CONTEXT_MAX_CHARS=4000`, and `SUPPLEMENTAL_CONTEXT_MAX_CHARS=1600`. Quotas are Redis-backed per UTC day (`chat-usage.ts`) and sit behind the strict Upstash limiter applied to `/api/ai` in `src/proxy.ts`.
+- **Guardrails to carry forward unchanged.** Guest identity is one-way hashed; history persists (30-day TTL) only for signed-in users; exact stock counts are never disclosed — `product-rag.ts` emits qualitative labels only; prompt and output text are sanitized; `playwright-tests/ai-stock-privacy.spec.ts` enforces the stock-privacy contract at browser level.
+- **Model configuration.** Google Generative AI (`@google/genai`) through `src/lib/ai/gateway.ts`, with `getAiConfigCached()` reading Vercel Edge Config on a 60-second in-process cache and `buildGenerateConfig()` applying the thinking level. Single-turn responses are cached in `src/lib/ai/ai-cache.ts` (Redis, 1-hour TTL) under `ai:response:{productId}:{currencyCode}:{normalizedQuestion}` — a key shape that assumes a product anchor and will need reworking for catalog-wide questions.
+- **Retrieval available to build on.** `src/lib/search/product-search.ts` exposes `searchProductIds`, `searchProductIdsCached`, and `searchProducts` with facets, six sort modes, a 60-second cache with a 10-second stale window, and a SQL fallback when the hosted search service is unavailable. This is the retrieval layer a catalog-wide assistant should consume; nothing new needs to be indexed to reach a first useful version.
+- **The gap, restated precisely**: (1) no entry point that is not anchored to a product id; (2) retrieval is keyword-triggered and server-chosen rather than model-directed, so genuinely open-ended discovery and multi-constraint comparison cannot be served; (3) the response cache key is product-scoped; (4) no cart awareness. The privacy model, quota model, streaming, and history are all already in place.
 
 ## User Scenarios & Testing _(mandatory)_
 

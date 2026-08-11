@@ -2,16 +2,37 @@
 
 **Feature Branch**: `024-admin-console-revamp`  
 **Created**: 2026-08-08  
-**Status**: Draft  
+**Last reviewed**: 2026-08-10  
+**Status**: Draft — ready to plan  
 **Input**: User description: "A complete revamp of the admin console (`/admin/*`) targeting three outcomes: better user experience, simplicity, and trackability. This is a UX/architecture revamp of existing surfaces — not a rewrite of business logic. Existing permission model, audit table, and API routes stay; the presentation and interaction layer is unified."
 
 ## Overview
 
-The admin console has grown one page at a time. Every list screen re-invents its own search box, filter row, pagination, table layout, empty state, and error state. Creating or editing a record happens in a modal on one screen, a full page on another, and inline on a third. Destructive actions are confirmed inconsistently — or not at all. Bulk operations and CSV exports exist as backend capabilities with no way for a staff member to reach them. Every mutating action is already written to an audit log that no human can read.
+The admin console has grown one page at a time. A shared list surface exists but only four screens use it, so most list screens still re-invent their own search box, filter row, pagination, empty state, and error state. Creating or editing a record happens in a modal on one screen, a full page on another, and inline on a third. Destructive actions are confirmed inconsistently — or not at all. Bulk operations and CSV exports exist as backend capabilities with no way for a staff member to reach them. Every mutating action is already written to an audit log that no human can read.
 
 This feature unifies the presentation and interaction layer of the admin console around a small number of shared, declarative surfaces, and makes the existing audit trail visible. It changes how staff see and operate the system; it does not change what the system is allowed to do.
 
 **Explicit non-goal**: this specification does not re-open decisions made in `004-zenput-admin-integration`. That work is a dependency and an overlapping surface. Where the two touch, this feature adopts whatever component foundation that effort lands on rather than proposing an alternative.
+
+## Baseline (verified 2026-08-10)
+
+Verified against the working tree at `f257e72`. The console is larger and less uniform than the summary above alone conveys; these are the specific facts the plan must be built against.
+
+**Screens — 15 pages under `src/app/admin/`**: `/admin` (dashboard, `analytics:read`), `categories`, `checkout-requests`, `coupons`, `email-failures`, `orders`, `products`, `products/[id]`, `products/[id]/edit`, `recommendations`, `returns`, `reviews`, `sales`, `search`, `users`. Every page is per-request — `await connection()` plus `requireAdminPermission` — which already satisfies FR-F03 and FR-F04 and means no screen carries the route-segment configuration Cache Components forbids.
+
+**API — roughly 40 route handlers under `src/app/api/admin/`**, including bulk endpoints (`orders/bulk`, `products/bulk`), five CSV exports (`orders`, `products`, `returns`, `reviews`, `users`) streamed through `batchedCsvRows` in `admin-csv.ts`, one import (`import/products`), refunds (`orders/[id]/refund`), return transitions (`returns/[id]`), reservation release (`checkout-requests/[id]/reservations/release`), search reindex, and recommendation recompute/status. FR-A12's export capability and FR-A09's bulk actions are backend-complete and UI-absent, exactly as the Overview states.
+
+**Permissions — 12 strings across 4 roles** in `src/lib/constants/roles.ts`: `orders:read`, `orders:update`, `orders:refund`, `orders:returns`, `products:read`, `products:write`, `users:read`, `users:manage`, `reviews:moderate`, `coupons:manage`, `analytics:read`, `system:manage`. `ADMIN` holds all twelve; `SUPPORT` holds `orders:read`, `orders:returns`, `products:read`, `users:read`, `reviews:moderate`; `FULFILMENT` holds `orders:read`, `orders:update`, `products:read`. Enforcement is `checkAdminAuth` for routes and `requireAdminPermission` for pages. This model is a fixed input — the User Story 1 persona maps onto the real `FULFILMENT` role, which notably **cannot** refund.
+
+**A shared list surface already exists — correcting the "every screen is bespoke" framing.** `src/features/admin/components/AdminDataView.tsx` wraps `zenput`'s `DataTable`, `Pagination`, and `SkeletonCard`, takes declarative `columns`, supports server-side pagination, an `emptyMessage`, a `loading` state, `expandedRowRender`, and a `renderMobileCard` fallback below a 767px media query. It is used by exactly **four** consumers: `admin/orders/page.tsx`, `admin/products/page.tsx`, `EmailFailuresClient.tsx`, and `UsersTable.tsx`. The remaining list screens — categories, coupons, returns, reviews, recommendations, checkout-requests, search — do not use it. The gap is therefore **adoption plus capability**, not invention: `AdminDataView` is the seed of the FR-A surface but lacks row selection, bulk toolbars, filter indicators, sort indication, URL-reflected state, saved views, distinct empty-vs-filtered-empty states, and a retryable failed state. FR-A02's "configuration rather than assembled from scratch" is a real extension of an existing component, and the plan should say so.
+
+**Forms and confirmations.** `ProductFormModal` and `VariantFormModal` are overlays, `products/[id]/edit` is a dedicated screen using `ProductEditPageForm` over the shared `ProductEditForm` body, and `CategoriesClient` edits inline in the row — the three-way inconsistency FR-B01 through FR-B03 target, confirmed. `DeleteConfirmModal` exists as a single confirmation component but is not used by every destructive action, so FR-C01 is an adoption problem with an existing primitive.
+
+**Trackability.** `AdminAuditLog` exists with `userId`, `entity`, and `createdAt` indexes and is written by `src/features/admin/services/admin-audit-log.ts`. Only two files in the entire tree reference it — the schema and that service. **No admin page, no API route, and no component reads it.** The Overview's "audit log that no human can read" is literally true, and FR-D04 through FR-D06 have no existing surface to extend. FR-D01's completeness claim must be verified endpoint by endpoint against the ~40 routes above, because the writer's presence does not prove universal coverage.
+
+**Accessibility and responsiveness.** ARIA usage across admin components is already reasonably disciplined — labelled controls, `aria-expanded`/`aria-haspopup` on menus, `role="alert"`, `<nav aria-label="Breadcrumb">` — and layouts are mobile-aware, with `AdminDataView` switching to cards at 767px. The concrete gaps for FR-H04 are asynchronous operations without live-region announcement (refunds, bulk actions, exports, return transitions) and unverified keyboard operability of the third-party `DataTable`'s sorting and pagination controls.
+
+**Recently shipped surfaces this specification inherits.** `/admin/returns` with `AdminReturnsClient` and `AdminReturnCard` implements the full `018` state machine (approve, reject, receive, refund, COD settle) as a bespoke card list; `/admin/checkout-requests` with `ReleaseReservationButton` exposes `016`'s reservation release; `/admin/recommendations` exposes `017`'s recompute and status. All three are conversion candidates for the unified surface, and none of them may lose functionality in conversion.
 
 ## Clarifications
 
@@ -151,6 +172,7 @@ A new starter opens the console for the first time. Navigation is grouped by wha
 - **FR-A13**: The list surface MUST adapt to narrow viewports without loss of any action available on a wide viewport.
 - **FR-A14**: Row actions MUST be filtered by the current user's permissions; an action the user cannot perform MUST NOT be rendered.
 - **FR-A15**: The products, orders, users, reviews, coupons, categories, and email-failures screens MUST all conform to this surface.
+- **FR-A15a**: The returns and checkout-requests screens, both of which currently present bespoke card lists, MUST also conform to this surface, and MUST retain every action they offer today — the full return state machine and reservation release respectively.
 - **FR-A16**: The system MUST make explicit, in the interface, whether a bulk action applies to the currently loaded page or to the entire filtered result set, and MUST require the user to opt into the latter.
 - **FR-A17**: The list surface MUST allow a user to save the current combination of search text, filters, and sort as a named saved view, and to recall it in a single interaction.
 - **FR-A18**: A user-created saved view MUST be private to the user who created it. It MUST NOT be visible to, editable by, or deletable by any other user, regardless of that user's permissions.
@@ -271,14 +293,15 @@ A new starter opens the console for the first time. Navigation is grouped by wha
 
 ## Assumptions
 
-- The role and permission model is fixed. The four existing roles and eleven existing permission strings are used as-is; this feature adds no new permission except any gate required for the activity view, and any such gate reuses an existing permission where one fits.
+- The role and permission model is fixed. The four existing roles (`CUSTOMER`, `ADMIN`, `SUPPORT`, `FULFILMENT`) and twelve existing permission strings are used as-is; this feature adds no new permission except any gate required for the activity view, and any such gate reuses an existing permission where one fits — `system:manage` being the closest fit.
 - Existing admin endpoints and their contracts remain. Where one is extended — for example to return a page of activity — the extension is additive and does not break existing consumers.
 - The existing audit table is structurally sufficient. Any schema change required is additive: new indexes, or nullable columns to support filtering and denormalised actor display. No destructive migration.
 - Persisting saved views requires new storage that does not exist today. It is additive — a new owner-scoped store — and touches no existing table.
 - Deleting activity entries at the end of the 24-month retention window is the one intentional exception to the immutability rule in FR-D08. Expiry is a scheduled system process; it is not an admin-surface capability, and no admin surface may delete an entry ahead of its expiry.
 - Bulk product and bulk order endpoints already exist and are the mechanism behind the new bulk toolbar; no new bulk capability is introduced beyond exposing what already exists.
 - CSV export and import endpoints already exist and are the mechanism behind the new export and import surfacing.
-- The component foundation from the in-progress admin component integration effort is the substrate for the shared surfaces. This feature consumes it and does not propose a competing one.
+- The component foundation from `004-zenput-admin-integration` is the substrate for the shared surfaces. Concretely that is `AdminDataView` over `zenput`'s `DataTable`/`Pagination`/`SkeletonCard`, plus `AdminPageShell`, `AdminBreadcrumbs`, `AdminNavLinks`, and `DeleteConfirmModal`. This feature extends and drives adoption of that foundation and does not propose a competing one.
+- The shared list surface is an extension of `AdminDataView`, not a new component. Row selection, bulk toolbars, filter indicators, sort indication, URL-reflected state, saved views, and the four distinct list states are additions to it; the responsive table/card switch and server-side pagination it already provides are retained.
 - Staff use modern evergreen browsers; no legacy browser support is required for the console.
 - The console is English-only for this revamp; no internationalisation work is included.
 - Analytics figures already computed for the current dashboard remain available and are relocated, not recomputed.
@@ -299,9 +322,11 @@ A new starter opens the console for the first time. Navigation is grouped by wha
 
 ## Dependencies
 
-- The in-progress admin component integration effort, whose component foundation the shared list and form surfaces build upon. Its completion state determines the sequencing of the surfaces in this feature.
+- `004-zenput-admin-integration`, whose component foundation the shared list and form surfaces build upon. It has shipped; `AdminDataView` is its list artefact and is in use on four screens, so the sequencing question is adoption rather than availability.
 - Existing bulk, export, and import endpoints, which must remain available and behaviourally stable.
-- The existing audit recording helper and its call sites, which are extended to reach complete coverage.
+- The existing audit recording helper (`src/features/admin/services/admin-audit-log.ts`) and its call sites, which are extended to reach complete coverage. It currently has no reader anywhere in the tree.
+- No dependency on `019`, `020`, `021`, `022`, or `023`. This feature can be planned and delivered independently of all of them. Where those features later add an admin screen — an alert-demand view, a store-credit adjustment, a webhook reconciliation view — they should be built on the surfaces this feature establishes rather than adding another bespoke screen for a later conversion pass. That argues for sequencing this feature **before** the admin-facing slices of `019`, `022`, and `023`, not after.
+- The `018-self-service-returns`, `016-inventory-reservation`, and `017-personalized-recommendations` admin screens have all shipped since this specification was drafted and are conversion candidates that must not lose functionality when converted.
 
 ## Success Criteria _(mandatory)_
 
