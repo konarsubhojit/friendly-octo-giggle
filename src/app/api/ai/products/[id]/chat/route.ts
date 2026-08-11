@@ -49,6 +49,7 @@ export const POST = async (
   try {
     const { id } = await params
     productId = id
+    const surface = `product:${id}` as const
     const product = await db.products.findById(id)
     if (!product) return apiError('Product not found', 404)
 
@@ -63,7 +64,7 @@ export const POST = async (
       sanitizedMessages,
       persistHistory,
       userId,
-      id,
+      surface,
       threadId,
       MAX_CONVERSATION_TURNS * 2
     )
@@ -142,10 +143,14 @@ export const POST = async (
     if (quotaError) return apiError(quotaError, 429)
 
     if (isSingleTurn && lastUserText) {
-      const cached = await getCachedAiResponse(id, lastUserText, currencyCode)
+      const cached = await getCachedAiResponse(
+        surface,
+        lastUserText,
+        currencyCode
+      )
       if (cached !== null) {
         await finalizeCachedAnswer(cached, {
-          productId: id,
+          surface,
           userId,
           trimmed,
           estimatedInputTokens,
@@ -187,7 +192,7 @@ export const POST = async (
 
     scheduleStreamSideEffects({
       fullTextPromise,
-      productId: id,
+      surface,
       userId,
       lastUserText,
       currencyCode,

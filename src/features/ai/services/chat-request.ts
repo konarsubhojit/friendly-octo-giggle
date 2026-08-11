@@ -8,6 +8,7 @@ import { isValidCurrencyCode } from '@/lib/currency'
 import type { CurrencyCode } from '@/lib/currency'
 import {
   ChatRequestSchema,
+  type AssistantSurface,
   type ChatMessage,
   type RequestIdentity,
 } from './chat-types'
@@ -17,6 +18,7 @@ import { resolveThreadId } from './chat-history'
 
 export type PreparedRequest = {
   identity: RequestIdentity
+  surface: AssistantSurface
   persistHistory: boolean
   threadId: string
   sanitizedMessages: ChatMessage[]
@@ -70,13 +72,14 @@ export const resolveCurrencyForUser = async (
 
 export const parseAndValidateRequest = async (
   request: NextRequest,
-  productId: string
+  productId?: string
 ): Promise<PrepareRequestResult> => {
   const body = await request.json()
   const parsed = ChatRequestSchema.safeParse(body)
   if (!parsed.success) return { ok: false, error: 'Invalid request body' }
 
   const identity = await resolveRequestIdentity(request)
+  const surface: AssistantSurface = productId ? `product:${productId}` : 'catalog'
 
   if (
     parsed.data.messages.some(
@@ -103,9 +106,10 @@ export const parseAndValidateRequest = async (
     ok: true,
     prepared: {
       identity,
+      surface,
       persistHistory:
         identity.isAuthenticated && (parsed.data.persistHistory ?? false),
-      threadId: resolveThreadId(parsed.data.threadId, productId),
+      threadId: resolveThreadId(parsed.data.threadId, surface, identity),
       sanitizedMessages,
     },
   }

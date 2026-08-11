@@ -2,7 +2,11 @@ import { waitUntil } from '@vercel/functions'
 import { setCachedAiResponse } from '@/lib/ai/ai-cache'
 import { logError, logBusinessEvent } from '@/lib/logger'
 import type { CurrencyCode } from '@/lib/currency'
-import type { ChatMessage, DailyUsage } from './chat-types'
+import type {
+  AssistantSurface,
+  ChatMessage,
+  DailyUsage,
+} from './chat-types'
 import {
   estimateTokens,
   sanitizeAssistantOutput,
@@ -57,7 +61,7 @@ export const buildStreamReader = (
 
 export type StreamSideEffectContext = {
   fullTextPromise: Promise<string>
-  productId: string
+  surface: AssistantSurface
   userId: string
   lastUserText: string
   currencyCode: CurrencyCode
@@ -87,7 +91,7 @@ export const scheduleStreamSideEffects = (
           event: 'ai_chat_usage',
           userId: ctx.userId,
           details: {
-            productId: ctx.productId,
+            surface: ctx.surface,
             cached: false,
             inputTokens: ctx.estimatedInputTokens,
             outputTokens,
@@ -101,7 +105,7 @@ export const scheduleStreamSideEffects = (
         logError({
           error,
           context: 'ai_chat_usage_log',
-          additionalInfo: { productId: ctx.productId, userId: ctx.userId },
+          additionalInfo: { surface: ctx.surface, userId: ctx.userId },
         })
       )
   )
@@ -112,7 +116,7 @@ export const scheduleStreamSideEffects = (
         .then((text) => {
           if (text)
             return setCachedAiResponse(
-              ctx.productId,
+              ctx.surface,
               ctx.lastUserText,
               ctx.currencyCode,
               text
@@ -122,7 +126,7 @@ export const scheduleStreamSideEffects = (
           logError({
             error,
             context: 'ai_cache_background_write',
-            additionalInfo: { productId: ctx.productId },
+            additionalInfo: { surface: ctx.surface },
           })
         )
     )
@@ -138,7 +142,7 @@ export const scheduleStreamSideEffects = (
           )
           return persistMessages(
             ctx.userId,
-            ctx.productId,
+            ctx.surface,
             ctx.threadId,
             historyToPersist
           )
@@ -148,7 +152,7 @@ export const scheduleStreamSideEffects = (
             error,
             context: 'ai_chat_history_persist',
             additionalInfo: {
-              productId: ctx.productId,
+              surface: ctx.surface,
               userId: ctx.userId,
               threadId: ctx.threadId,
             },
