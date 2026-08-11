@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNull, or } from 'drizzle-orm'
 import { primaryDrizzleDb } from '@/lib/db'
-import { adminSavedViews } from '@/lib/schema'
+import { adminSavedViews, type AdminSavedViewCriteriaRecord } from '@/lib/schema'
 import type { AdminPermission } from '@/lib/constants/roles'
 import type {
   AdminResourceKey,
@@ -57,6 +57,11 @@ const toSavedViewRecord = (
   owned: row.ownerId === userId,
 })
 
+const toCriteriaRecord = (
+  criteria: AdminSavedViewCriteriaRecord
+): Record<string, unknown> =>
+  JSON.parse(JSON.stringify(criteria)) as Record<string, unknown>
+
 export const listSavedViews = async ({
   userId,
   permissions,
@@ -100,12 +105,23 @@ export const listSavedViews = async ({
   return rows
     .filter((row) =>
       isSavedViewVisibleToUser(
-        row as VisibleSavedViewRow,
+        {
+          ...(row as unknown as VisibleSavedViewRow),
+          criteria: toCriteriaRecord(row.criteria),
+        },
         userId,
         permissions
       )
     )
-    .map((row) => toSavedViewRecord(row as VisibleSavedViewRow, userId))
+    .map((row) =>
+      toSavedViewRecord(
+        {
+          ...(row as unknown as VisibleSavedViewRow),
+          criteria: toCriteriaRecord(row.criteria),
+        },
+        userId
+      )
+    )
 }
 
 export const createSavedView = async ({
@@ -132,8 +148,8 @@ export const createSavedView = async ({
 
   return toSavedViewRecord(
     {
-      ...(created as VisibleSavedViewRow),
-      criteria: created.criteria as Record<string, unknown>,
+      ...(created as unknown as VisibleSavedViewRow),
+      criteria: toCriteriaRecord(created.criteria),
     },
     userId
   )
@@ -184,8 +200,8 @@ export const renameSavedView = async ({
 
   return toSavedViewRecord(
     {
-      ...(updated as VisibleSavedViewRow),
-      criteria: updated.criteria as Record<string, unknown>,
+      ...(updated as unknown as VisibleSavedViewRow),
+      criteria: toCriteriaRecord(updated.criteria),
     },
     userId
   )

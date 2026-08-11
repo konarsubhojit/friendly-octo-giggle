@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 
 export type ConfirmOutcome =
   | { status: 'success' }
@@ -68,12 +68,16 @@ export function AdminConfirmDialog({
   const lastFocusedRef = useRef<HTMLElement | null>(null)
   const id = useId()
 
+  const handleClose = useCallback(() => {
+    setTypedValue('')
+    setLoading(false)
+    setOutcome(null)
+    onClose()
+    lastFocusedRef.current?.focus()
+  }, [onClose])
+
   useEffect(() => {
     if (!open) {
-      setTypedValue('')
-      setLoading(false)
-      setOutcome(null)
-      lastFocusedRef.current?.focus()
       return
     }
 
@@ -84,7 +88,7 @@ export function AdminConfirmDialog({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && !loading) {
-        onClose()
+        handleClose()
         return
       }
 
@@ -121,7 +125,7 @@ export function AdminConfirmDialog({
       cancelAnimationFrame(frame)
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [loading, onClose, open])
+  }, [handleClose, loading, open])
 
   if (!open) {
     return null
@@ -168,7 +172,7 @@ export function AdminConfirmDialog({
           <button
             ref={closeButtonRef}
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             disabled={loading}
             aria-label="Close confirmation dialog"
             className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 disabled:opacity-60 dark:hover:bg-slate-900 dark:hover:text-slate-100"
@@ -205,7 +209,7 @@ export function AdminConfirmDialog({
         <div className="mt-6 flex flex-wrap justify-end gap-3">
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             disabled={loading}
             className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 disabled:opacity-60 dark:border-slate-700 dark:text-slate-200"
           >

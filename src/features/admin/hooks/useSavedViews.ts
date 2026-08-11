@@ -56,7 +56,11 @@ export const useSavedViews = (resource: AdminResourceKey) => {
   }, [resource])
 
   useEffect(() => {
-    void refresh()
+    const timeoutId = globalThis.setTimeout(() => {
+      void refresh()
+    }, 0)
+
+    return () => globalThis.clearTimeout(timeoutId)
   }, [refresh])
 
   const create = useCallback(

@@ -1,6 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
 import {
   DataTable,
   Pagination,
@@ -142,7 +148,10 @@ export function AdminDataView<T extends Record<string, unknown>>({
     ReadonlyArray<string | number>
   >([])
 
-  const resolvedColumns = definition?.columns ?? columns ?? []
+  const resolvedColumns = useMemo(
+    () => definition?.columns ?? columns ?? [],
+    [columns, definition]
+  )
   const resolvedState = getDerivedState(data, loading, emptyMessage, listState)
   const selectionEnabled =
     (typeof renderBulkActionBar === 'function' ||
@@ -166,37 +175,38 @@ export function AdminDataView<T extends Record<string, unknown>>({
     return () => mediaQuery.removeEventListener('change', updateViewport)
   }, [])
 
-  useEffect(() => {
-    setSelectedRowIds((current) =>
-      current.filter((rowId) => visibleRowIds.includes(rowId))
-    )
-  }, [visibleRowIds])
+  const effectiveSelectedRowIds = useMemo(
+    () => selectedRowIds.filter((rowId) => visibleRowIds.includes(rowId)),
+    [selectedRowIds, visibleRowIds]
+  )
 
   const selectedRows = useMemo(
     () =>
-      data.filter((row, index) => selectedRowIds.includes(rowKey(row, index))),
-    [data, rowKey, selectedRowIds]
+      data.filter((row, index) =>
+        effectiveSelectedRowIds.includes(rowKey(row, index))
+      ),
+    [data, effectiveSelectedRowIds, rowKey]
   )
 
   const selectionContext: AdminDataViewSelectionContext<T> = {
-    selectedRowIds,
+    selectedRowIds: effectiveSelectedRowIds,
     selectedRows,
     clearSelection: () => setSelectedRowIds([]),
   }
 
-  const toggleRowSelection = (rowId: string | number) => {
+  const toggleRowSelection = useCallback((rowId: string | number) => {
     setSelectedRowIds((current) =>
       current.includes(rowId)
         ? current.filter((value) => value !== rowId)
         : [...current, rowId]
     )
-  }
+  }, [])
 
-  const toggleAllVisibleRows = () => {
-    setSelectedRowIds((current) =>
-      current.length === visibleRowIds.length ? [] : visibleRowIds
+  const toggleAllVisibleRows = useCallback(() => {
+    setSelectedRowIds(() =>
+      effectiveSelectedRowIds.length === visibleRowIds.length ? [] : visibleRowIds
     )
-  }
+  }, [effectiveSelectedRowIds.length, visibleRowIds])
 
   const tableColumns: DataTableColumn<T>[] = useMemo(() => {
     if (!selectionEnabled) {
@@ -208,7 +218,8 @@ export function AdminDataView<T extends Record<string, unknown>>({
       header: (
         <SelectionCheckbox
           checked={
-            visibleRowIds.length > 0 && selectedRowIds.length === visibleRowIds.length
+            visibleRowIds.length > 0 &&
+            effectiveSelectedRowIds.length === visibleRowIds.length
           }
           onChange={toggleAllVisibleRows}
           label={`Select all ${ariaLabel.toLowerCase()} on this page`}
@@ -218,7 +229,7 @@ export function AdminDataView<T extends Record<string, unknown>>({
         const rowId = rowKey(row, 0)
         return (
           <SelectionCheckbox
-            checked={selectedRowIds.includes(rowId)}
+            checked={effectiveSelectedRowIds.includes(rowId)}
             onChange={() => toggleRowSelection(rowId)}
             label={`Select row ${String(rowId)}`}
           />
@@ -232,8 +243,10 @@ export function AdminDataView<T extends Record<string, unknown>>({
     resolvedColumns,
     rowKey,
     selectionEnabled,
-    selectedRowIds,
+    effectiveSelectedRowIds,
     visibleRowIds.length,
+    toggleAllVisibleRows,
+    toggleRowSelection,
   ])
 
   const toolbar =
@@ -282,16 +295,16 @@ export function AdminDataView<T extends Record<string, unknown>>({
     ) : null
 
   const bulkActionBar =
-    selectionEnabled && selectedRowIds.length > 0
+    selectionEnabled && effectiveSelectedRowIds.length > 0
       ? renderBulkActionBar?.(selectionContext) ?? (
           definition && definition.bulkActions.length > 0 ? (
             <AdminBulkActionBar
               actions={definition.bulkActions}
               selection={{
                 scope: 'loaded_page',
-                rowIds: selectedRowIds,
+                rowIds: effectiveSelectedRowIds,
               }}
-              selectedCount={selectedRowIds.length}
+              selectedCount={effectiveSelectedRowIds.length}
               onClearSelection={selectionContext.clearSelection}
             />
           ) : null
@@ -396,7 +409,7 @@ export function AdminDataView<T extends Record<string, unknown>>({
               {selectionEnabled ? (
                 <div className="mb-3 flex justify-end">
                   <SelectionCheckbox
-                    checked={selectedRowIds.includes(currentRowId)}
+                    checked={effectiveSelectedRowIds.includes(currentRowId)}
                     onChange={() => toggleRowSelection(currentRowId)}
                     label={`Select row ${String(currentRowId)}`}
                   />
