@@ -213,7 +213,7 @@ export function AdminDataView<T extends Record<string, unknown>>({
           onChange={toggleAllVisibleRows}
           label={`Select all ${ariaLabel.toLowerCase()} on this page`}
         />
-      ),
+      ) as unknown as string,
       render: (_value, row) => {
         const rowId = rowKey(row, 0)
         return (
@@ -411,7 +411,7 @@ export function AdminDataView<T extends Record<string, unknown>>({
         <Pagination
           {...pagination}
           size="sm"
-          disabled={resolvedState.status === 'loading'}
+          disabled={false}
           className="mt-5 overflow-x-auto pb-1"
         />
       ) : null}

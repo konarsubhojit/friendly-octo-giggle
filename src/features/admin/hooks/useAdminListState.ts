@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useMemo } from 'react'
+import type { Route } from 'next'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import type { SavedViewCriteria } from '@/lib/validations/admin'
 
@@ -102,7 +103,7 @@ export const useAdminListState = (): UseAdminListStateResult => {
       const nextUrl = nextParams.toString()
         ? `${pathname}?${nextParams.toString()}`
         : pathname
-      router.replace(nextUrl, { scroll: false })
+      router.replace(nextUrl as Route, { scroll: false })
     },
     [pathname, router]
   )
