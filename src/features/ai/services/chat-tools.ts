@@ -1,13 +1,20 @@
 import type { FunctionDeclaration } from '@google/genai'
 import { z } from 'zod'
 import type { AssistantTool, AssistantToolName, ToolExecutionContext } from './chat-types'
+import {
+  getProductDetailsTool,
+  searchCatalogTool,
+} from './chat-tools-catalog'
 
-export const assistantToolRegistry: readonly AssistantTool<unknown>[] = []
+export const assistantToolRegistry: readonly AssistantTool<any>[] = [
+  searchCatalogTool,
+  getProductDetailsTool,
+]
 
 export const getAssistantTool = (
   name: string,
-  registry: readonly AssistantTool<unknown>[] = assistantToolRegistry
-): AssistantTool<unknown> | undefined =>
+  registry: readonly AssistantTool<any>[] = assistantToolRegistry
+): AssistantTool<any> | undefined =>
   registry.find((tool) => tool.name === name)
 
 const formatValidationError = (toolName: string, error: z.ZodError): string => {
@@ -24,7 +31,7 @@ const formatValidationError = (toolName: string, error: z.ZodError): string => {
 }
 
 export const buildFunctionDeclarations = (
-  registry: readonly AssistantTool<unknown>[] = assistantToolRegistry
+  registry: readonly AssistantTool<any>[] = assistantToolRegistry
 ): FunctionDeclaration[] =>
   registry.map((tool) => ({
     name: tool.name,
@@ -36,7 +43,7 @@ export const dispatchToolCall = async (
   name: AssistantToolName | string,
   rawArgs: unknown,
   ctx: ToolExecutionContext,
-  registry: readonly AssistantTool<unknown>[] = assistantToolRegistry
+  registry: readonly AssistantTool<any>[] = assistantToolRegistry
 ): Promise<string> => {
   const tool = getAssistantTool(name, registry)
   if (!tool) {

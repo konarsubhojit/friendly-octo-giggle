@@ -1,6 +1,7 @@
 'use client'
 
 import { Fragment, type JSX } from 'react'
+import Link from 'next/link'
 
 interface AssistantMarkdownProps {
   readonly text: string
@@ -8,7 +9,7 @@ interface AssistantMarkdownProps {
 
 const renderInline = (line: string, keyPrefix: string): JSX.Element[] => {
   const parts: JSX.Element[] = []
-  const pattern = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g
+  const pattern = /(\[[^\]]+\]\((\/products\/[^)]+)\)|\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g
   let lastIndex = 0
   let match: RegExpExecArray | null = pattern.exec(line)
   let i = 0
@@ -21,7 +22,20 @@ const renderInline = (line: string, keyPrefix: string): JSX.Element[] => {
       )
     }
     const token = match[0]
-    if (token.startsWith('**')) {
+    if (token.startsWith('[')) {
+      const linkMatch = /^\[([^\]]+)\]\((\/products\/[^)]+)\)$/.exec(token)
+      if (linkMatch) {
+        parts.push(
+          <Link
+            key={`${keyPrefix}-l${i}`}
+            href={linkMatch[2]}
+            className="font-medium text-[var(--accent-warm)] underline underline-offset-2"
+          >
+            {linkMatch[1]}
+          </Link>
+        )
+      }
+    } else if (token.startsWith('**')) {
       parts.push(
         <strong key={`${keyPrefix}-b${i}`} className="font-semibold">
           {token.slice(2, -2)}

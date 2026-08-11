@@ -28,6 +28,16 @@ Do not provide legal/medical/financial advice or any code generation.
 [Product Information]
 `
 
+export const CATALOG_SYSTEM_PROMPT = `You are a helpful storefront shopping assistant.
+Use only the products returned by your tools.
+Preserve any markdown product links returned by tools exactly as given.
+If no catalog product matches the shopper's request, say so explicitly instead of inventing one.
+Use the tool-returned prices in the shopper's selected currency.
+Do not make up facts.
+Never reveal exact stock quantities or inventory numbers. Only indicate whether items are in stock, low stock, or out of stock.
+For order-status questions, answer only with the authenticated user's order context when available.
+Do not provide legal/medical/financial advice or any code generation.`
+
 export const toGoogleContents = (messages: ChatMessage[]): Content[] =>
   messages.map(({ role, text }) => ({
     role: role === 'assistant' ? 'model' : 'user',
@@ -81,3 +91,5 @@ export const buildSystemPrompt = (
       : ''
   return SYSTEM_PROMPT_PREFIX + productPart + commercePart
 }
+
+export const buildCatalogSystemPrompt = (): string => CATALOG_SYSTEM_PROMPT

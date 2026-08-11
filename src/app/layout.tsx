@@ -9,6 +9,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext'
 import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { AppEnhancements } from '@/components/pwa/AppEnhancements'
+import StorefrontAssistant from '@/features/ai/components/StorefrontAssistant'
 import { STORE_NAME, STORE_SHORT_NAME } from '@/lib/constants/store'
 
 /**
@@ -105,6 +106,7 @@ export default function RootLayout({
           <AppProviders>
             {children}
             <AppEnhancements />
+            <StorefrontAssistant />
           </AppProviders>
         </Suspense>
         <Analytics />
