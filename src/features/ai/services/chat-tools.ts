@@ -2,6 +2,7 @@ import type { FunctionDeclaration } from '@google/genai'
 import { z } from 'zod'
 import type { AssistantTool, AssistantToolName, ToolExecutionContext } from './chat-types'
 import {
+  compareProductsTool,
   getProductDetailsTool,
   searchCatalogTool,
 } from './chat-tools-catalog'
@@ -9,6 +10,7 @@ import {
 export const assistantToolRegistry: readonly AssistantTool<any>[] = [
   searchCatalogTool,
   getProductDetailsTool,
+  compareProductsTool,
 ]
 
 export const getAssistantTool = (

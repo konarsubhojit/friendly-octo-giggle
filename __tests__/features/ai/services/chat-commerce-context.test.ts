@@ -9,7 +9,6 @@ const getShippingConfigMock = vi.hoisted(() => vi.fn())
 vi.mock('@/lib/db', () => ({
   drizzleDb: {
     query: {
-      products: { findMany: productsFindManyMock },
       reviews: { findMany: reviewsFindManyMock },
       orders: {
         findMany: ordersFindManyMock,
@@ -25,7 +24,6 @@ vi.mock('@/lib/edge-config', () => ({
 
 import {
   buildCommerceContext,
-  extractComparisonTerms,
   fetchOrderStatusContext,
   fetchReviewSummaryContext,
   toStockLabel,
@@ -63,7 +61,6 @@ describe('chat-commerce-context', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     getShippingConfigMock.mockResolvedValue({ estimatedDeliveryDays: 5 })
-    productsFindManyMock.mockResolvedValue([])
     reviewsFindManyMock.mockResolvedValue([])
     ordersFindManyMock.mockResolvedValue([])
     ordersFindFirstMock.mockResolvedValue(undefined)
@@ -77,24 +74,10 @@ describe('chat-commerce-context', () => {
     })
   })
 
-  describe('extractComparisonTerms', () => {
-    it('splits on comparison connectives', () => {
-      expect(extractComparisonTerms('compare mug vs tumbler', 'Mug')).toEqual([
-        'mug',
-        'tumbler',
-      ])
-    })
-
-    it('falls back to the current product name', () => {
-      expect(extractComparisonTerms('compare', 'Mug')).toEqual(['Mug'])
-    })
-  })
-
   describe('buildCommerceContext dispatch', () => {
     it('returns no sections when no intent is detected', async () => {
       const sections = await buildCommerceContext(baseParams)
       expect(sections).toEqual([])
-      expect(productsFindManyMock).not.toHaveBeenCalled()
       expect(reviewsFindManyMock).not.toHaveBeenCalled()
       expect(getShippingConfigMock).not.toHaveBeenCalled()
     })
@@ -107,78 +90,6 @@ describe('chat-commerce-context', () => {
       expect(sections).toEqual([
         'Estimated delivery: approximately 5 business days (standard shipping).',
       ])
-    })
-
-    it('builds a comparison section when multiple products match', async () => {
-      productsFindManyMock.mockResolvedValue([
-        { id: 'p1', name: 'Ceramic Mug', variants: [{ price: 500, stock: 9 }] },
-        {
-          id: 'p2',
-          name: 'Steel Tumbler',
-          variants: [{ price: 900, stock: 0 }],
-        },
-      ])
-
-      const sections = await buildCommerceContext({
-        ...baseParams,
-        messageText: 'compare mug vs tumbler',
-        intents: { ...noIntents, wantsComparison: true },
-      })
-
-      expect(sections[0]).toContain('Comparison candidates:')
-      expect(sections[0]).toContain('- Ceramic Mug: INR500 (INR), In Stock')
-      expect(sections[0]).toContain(
-        '- Steel Tumbler: INR900 (INR), Out of Stock'
-      )
-    })
-
-    it('omits the comparison section when only one product matches', async () => {
-      productsFindManyMock.mockResolvedValue([
-        { id: 'p1', name: 'Ceramic Mug', variants: [{ price: 500, stock: 9 }] },
-      ])
-
-      const sections = await buildCommerceContext({
-        ...baseParams,
-        messageText: 'compare mug vs tumbler',
-        intents: { ...noIntents, wantsComparison: true },
-      })
-
-      expect(sections).toEqual([])
-    })
-
-    it('recommends cheaper same-category products within budget', async () => {
-      productsFindManyMock.mockResolvedValue([
-        { id: 'p1', name: 'Ceramic Mug', variants: [{ price: 500, stock: 9 }] },
-        { id: 'p2', name: 'Budget Mug', variants: [{ price: 200, stock: 2 }] },
-        { id: 'p3', name: 'Luxury Mug', variants: [{ price: 5000, stock: 4 }] },
-      ])
-
-      const sections = await buildCommerceContext({
-        ...baseParams,
-        messageText: 'recommend something under 400',
-        intents: { ...noIntents, wantsRecommendation: true },
-      })
-
-      expect(sections[0]).toContain('Recommendations under INR400 (INR):')
-      expect(sections[0]).toContain('- Budget Mug: INR200, Low Stock')
-      expect(sections[0]).not.toContain('Luxury Mug')
-      expect(sections[0]).not.toContain('Ceramic Mug')
-    })
-
-    it('reports when no alternatives fit the budget', async () => {
-      productsFindManyMock.mockResolvedValue([
-        { id: 'p9', name: 'Luxury Mug', variants: [{ price: 5000, stock: 4 }] },
-      ])
-
-      const sections = await buildCommerceContext({
-        ...baseParams,
-        messageText: 'anything under 400',
-        intents: { ...noIntents, wantsRecommendation: true },
-      })
-
-      expect(sections[0]).toBe(
-        'No same-category alternatives were found under INR400 (INR).'
-      )
     })
 
     it('prompts guests to sign in for order status', async () => {

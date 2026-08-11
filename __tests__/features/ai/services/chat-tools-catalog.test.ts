@@ -31,6 +31,8 @@ vi.mock('@/lib/db', () => ({
 
 import { dispatchToolCall } from '@/features/ai/services/chat-tools'
 import {
+  CompareProductsArgs,
+  extractComparisonTerms,
   GetProductDetailsArgs,
   SearchCatalogArgs,
 } from '@/features/ai/services/chat-tools-catalog'
@@ -122,7 +124,7 @@ describe('chat-tools-catalog', () => {
     )
     expect(output).toContain('[Travel Bag](/products/prod-1)')
     expect(output).not.toContain('prod-2')
-    expect(output).not.toMatch(/\b9\b.*stock/i)
+    expect(output).not.toMatch(/\b\d+\s*(units|left|in stock)\b/i)
   })
 
   it('falls back to direct product lookup details when requested', async () => {
@@ -144,6 +146,90 @@ describe('chat-tools-catalog', () => {
     expect(output).toContain('[Travel Bag](/products/prod-1)')
     expect(output).toContain('Price: ₹1999')
     expect(output).toContain('Availability: Low Stock')
-    expect(output).not.toMatch(/\b2\b.*stock/i)
+    expect(output).not.toMatch(/\b\d+\s*(units|left|in stock)\b/i)
+  })
+
+  it('extracts comparison terms from natural language', () => {
+    expect(extractComparisonTerms('compare tote vs backpack')).toEqual([
+      'tote',
+      'backpack',
+    ])
+  })
+
+  it('validates compare_products bounds', () => {
+    expect(
+      CompareProductsArgs.safeParse({
+        terms: ['tote', 'backpack', 'duffel'],
+      }).success
+    ).toBe(true)
+    expect(
+      CompareProductsArgs.safeParse({
+        terms: [],
+      }).success
+    ).toBe(false)
+  })
+
+  it('compares grounded products with qualitative stock only', async () => {
+    productsFindManyMock.mockResolvedValue([
+      {
+        id: 'prod-1',
+        name: 'Travel Bag',
+        category: 'bags',
+        description: 'A durable travel bag',
+        variants: [{ price: 1999, stock: 9 }],
+      },
+      {
+        id: 'prod-2',
+        name: 'Weekend Backpack',
+        category: 'bags',
+        description: 'A roomy backpack',
+        variants: [{ price: 2499, stock: 2 }],
+      },
+    ])
+
+    const output = await dispatchToolCall(
+      'compare_products',
+      { terms: ['Travel Bag', 'Weekend Backpack'] },
+      toolContext
+    )
+
+    expect(output).toContain('Comparison candidates:')
+    expect(output).toContain('[Travel Bag](/products/prod-1)')
+    expect(output).toContain('Availability: In Stock')
+    expect(output).toContain('Availability: Low Stock')
+    expect(output).not.toMatch(/\b\d+\s*(units|left|in stock)\b/i)
+  })
+
+  it('labels nearest alternatives when no product fits the budget', async () => {
+    findMinimalByIdsMock.mockResolvedValue([
+      {
+        id: 'prod-1',
+        name: 'Travel Bag',
+        category: 'bags',
+        description: 'A durable travel bag',
+        price: 2500,
+        stock: 9,
+      },
+      {
+        id: 'prod-2',
+        name: 'Weekend Backpack',
+        category: 'bags',
+        description: 'A roomy backpack',
+        price: 3200,
+        stock: 4,
+      },
+    ])
+
+    const output = await dispatchToolCall(
+      'search_catalog',
+      {
+        query: 'travel bag',
+        maxPriceInDisplayCurrency: 1000,
+      },
+      toolContext
+    )
+
+    expect(output).toContain('Nearest alternatives:')
+    expect(output).toContain('[Travel Bag](/products/prod-1)')
   })
 })

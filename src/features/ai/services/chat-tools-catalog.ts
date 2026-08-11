@@ -16,6 +16,7 @@ import type { AssistantTool } from './chat-types'
 const MAX_QUERY_LENGTH = 200
 const MAX_CATEGORY_LENGTH = 100
 const MAX_PRODUCT_LOOKUPS = 4
+const MAX_COMPARISON_TERMS = 3
 const TOOL_DEFAULT_LIMIT = 6
 
 const escapeLikeValue = (value: string): string =>
@@ -61,6 +62,29 @@ const formatCatalogProductDetailsLine = (
   formatPrice: (priceInINR: number) => string
 ): string =>
   `- [${product.name}](/products/${product.id}) — Category: ${product.category} — Price: ${formatPrice(product.minPrice)} — Availability: ${product.stockLabel} — Description: ${product.description}`
+
+export const extractComparisonTerms = (
+  text: string,
+  fallbackProductName?: string
+): string[] => {
+  const normalized = text
+    .replace(/\bcompare\b/gi, ' ')
+    .replace(/\bdifference\s+between\b/gi, ' ')
+  const terms = normalized
+    .split(/\b(?:vs\.?|versus|and|with)\b/gi)
+    .map((part) => part.replace(/[^\w\s-]/g, ' ').trim())
+    .filter((part) => part.length >= 3)
+    .slice(0, MAX_COMPARISON_TERMS)
+
+  if (terms.length > 0) return terms
+  return fallbackProductName ? [fallbackProductName] : []
+}
+
+const formatComparableProduct = (
+  product: CatalogResultProduct,
+  formatPrice: (priceInINR: number) => string
+): string =>
+  `- [${product.name}](/products/${product.id}) — Category: ${product.category} — Price: ${formatPrice(product.minPrice)} — Availability: ${product.stockLabel}`
 
 const applyBudgetFilter = (
   productsToFilter: CatalogResultProduct[],
@@ -185,6 +209,13 @@ export const GetProductDetailsArgs = z.object({
     .max(MAX_PRODUCT_LOOKUPS),
 })
 
+export const CompareProductsArgs = z.object({
+  terms: z
+    .array(z.string().trim().min(1).max(120))
+    .min(1)
+    .max(MAX_COMPARISON_TERMS),
+})
+
 export const searchCatalogTool: AssistantTool<z.infer<typeof SearchCatalogArgs>> =
   {
     name: 'search_catalog',
@@ -193,17 +224,38 @@ export const searchCatalogTool: AssistantTool<z.infer<typeof SearchCatalogArgs>>
     argsSchema: SearchCatalogArgs,
     requiresAuth: false,
     async execute(args, ctx) {
-      const matchingProducts = applyBudgetFilter(
-        await resolveCatalogSearchResults({
+      const candidateProducts = await resolveCatalogSearchResults({
           query: args.query,
           category: args.category,
           limit: args.limit,
-        }),
+        })
+      const matchingProducts = applyBudgetFilter(
+        candidateProducts,
         args.maxPriceInDisplayCurrency,
         ctx.currencyCode
       ).slice(0, args.limit)
 
       if (matchingProducts.length === 0) {
+        if (args.maxPriceInDisplayCurrency && candidateProducts.length > 0) {
+          const nearestAlternatives = [...candidateProducts]
+            .sort((left, right) => left.minPrice - right.minPrice)
+            .slice(0, Math.min(3, candidateProducts.length))
+          return truncateToolResult(
+            [
+              `No catalog product matches "${args.query}" within ${ctx.formatPrice(
+                convertPriceToINR(
+                  args.maxPriceInDisplayCurrency,
+                  ctx.currencyCode
+                )
+              )}.`,
+              'Nearest alternatives:',
+              ...nearestAlternatives.map((product) =>
+                formatCatalogProductLine(product, ctx.formatPrice)
+              ),
+            ].join('\n')
+          )
+        }
+
         return truncateToolResult(
           `No catalog product matches "${args.query}" right now.`
         )
@@ -244,6 +296,49 @@ export const getProductDetailsTool: AssistantTool<
         'Product details:',
         ...resolvedProducts.map((product) =>
           formatCatalogProductDetailsLine(product, ctx.formatPrice)
+        ),
+      ].join('\n')
+    )
+  },
+}
+
+export const compareProductsTool: AssistantTool<
+  z.infer<typeof CompareProductsArgs>
+> = {
+  name: 'compare_products',
+  description:
+    'Compare up to three catalog products using only grounded product attributes, prices, and qualitative availability.',
+  argsSchema: CompareProductsArgs,
+  requiresAuth: false,
+  async execute(args, ctx) {
+    const conditions = args.terms.map((term) =>
+      ilike(products.name, `%${escapeLikeValue(term)}%`)
+    )
+    if (conditions.length === 0) {
+      return 'I could not find enough catalog products to compare.'
+    }
+
+    const rows = await drizzleDb.query.products.findMany({
+      where: and(isNull(products.deletedAt), or(...conditions)),
+      with: {
+        variants: {
+          where: (variant, { isNull: isVariantNull }) =>
+            isVariantNull(variant.deletedAt),
+          columns: { price: true, stock: true },
+        },
+      },
+      limit: 4,
+    })
+
+    if (rows.length <= 1) {
+      return 'I could not find enough catalog products to compare.'
+    }
+
+    return truncateToolResult(
+      [
+        'Comparison candidates:',
+        ...rows.map((row) =>
+          formatComparableProduct(toCatalogResultProduct(row), ctx.formatPrice)
         ),
       ].join('\n')
     )

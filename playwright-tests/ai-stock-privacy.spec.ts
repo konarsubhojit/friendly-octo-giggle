@@ -1,6 +1,7 @@
 /**
  * Playwright E2E test — verifies that the AI product assistant never
- * reveals exact stock quantities to customers.
+ * reveals exact stock quantities to customers across both the product-anchored
+ * and catalog-wide assistant surfaces.
  *
  * Strategy: navigate to a real product page, interact with the AI chat,
  * and assert the response uses qualitative stock labels instead of numbers.
@@ -70,6 +71,28 @@ const mockAiChatApi = async (page: Page) => {
     await route.fulfill({
       contentType: 'application/json',
       json: { text: 'Both variants are currently in stock.' },
+    })
+  })
+
+  await page.route('**/api/ai/assistant/chat', async (route: Route) => {
+    const request = route.request()
+    if (request.method() !== 'POST') {
+      await route.continue()
+      return
+    }
+
+    const body = request.postDataJSON()
+    capturedChatBodies.push(body)
+
+    await route.fulfill({
+      contentType: 'application/json',
+      json: {
+        text: [
+          'Comparison candidates:',
+          '- [Travel Bag](/products/prod-1) — Price: ₹1999 — Availability: In Stock',
+          '- [Weekend Backpack](/products/prod-2) — Price: ₹2499 — Availability: Low Stock',
+        ].join('\n'),
+      },
     })
   })
 }
@@ -166,5 +189,36 @@ test.describe('AI Product Assistant — stock privacy', () => {
 
     // Assert the captured request included context (not empty)
     expect(capturedChatBodies.length).toBeGreaterThan(0)
+  })
+
+  test('should keep catalog comparison answers qualitative on the storefront assistant', async ({
+    page,
+  }) => {
+    await mockExchangeRates(page)
+    await mockAiChatApi(page)
+
+    await page.goto('/shop', { waitUntil: 'networkidle' })
+
+    const openButton = page.getByRole('button', {
+      name: 'Open storefront assistant',
+    })
+    await expect(openButton).toBeVisible({ timeout: 10_000 })
+    await openButton.click()
+
+    const assistant = page.locator('section[aria-label="Storefront assistant"]')
+    await expect(assistant).toBeVisible({ timeout: 10_000 })
+
+    const input = assistant.getByLabel('Ask the storefront assistant')
+    await input.fill('Compare your best travel bags')
+    await assistant.getByRole('button', { name: 'Send message' }).click()
+
+    await expect(
+      assistant.getByText('Comparison candidates:')
+    ).toBeVisible({ timeout: 10_000 })
+
+    const responseText = await assistant.textContent()
+    expect(responseText).not.toMatch(/\b\d+\b\s*(units|in stock|left)/iu)
+    expect(responseText).toContain('Availability: In Stock')
+    expect(responseText).toContain('Availability: Low Stock')
   })
 })
