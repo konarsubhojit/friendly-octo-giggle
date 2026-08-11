@@ -17,7 +17,9 @@ import {
 } from '@/features/admin/services/admin-activity-query'
 
 const mockCheckAdminAuth = vi.mocked(checkAdminAuth)
-const mockGetActivityRequiredPermission = vi.mocked(getActivityRequiredPermission)
+const mockGetActivityRequiredPermission = vi.mocked(
+  getActivityRequiredPermission
+)
 const mockQueryAdminActivity = vi.mocked(queryAdminActivity)
 
 describe('GET /api/admin/activity', () => {
@@ -42,7 +44,9 @@ describe('GET /api/admin/activity', () => {
           entityId: 'ORD123',
           action: 'status_change',
           actor: { userId: 'admin-1', role: 'ADMIN' },
-          changes: [{ field: 'status', before: 'PROCESSING', after: 'SHIPPED' }],
+          changes: [
+            { field: 'status', before: 'PROCESSING', after: 'SHIPPED' },
+          ],
           createdAt: '2026-01-01T00:00:00.000Z',
         },
       ],
@@ -50,7 +54,9 @@ describe('GET /api/admin/activity', () => {
     })
 
     const response = await GET(
-      new NextRequest('http://localhost/api/admin/activity?action=status_change')
+      new NextRequest(
+        'http://localhost/api/admin/activity?action=status_change'
+      )
     )
     const payload = await response.json()
 

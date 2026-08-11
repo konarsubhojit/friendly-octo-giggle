@@ -1,6 +1,9 @@
 'use client'
 
-import type { AdminResourceKey, SavedViewCriteria } from '@/lib/validations/admin'
+import type {
+  AdminResourceKey,
+  SavedViewCriteria,
+} from '@/lib/validations/admin'
 import { useSavedViews } from '@/features/admin/hooks/useSavedViews'
 
 interface AdminSavedViewPickerProps {

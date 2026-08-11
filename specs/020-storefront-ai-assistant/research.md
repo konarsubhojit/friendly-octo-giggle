@@ -20,13 +20,14 @@ catalog-wide capability. This directly satisfies User Story 1's acceptance scena
 require the assistant to be reachable and answer with products "from anywhere in the catalog."
 
 **Alternatives considered**:
-- *Replace the product route with a single catalog-wide route that takes an optional anchor
-  product id.* Rejected: this would force every existing call site (`ProductClient.tsx`) to
+
+- _Replace the product route with a single catalog-wide route that takes an optional anchor
+  product id._ Rejected: this would force every existing call site (`ProductClient.tsx`) to
   change its request shape and would risk regressing the already-shipped, well-tested anchored
   behavior (including its cache key and history threading) for no functional gain — the same
   four tools are available to both surfaces either way.
-- *Embed the catalog-wide assistant only on the `/shop` search results page rather than
-  globally.* Rejected: narrower than what User Story 1 asks for ("a shopper who has not yet
+- _Embed the catalog-wide assistant only on the `/shop` search results page rather than
+  globally._ Rejected: narrower than what User Story 1 asks for ("a shopper who has not yet
   chosen a product" could be on the home page, a category page, or anywhere else), and a global
   launcher is a small, well-understood UI pattern (matches the existing pattern of
   `ServiceWorkerRegistration.tsx` and other global client mounts in the root layout).
@@ -50,13 +51,14 @@ the existing quota-conscious design (`MAX_CONVERSATION_TURNS`, `MAX_OUTPUT_TOKEN
 `chat-constants.ts`).
 
 **Alternatives considered**:
-- *Keep keyword-intent detection but broaden its patterns to catalog-wide queries.* Rejected:
+
+- _Keep keyword-intent detection but broaden its patterns to catalog-wide queries._ Rejected:
   this is the exact anti-pattern the baseline calls out — misdetection silently starves the model
   of context with no recovery path, and broadening regexes cannot express genuinely open-ended,
   multi-constraint discovery (User Story 2's comparison-with-budget scenarios).
   Model-directed tool calls let the model retry or use a different tool when its first choice is
   unproductive, which is the actual capability gap.
-- *Unbounded/agentic tool loop with no cap.* Rejected: violates FR-011 directly and the
+- _Unbounded/agentic tool loop with no cap._ Rejected: violates FR-011 directly and the
   Simplicity/YAGNI principle; also opens an availability/cost risk (a model stuck in a retrieval
   loop could exhaust the token quota on a single turn).
 
@@ -75,8 +77,9 @@ products beyond the anchor product when asked, closing part of the baseline's ga
 new route for that specific case.
 
 **Alternatives considered**:
-- *Leave the product route as intent-driven and only build tool-calling into the new catalog
-  route.* Rejected: this would mean two different retrieval architectures to maintain and would
+
+- _Leave the product route as intent-driven and only build tool-calling into the new catalog
+  route._ Rejected: this would mean two different retrieval architectures to maintain and would
   leave the anchored route's comparison/recommendation logic on the fragile keyword-detection
   path that Guardrail Story 4 asks to be uniformly solid across every surface.
 
@@ -96,11 +99,12 @@ mechanism — same Redis key/value shape, same 1-hour TTL, same `getRedisClient(
 no-op-when-unavailable behavior.
 
 **Alternatives considered**:
-- *Use a wildcard/empty product id for the catalog surface (`ai:response::INR:...`).* Rejected:
+
+- _Use a wildcard/empty product id for the catalog surface (`ai:response::INR:...`)._ Rejected:
   fragile — a future refactor could accidentally treat an empty string as "any product," and it
   reads ambiguously in Redis key inspection/debugging.
-- *Separate Redis key prefix entirely for the catalog surface
-  (`ai:catalog-response:{currencyCode}:{normalizedQuestion}`).* Considered but not chosen: the
+- _Separate Redis key prefix entirely for the catalog surface
+  (`ai:catalog-response:{currencyCode}:{normalizedQuestion}`)._ Considered but not chosen: the
   `surface` dimension inside the existing prefix keeps one cache namespace, one TTL constant, and
   one set of cache-operation log statements (`logCacheOperation`) to reason about, which is
   simpler to audit for the stock-privacy and no-history guardrails that already instrument this
@@ -122,13 +126,14 @@ retrieval decisions the model needs to make).
 
 **Rationale**: These functions are already correct and already enforce the qualitative-stock
 guardrail (`toStockLabel`) and the soft-delete/unpublished exclusion (`isNull(products.deletedAt)`
-in every query). Moving their *call site* from a keyword regex to a tool dispatch changes nothing
+in every query). Moving their _call site_ from a keyword regex to a tool dispatch changes nothing
 about their SQL or their output formatting, which is the lowest-risk path to closing baseline gap
 #2 ("retrieval is keyword-triggered and server-chosen rather than model-directed").
 
 **Alternatives considered**:
-- *Leave `chat-commerce-context.ts` untouched and add a parallel, duplicate set of tool
-  implementations.* Rejected: violates Principle VIII (DRY) — the exact same Drizzle queries
+
+- _Leave `chat-commerce-context.ts` untouched and add a parallel, duplicate set of tool
+  implementations._ Rejected: violates Principle VIII (DRY) — the exact same Drizzle queries
   would exist in two places and a future guardrail fix (e.g., a new soft-delete condition) could
   be applied to one copy and not the other.
 
@@ -150,8 +155,9 @@ malicious or malformed tool-call argument that could route a query to another us
 the identity is simply not on the argument surface the model controls.
 
 **Alternatives considered**:
-- *Accept a `userId` argument in the tool schema and validate it matches the session at
-  dispatch time.* Rejected: adds an attack surface (a check that could be missed or weakened in
+
+- _Accept a `userId` argument in the tool schema and validate it matches the session at
+  dispatch time._ Rejected: adds an attack surface (a check that could be missed or weakened in
   a future edit) for no benefit — the server already knows the session identity and never needs
   the model to supply it.
 
@@ -171,7 +177,8 @@ search and assistant-driven search) consistent with each other, which is also wh
 replace the existing search experience; the assistant complements it" out-of-scope note implies.
 
 **Alternatives considered**:
-- *Build a bespoke semantic-only retrieval path for the assistant with no DB fallback.*
+
+- _Build a bespoke semantic-only retrieval path for the assistant with no DB fallback._
   Rejected: directly violates FR-012 and the edge case "the AI provider unavailable... must
   degrade to conventional search rather than erroring the page" — the DB fallback is what makes
   that degradation possible at the retrieval layer, one level below the AI-provider-unavailable
@@ -213,7 +220,8 @@ resilient — a shopper still gets a useful answer even if the model's explorati
 otherwise have wanted a 4th lookup.
 
 **Alternatives considered**:
-- *Hard-error the turn once the bound is hit.* Rejected: turns a soft over-exploration into a
+
+- _Hard-error the turn once the bound is hit._ Rejected: turns a soft over-exploration into a
   visible failure for the shopper, worse than simply asking for a final answer with what is
   already known.
 
@@ -238,7 +246,7 @@ surface, not a redesign.
 **Decision**: Out of scope for this feature. The bounded tool set in FR-004 is catalog search,
 filtering, comparison, and authenticated order lookup — no cart tool. The assistant remains
 strictly read-only per FR-007 and the Out of Scope section ("Assistant-initiated mutations such
-as adding to cart... " are explicitly excluded), and a *read* of cart contents is not requested
+as adding to cart... " are explicitly excluded), and a _read_ of cart contents is not requested
 by any user story or functional requirement.
 
 **Rationale**: The baseline names "no cart awareness" as part of "the gap, restated precisely,"
@@ -248,6 +256,7 @@ what is specified (Principle VII, YAGNI) and beyond what `/speckit.plan` should 
 a spec change.
 
 **Alternatives considered**:
-- *Add a read-only `get_cart_contents` tool anyway, reasoning it is implied by "the gap."*
+
+- _Add a read-only `get_cart_contents` tool anyway, reasoning it is implied by "the gap."_
   Rejected: no acceptance scenario or functional requirement calls for it; adding unspecified
   scope during planning risks scope creep the constitution explicitly warns against.

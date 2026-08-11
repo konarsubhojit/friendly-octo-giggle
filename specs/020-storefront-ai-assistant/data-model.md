@@ -18,21 +18,22 @@ type AssistantToolName =
 
 interface AssistantTool<Args> {
   name: AssistantToolName
-  description: string          // sent to the model as the FunctionDeclaration description
-  argsSchema: z.ZodType<Args>  // validated before execution; source of the FunctionDeclaration.parameters
-  requiresAuth: boolean        // true only for get_order_status
+  description: string // sent to the model as the FunctionDeclaration description
+  argsSchema: z.ZodType<Args> // validated before execution; source of the FunctionDeclaration.parameters
+  requiresAuth: boolean // true only for get_order_status
   execute: (args: Args, ctx: ToolExecutionContext) => Promise<string> // returns prompt-ready text
 }
 
 interface ToolExecutionContext {
-  identity: RequestIdentity     // { userId, isAuthenticated } — never derived from tool args
+  identity: RequestIdentity // { userId, isAuthenticated } — never derived from tool args
   currencyCode: CurrencyCode
   formatPrice: (priceInINR: number) => string
-  anchorProductId?: string      // present only on the product-anchored route
+  anchorProductId?: string // present only on the product-anchored route
 }
 ```
 
 **Validation rules**:
+
 - Every `execute` call is preceded by `argsSchema.safeParse(rawArgs)`; a failed parse returns a
   tool-result string describing the argument problem to the model rather than throwing, so the
   model can retry within the tool-call bound (R9).
@@ -61,7 +62,11 @@ const CompareProductsArgs = z.object({
 })
 
 const GetOrderStatusArgs = z.object({
-  orderId: z.string().trim().regex(/^[A-Za-z0-9]{7,10}$/).optional(),
+  orderId: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9]{7,10}$/)
+    .optional(),
 })
 ```
 
@@ -70,6 +75,7 @@ const GetOrderStatusArgs = z.object({
 The bounded set of catalog records assembled for one turn, treated as **untrusted content** once
 it enters the prompt (FR-010). Represented as the string returned by each tool's `execute`, which
 is:
+
 - Length-bounded (reuses `SUPPLEMENTAL_CONTEXT_MAX_CHARS` / a new `TOOL_RESULT_MAX_CHARS`
   constant per result, mirroring the existing `PRODUCT_CONTEXT_MAX_CHARS` /
   `SUPPLEMENTAL_CONTEXT_MAX_CHARS` truncation discipline in `chat-prompt.ts`).
@@ -96,14 +102,14 @@ authenticated users, under a Redis key that now also encodes the **surface**:
 
 ```ts
 // Before (product-anchored only):
-`ai:chat:history:${userId}:${productId}:${threadId}`
-
+;`ai:chat:history:${userId}:${productId}:${threadId}`
 // After (both surfaces):
 `ai:chat:history:${userId}:${surface}:${threadId}`
 // surface = `product:${productId}` | 'catalog'
 ```
 
 **Validation rules** (unchanged from today, re-verified against the new surface):
+
 - `persistHistory` is forced `false` whenever `identity.isAuthenticated` is `false` — a guest's
   `ConversationTurn`s are never written to Redis regardless of what the client requests
   (FR-009, `parseAndValidateRequest`'s existing `persistHistory: identity.isAuthenticated && ...`
@@ -119,12 +125,13 @@ limiting, quota, and abuse control. Represented by the existing `RequestIdentity
 
 ```ts
 type RequestIdentity = {
-  userId: string          // real user id, or `guest:{sha256-hash-prefix}`
+  userId: string // real user id, or `guest:{sha256-hash-prefix}`
   isAuthenticated: boolean
 }
 ```
 
 **Validation rules** (unchanged, reused by both routes via `resolveRequestIdentity`):
+
 - Guest ids are derived via `createHash('sha256')` over a client IP header, truncated to
   `MAX_GUEST_ID_LENGTH` — never the raw IP itself is stored or logged (FR-009, FR-015).
 - `AssistantIdentity` is the single source of truth `chat-tools-orders.ts` uses for scoping —

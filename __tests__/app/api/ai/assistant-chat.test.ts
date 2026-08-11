@@ -46,7 +46,11 @@ vi.mock('@/lib/ai/gateway', () => ({
       systemInstruction: string,
       options?: {
         functionCallingMode?: string
-        tools?: readonly { name: string; description: string; parametersJsonSchema?: unknown }[]
+        tools?: readonly {
+          name: string
+          description: string
+          parametersJsonSchema?: unknown
+        }[]
       }
     ) => ({
       systemInstruction,
@@ -123,7 +127,9 @@ describe('POST /api/ai/assistant/chat', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     getCachedAiResponseMock.mockResolvedValue(null)
-    generateContentMock.mockResolvedValue({ text: 'Try [Travel Bag](/products/prod-1).' })
+    generateContentMock.mockResolvedValue({
+      text: 'Try [Travel Bag](/products/prod-1).',
+    })
     getDailyUsageMock.mockResolvedValue({ requests: 0, tokens: 0 })
     enforceQuotasMock.mockResolvedValue(null)
     recordDailyUsageMock.mockResolvedValue(undefined)
@@ -212,7 +218,10 @@ describe('POST /api/ai/assistant/chat', () => {
     )
 
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ text: 'Cached answer', threadId: undefined })
+    expect(await response.json()).toEqual({
+      text: 'Cached answer',
+      threadId: undefined,
+    })
     expect(generateContentMock).not.toHaveBeenCalled()
   })
 

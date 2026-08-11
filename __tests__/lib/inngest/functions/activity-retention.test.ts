@@ -20,7 +20,8 @@ vi.mock('@/lib/schema', () => ({
   },
 }))
 vi.mock('drizzle-orm', async () => {
-  const actual = await vi.importActual<typeof import('drizzle-orm')>('drizzle-orm')
+  const actual =
+    await vi.importActual<typeof import('drizzle-orm')>('drizzle-orm')
   return {
     ...actual,
     lt: vi.fn(),
@@ -39,7 +40,11 @@ type FunctionInternals = {
     id: string
     triggers: ReadonlyArray<{ cron?: string }>
   }
-  fn: (context: { step: { run: (_id: string, handler: () => Promise<number>) => Promise<number> } }) => Promise<{ deleted: number; cutoff: string }>
+  fn: (context: {
+    step: {
+      run: (_id: string, handler: () => Promise<number>) => Promise<number>
+    }
+  }) => Promise<{ deleted: number; cutoff: string }>
 }
 
 describe('activity retention', () => {
@@ -48,13 +53,17 @@ describe('activity retention', () => {
   })
 
   it('computes a 24-month cutoff', () => {
-    const cutoff = getActivityRetentionCutoff(new Date('2026-08-01T12:00:00.000Z'))
+    const cutoff = getActivityRetentionCutoff(
+      new Date('2026-08-01T12:00:00.000Z')
+    )
     expect(ACTIVITY_RETENTION_MONTHS).toBe(24)
     expect(cutoff.toISOString()).toBe('2024-08-01T12:00:00.000Z')
   })
 
   it('deletes rows older than the cutoff and reports the deleted count', async () => {
-    const returning = vi.fn().mockResolvedValue([{ id: 'log1' }, { id: 'log2' }])
+    const returning = vi
+      .fn()
+      .mockResolvedValue([{ id: 'log1' }, { id: 'log2' }])
     const where = vi.fn(() => ({ returning }))
     mockDelete.mockReturnValue({ where })
 

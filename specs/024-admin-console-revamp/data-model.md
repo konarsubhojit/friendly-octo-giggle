@@ -13,26 +13,26 @@ redesign it.
 
 **Existing columns** (unchanged):
 
-| Column      | Type                              | Notes                                                    |
-| ----------- | --------------------------------- | --------------------------------------------------------- |
-| `id`        | `varchar(7)`, PK                  | Short ID via `generateShortId()`                          |
-| `userId`    | `text`, FK → `users.id`, cascade  | Acting user                                                |
-| `role`      | `userRoleEnum`, nullable          | Actor's role at time of action (FR-D02)                    |
-| `entity`    | `text`, not null                  | Entity type (`order`, `product`, `user`, …)                |
-| `entityId`  | `text`, not null                  | Entity identifier                                          |
-| `action`    | `text`, not null                  | Action performed (e.g. `refund`, `status_change`)          |
-| `diff`      | `json`, not null, default `{}`    | Structured before/after change set (FR-D02/D03)            |
-| `createdAt` | `timestamp`, default now, not null | Time of action                                             |
+| Column      | Type                               | Notes                                             |
+| ----------- | ---------------------------------- | ------------------------------------------------- |
+| `id`        | `varchar(7)`, PK                   | Short ID via `generateShortId()`                  |
+| `userId`    | `text`, FK → `users.id`, cascade   | Acting user                                       |
+| `role`      | `userRoleEnum`, nullable           | Actor's role at time of action (FR-D02)           |
+| `entity`    | `text`, not null                   | Entity type (`order`, `product`, `user`, …)       |
+| `entityId`  | `text`, not null                   | Entity identifier                                 |
+| `action`    | `text`, not null                   | Action performed (e.g. `refund`, `status_change`) |
+| `diff`      | `json`, not null, default `{}`     | Structured before/after change set (FR-D02/D03)   |
+| `createdAt` | `timestamp`, default now, not null | Time of action                                    |
 
 **Existing indexes** (unchanged): `userId`, `entity`, `createdAt`.
 
 **Additive changes required by this feature:**
 
-| Change                                                    | Requirement    | Rationale                                                                                                   |
-| ---------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------- |
-| Composite index on `(entity, entityId, createdAt)`         | FR-D06, NFR-007 | Per-entity activity panels query `entity = X AND entityId = Y ORDER BY createdAt DESC` — the existing single-column `entity` index does not support this efficiently at 24-month volume. |
-| Composite index on `(action, createdAt)`                   | FR-D05         | Global-view filtering by action type combined with date range.                                              |
-| Nullable `actorName` / `actorEmail` denormalised columns *(optional, decide during implementation)* | FR-D02 ("acting person's identity") | Avoids an extra join to `users` per row when a user is later deleted or renamed; the spec's Baseline note ("nullable columns to support … denormalised actor display") anticipates this. If the join proves cheap enough (single query with `users` join, indexed FK), this may be unnecessary — decide against actual query-cost measurement rather than pre-emptively adding columns (Principle VII). |
+| Change                                                                                              | Requirement                         | Rationale                                                                                                                                                                                                                                                                                                                                                                                               |
+| --------------------------------------------------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Composite index on `(entity, entityId, createdAt)`                                                  | FR-D06, NFR-007                     | Per-entity activity panels query `entity = X AND entityId = Y ORDER BY createdAt DESC` — the existing single-column `entity` index does not support this efficiently at 24-month volume.                                                                                                                                                                                                                |
+| Composite index on `(action, createdAt)`                                                            | FR-D05                              | Global-view filtering by action type combined with date range.                                                                                                                                                                                                                                                                                                                                          |
+| Nullable `actorName` / `actorEmail` denormalised columns _(optional, decide during implementation)_ | FR-D02 ("acting person's identity") | Avoids an extra join to `users` per row when a user is later deleted or renamed; the spec's Baseline note ("nullable columns to support … denormalised actor display") anticipates this. If the join proves cheap enough (single query with `users` join, indexed FK), this may be unnecessary — decide against actual query-cost measurement rather than pre-emptively adding columns (Principle VII). |
 
 No column is removed, renamed, or made non-nullable. `diff` retains its
 existing shape; FR-D11 (no credentials/payment data in the diff) is enforced
@@ -62,17 +62,17 @@ at the call sites that construct the diff, not by a schema change.
 
 **Table**: `AdminSavedView` (Drizzle export name `adminSavedViews`)
 
-| Column               | Type                                   | Notes                                                                                       |
-| --------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `id`                  | `varchar(7)`, PK, `generateShortId()`  | Consistent with the project's ID convention                                                      |
-| `ownerId`             | `text`, FK → `users.id`, cascade, nullable | Null denotes a built-in/shared view (FR-A20); non-null denotes a private, owner-scoped view (FR-A18) |
-| `resource`            | `text`, not null                       | Which resource this view applies to (`orders`, `products`, `returns`, …)                         |
-| `name`                | `text`, not null                       | User- or product-supplied label                                                                  |
-| `criteria`            | `json`, not null                       | `{ search?: string, filters?: Record<string, unknown>, sort?: { field: string, direction: 'asc'|'desc' } }` |
-| `isBuiltIn`           | `boolean`, not null, default `false`   | True only for shipped, read-only defaults (FR-A20)                                               |
-| `requiredPermission`  | `text` (or the `AdminPermission` enum), nullable | Only set on built-in views; gates visibility (FR-A20)                                            |
-| `createdAt`           | `timestamp`, default now, not null     |                                                                                                    |
-| `updatedAt`           | `timestamp`, default now, not null, on update now |                                                                                         |
+| Column               | Type                                              | Notes                                                                                                |
+| -------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------- |
+| `id`                 | `varchar(7)`, PK, `generateShortId()`             | Consistent with the project's ID convention                                                          |
+| `ownerId`            | `text`, FK → `users.id`, cascade, nullable        | Null denotes a built-in/shared view (FR-A20); non-null denotes a private, owner-scoped view (FR-A18) |
+| `resource`           | `text`, not null                                  | Which resource this view applies to (`orders`, `products`, `returns`, …)                             |
+| `name`               | `text`, not null                                  | User- or product-supplied label                                                                      |
+| `criteria`           | `json`, not null                                  | `{ search?: string, filters?: Record<string, unknown>, sort?: { field: string, direction: 'asc'      | 'desc' } }` |
+| `isBuiltIn`          | `boolean`, not null, default `false`              | True only for shipped, read-only defaults (FR-A20)                                                   |
+| `requiredPermission` | `text` (or the `AdminPermission` enum), nullable  | Only set on built-in views; gates visibility (FR-A20)                                                |
+| `createdAt`          | `timestamp`, default now, not null                |                                                                                                      |
+| `updatedAt`          | `timestamp`, default now, not null, on update now |                                                                                                      |
 
 **Indexes**: `(ownerId, resource)` for "my saved views for this resource";
 `(resource, isBuiltIn)` for "built-in views for this resource."
@@ -91,7 +91,7 @@ at the call sites that construct the diff, not by a schema change.
   list-definition filter shape, so a saved view can never encode a filter
   the resource doesn't support.
 - Query access MUST always be scoped as `WHERE (ownerId = :currentUserId) OR
-  (isBuiltIn = true AND :currentUserPermissions INCLUDES requiredPermission)`
+(isBuiltIn = true AND :currentUserPermissions INCLUDES requiredPermission)`
   — never a broader query filtered client-side, since FR-A18 requires zero
   cross-user visibility and SC-018 requires this verified per role pairing.
 
@@ -126,7 +126,8 @@ or a new `src/features/admin/resources/` module, not a schema or migration
 change.
 
 ## 4. Bulk operation (transient; not fully persisted unless it exceeds the
-   synchronous ceiling)
+
+synchronous ceiling)
 
 For selections within the documented synchronous ceiling (see research.md §6),
 a bulk operation is a request/response pair against the existing
@@ -136,17 +137,17 @@ For selections that exceed the ceiling or apply to the entire filtered
 result set (FR-A16), a bulk operation becomes a tracked background job. Its
 status needs a minimal persisted or Redis-backed record for polling:
 
-| Field           | Notes                                                                 |
-| ---------------- | ------------------------------------------------------------------------ |
-| `id`             | Job identifier (Inngest run ID or a generated short ID)                |
-| `resource`       | e.g. `orders`                                                            |
-| `action`         | e.g. `mark_shipped`                                                      |
-| `initiatedBy`    | User ID                                                                  |
-| `selectionScope` | `'loaded_page' \| 'entire_filtered_result'` (FR-A16)                     |
-| `total`          | Row count targeted                                                       |
-| `succeeded`      | Count so far                                                            |
-| `failed`         | Array of `{ rowId, reason }` (FR-A10)                                    |
-| `status`         | `'running' \| 'completed' \| 'completed_with_errors' \| 'failed'`        |
+| Field            | Notes                                                             |
+| ---------------- | ----------------------------------------------------------------- |
+| `id`             | Job identifier (Inngest run ID or a generated short ID)           |
+| `resource`       | e.g. `orders`                                                     |
+| `action`         | e.g. `mark_shipped`                                               |
+| `initiatedBy`    | User ID                                                           |
+| `selectionScope` | `'loaded_page' \| 'entire_filtered_result'` (FR-A16)              |
+| `total`          | Row count targeted                                                |
+| `succeeded`      | Count so far                                                      |
+| `failed`         | Array of `{ rowId, reason }` (FR-A10)                             |
+| `status`         | `'running' \| 'completed' \| 'completed_with_errors' \| 'failed'` |
 
 Whether this is a new lightweight table or a Redis-backed structure is an
 implementation detail decided during task planning against actual selection

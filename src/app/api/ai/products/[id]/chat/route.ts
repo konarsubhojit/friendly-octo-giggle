@@ -25,28 +25,28 @@ export const POST = async (
       anchorProductId: id,
       toolRegistry: assistantToolRegistry,
       systemPrompt: async ({
-      currencyCode,
-      formatPrice,
-      identity,
-      intents,
-      lastUserText,
-      }) => {
-      const supplementalContext = await buildCommerceContext({
-        product,
-        userId: identity.userId,
-        isAuthenticated: identity.isAuthenticated,
-        messageText: lastUserText,
         currencyCode,
         formatPrice,
+        identity,
         intents,
-      })
+        lastUserText,
+      }) => {
+        const supplementalContext = await buildCommerceContext({
+          product,
+          userId: identity.userId,
+          isAuthenticated: identity.isAuthenticated,
+          messageText: lastUserText,
+          currencyCode,
+          formatPrice,
+          intents,
+        })
 
-      return buildSystemPrompt(
-        product,
-        currencyCode,
-        formatPrice,
-        supplementalContext
-      )
+        return buildSystemPrompt(
+          product,
+          currencyCode,
+          formatPrice,
+          supplementalContext
+        )
       },
     })
   } catch (error) {

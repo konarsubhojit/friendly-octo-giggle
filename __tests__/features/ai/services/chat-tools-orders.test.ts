@@ -51,7 +51,9 @@ describe('chat-tools-orders', () => {
     )
 
     expect(ordersFindFirstMock).toHaveBeenCalled()
-    expect(output).toBe('No order with ID "ORD1234" was found for this account.')
+    expect(output).toBe(
+      'No order with ID "ORD1234" was found for this account.'
+    )
   })
 
   it('returns recent order status for the authenticated shopper', async () => {
@@ -75,6 +77,8 @@ describe('chat-tools-orders', () => {
     )
 
     expect(output).toContain('Recent order status:')
-    expect(output).toContain('ORD1001: SHIPPED, tracking TRK1001, carrier BlueDart')
+    expect(output).toContain(
+      'ORD1001: SHIPPED, tracking TRK1001, carrier BlueDart'
+    )
   })
 })

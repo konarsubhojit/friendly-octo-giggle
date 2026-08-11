@@ -41,7 +41,9 @@ const getOutcomeMessage = (outcome: ConfirmOutcome) => {
   return outcome.reason
 }
 
-const getButtonClass = (variant: NonNullable<AdminConfirmDialogProps['variant']>) =>
+const getButtonClass = (
+  variant: NonNullable<AdminConfirmDialogProps['variant']>
+) =>
   ({
     danger: 'bg-red-600 hover:bg-red-700 disabled:bg-red-400',
     warning: 'bg-amber-600 hover:bg-amber-700 disabled:bg-amber-400',
@@ -132,7 +134,8 @@ export function AdminConfirmDialog({
   }
 
   const typedConfirmationSatisfied =
-    typedConfirmationValue === undefined || typedValue === typedConfirmationValue
+    typedConfirmationValue === undefined ||
+    typedValue === typedConfirmationValue
 
   const submit = async () => {
     setLoading(true)
@@ -182,13 +185,15 @@ export function AdminConfirmDialog({
         </div>
 
         <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
-          {reversible ? 'This action can be reversed later.' : 'This action cannot be reversed.'}
+          {reversible
+            ? 'This action can be reversed later.'
+            : 'This action cannot be reversed.'}
         </p>
 
         {typedConfirmationValue ? (
           <label className="mt-4 block text-sm font-medium text-slate-700 dark:text-slate-200">
-            Type <span className="font-semibold">{typedConfirmationValue}</span> to
-            continue
+            Type <span className="font-semibold">{typedConfirmationValue}</span>{' '}
+            to continue
             <input
               value={typedValue}
               onChange={(event) => setTypedValue(event.target.value)}

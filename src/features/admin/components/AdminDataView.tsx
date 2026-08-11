@@ -204,7 +204,9 @@ export function AdminDataView<T extends Record<string, unknown>>({
 
   const toggleAllVisibleRows = useCallback(() => {
     setSelectedRowIds(() =>
-      effectiveSelectedRowIds.length === visibleRowIds.length ? [] : visibleRowIds
+      effectiveSelectedRowIds.length === visibleRowIds.length
+        ? []
+        : visibleRowIds
     )
   }, [effectiveSelectedRowIds.length, visibleRowIds])
 
@@ -296,19 +298,18 @@ export function AdminDataView<T extends Record<string, unknown>>({
 
   const bulkActionBar =
     selectionEnabled && effectiveSelectedRowIds.length > 0
-      ? renderBulkActionBar?.(selectionContext) ?? (
-          definition && definition.bulkActions.length > 0 ? (
-            <AdminBulkActionBar
-              actions={definition.bulkActions}
-              selection={{
-                scope: 'loaded_page',
-                rowIds: effectiveSelectedRowIds,
-              }}
-              selectedCount={effectiveSelectedRowIds.length}
-              onClearSelection={selectionContext.clearSelection}
-            />
-          ) : null
-        )
+      ? (renderBulkActionBar?.(selectionContext) ??
+        (definition && definition.bulkActions.length > 0 ? (
+          <AdminBulkActionBar
+            actions={definition.bulkActions}
+            selection={{
+              scope: 'loaded_page',
+              rowIds: effectiveSelectedRowIds,
+            }}
+            selectedCount={effectiveSelectedRowIds.length}
+            onClearSelection={selectionContext.clearSelection}
+          />
+        ) : null))
       : null
 
   const renderEmptyState = () => {
@@ -338,7 +339,9 @@ export function AdminDataView<T extends Record<string, unknown>>({
     if (resolvedState.status === 'filtered-empty') {
       return (
         <StateMessage
-          message={resolvedState.message ?? 'No records match the current filters.'}
+          message={
+            resolvedState.message ?? 'No records match the current filters.'
+          }
         />
       )
     }
@@ -353,9 +356,12 @@ export function AdminDataView<T extends Record<string, unknown>>({
         {bulkActionBar}
         {resolvedState.status === 'loading' ? (
           <div className="grid gap-3" aria-label={`${ariaLabel} loading`}>
-            {Array.from({ length: Math.min(skeletonRowCount, 5) }, (_, index) => (
-              <SkeletonCard key={index} />
-            ))}
+            {Array.from(
+              { length: Math.min(skeletonRowCount, 5) },
+              (_, index) => (
+                <SkeletonCard key={index} />
+              )
+            )}
           </div>
         ) : resolvedState.status === 'ready' ? (
           <div className="min-w-0 overflow-hidden">

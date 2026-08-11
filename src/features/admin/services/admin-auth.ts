@@ -45,25 +45,26 @@ export const checkAdminAuth = async (
   return { authorized: true, userId: session.user.id ?? '', role }
 }
 
-export const checkAdminSessionAuth = async (): Promise<AdminSessionAuthResult> => {
-  const session = await auth()
-  if (!session?.user) {
-    return { authorized: false, error: 'Not authenticated', status: 401 }
-  }
+export const checkAdminSessionAuth =
+  async (): Promise<AdminSessionAuthResult> => {
+    const session = await auth()
+    if (!session?.user) {
+      return { authorized: false, error: 'Not authenticated', status: 401 }
+    }
 
-  const role = session.user.role
-  if (!isStaffRole(role)) {
+    const role = session.user.role
+    if (!isStaffRole(role)) {
+      return {
+        authorized: false,
+        error: 'Not authorized - Admin access required',
+        status: 403,
+      }
+    }
+
     return {
-      authorized: false,
-      error: 'Not authorized - Admin access required',
-      status: 403,
+      authorized: true,
+      userId: session.user.id ?? '',
+      role,
+      permissions: getRolePermissions(role),
     }
   }
-
-  return {
-    authorized: true,
-    userId: session.user.id ?? '',
-    role,
-    permissions: getRolePermissions(role),
-  }
-}

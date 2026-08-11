@@ -4,7 +4,10 @@ import { db, drizzleDb } from '@/lib/db'
 import { products } from '@/lib/schema'
 import { searchProductIds, searchProductIdsCached } from '@/lib/search'
 import { convertPriceToINR, type CurrencyCode } from '@/lib/currency'
-import { getVariantMinPrice, getVariantTotalStock } from '@/features/product/variant-utils'
+import {
+  getVariantMinPrice,
+  getVariantTotalStock,
+} from '@/features/product/variant-utils'
 import {
   CATALOG_SEARCH_MAX_RESULTS,
   TOOL_RESULT_MAX_CHARS,
@@ -94,7 +97,10 @@ const applyBudgetFilter = (
   currencyCode: CurrencyCode
 ): CatalogResultProduct[] => {
   if (!maxPriceInDisplayCurrency) return productsToFilter
-  const maxPriceInINR = convertPriceToINR(maxPriceInDisplayCurrency, currencyCode)
+  const maxPriceInINR = convertPriceToINR(
+    maxPriceInDisplayCurrency,
+    currencyCode
+  )
   return productsToFilter.filter((product) => product.minPrice <= maxPriceInINR)
 }
 
@@ -103,7 +109,9 @@ const orderProductsByIdList = (
   rows: CatalogResultProduct[]
 ): CatalogResultProduct[] => {
   const byId = new Map(rows.map((row) => [row.id, row]))
-  return idList.map((id) => byId.get(id)).filter(Boolean) as CatalogResultProduct[]
+  return idList
+    .map((id) => byId.get(id))
+    .filter(Boolean) as CatalogResultProduct[]
 }
 
 const searchCatalogFallback = async (params: {
@@ -116,7 +124,10 @@ const searchCatalogFallback = async (params: {
     where: and(
       isNull(products.deletedAt),
       params.category ? eq(products.category, params.category) : undefined,
-      or(ilike(products.name, likeQuery), ilike(products.description, likeQuery))
+      or(
+        ilike(products.name, likeQuery),
+        ilike(products.description, likeQuery)
+      )
     ),
     with: {
       variants: {
@@ -218,61 +229,62 @@ export const CompareProductsArgs = z.object({
     .max(MAX_COMPARISON_TERMS),
 })
 
-export const searchCatalogTool: AssistantTool<z.infer<typeof SearchCatalogArgs>> =
-  {
-    name: 'search_catalog',
-    description:
-      'Search the storefront catalog for matching products and return grounded markdown links, prices, and qualitative availability.',
-    argsSchema: SearchCatalogArgs,
-    requiresAuth: false,
-    async execute(args, ctx) {
-      const candidateProducts = await resolveCatalogSearchResults({
-          query: args.query,
-          category: args.category,
-          limit: args.limit,
-        })
-      const matchingProducts = applyBudgetFilter(
-        candidateProducts,
-        args.maxPriceInDisplayCurrency,
-        ctx.currencyCode
-      ).slice(0, args.limit)
+export const searchCatalogTool: AssistantTool<
+  z.infer<typeof SearchCatalogArgs>
+> = {
+  name: 'search_catalog',
+  description:
+    'Search the storefront catalog for matching products and return grounded markdown links, prices, and qualitative availability.',
+  argsSchema: SearchCatalogArgs,
+  requiresAuth: false,
+  async execute(args, ctx) {
+    const candidateProducts = await resolveCatalogSearchResults({
+      query: args.query,
+      category: args.category,
+      limit: args.limit,
+    })
+    const matchingProducts = applyBudgetFilter(
+      candidateProducts,
+      args.maxPriceInDisplayCurrency,
+      ctx.currencyCode
+    ).slice(0, args.limit)
 
-      if (matchingProducts.length === 0) {
-        if (args.maxPriceInDisplayCurrency && candidateProducts.length > 0) {
-          const nearestAlternatives = [...candidateProducts]
-            .sort((left, right) => left.minPrice - right.minPrice)
-            .slice(0, Math.min(3, candidateProducts.length))
-          return truncateToolResult(
-            [
-              `No catalog product matches "${args.query}" within ${ctx.formatPrice(
-                convertPriceToINR(
-                  args.maxPriceInDisplayCurrency,
-                  ctx.currencyCode
-                )
-              )}.`,
-              'Nearest alternatives:',
-              ...nearestAlternatives.map((product) =>
-                formatCatalogProductLine(product, ctx.formatPrice)
-              ),
-            ].join('\n')
-          )
-        }
-
+    if (matchingProducts.length === 0) {
+      if (args.maxPriceInDisplayCurrency && candidateProducts.length > 0) {
+        const nearestAlternatives = [...candidateProducts]
+          .sort((left, right) => left.minPrice - right.minPrice)
+          .slice(0, Math.min(3, candidateProducts.length))
         return truncateToolResult(
-          `No catalog product matches "${args.query}" right now.`
+          [
+            `No catalog product matches "${args.query}" within ${ctx.formatPrice(
+              convertPriceToINR(
+                args.maxPriceInDisplayCurrency,
+                ctx.currencyCode
+              )
+            )}.`,
+            'Nearest alternatives:',
+            ...nearestAlternatives.map((product) =>
+              formatCatalogProductLine(product, ctx.formatPrice)
+            ),
+          ].join('\n')
         )
       }
 
       return truncateToolResult(
-        [
-          `Catalog matches for "${args.query}":`,
-          ...matchingProducts.map((product) =>
-            formatCatalogProductLine(product, ctx.formatPrice)
-          ),
-        ].join('\n')
+        `No catalog product matches "${args.query}" right now.`
       )
-    },
-  }
+    }
+
+    return truncateToolResult(
+      [
+        `Catalog matches for "${args.query}":`,
+        ...matchingProducts.map((product) =>
+          formatCatalogProductLine(product, ctx.formatPrice)
+        ),
+      ].join('\n')
+    )
+  },
+}
 
 export const getProductDetailsTool: AssistantTool<
   z.infer<typeof GetProductDetailsArgs>

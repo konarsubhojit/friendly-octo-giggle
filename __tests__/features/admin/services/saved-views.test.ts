@@ -13,12 +13,12 @@ describe('saved view visibility', () => {
       requiredPermission: null,
     }
 
-    expect(isSavedViewVisibleToUser(privateView, 'user-1', ['orders:read'])).toBe(
-      true
-    )
-    expect(isSavedViewVisibleToUser(privateView, 'user-2', ['orders:read'])).toBe(
-      false
-    )
+    expect(
+      isSavedViewVisibleToUser(privateView, 'user-1', ['orders:read'])
+    ).toBe(true)
+    expect(
+      isSavedViewVisibleToUser(privateView, 'user-2', ['orders:read'])
+    ).toBe(false)
   })
 
   it('shows a built-in view only when the viewer holds the required permission', () => {

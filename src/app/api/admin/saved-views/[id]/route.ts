@@ -29,7 +29,10 @@ export async function PATCH(
     }
 
     const { id } = await params
-    const existing = await getOwnedSavedViewById({ id, userId: sessionAuth.userId })
+    const existing = await getOwnedSavedViewById({
+      id,
+      userId: sessionAuth.userId,
+    })
     if (!existing) {
       return apiError('Saved view not found', 404)
     }
@@ -71,7 +74,10 @@ export async function DELETE(
     }
 
     const { id } = await params
-    const existing = await getOwnedSavedViewById({ id, userId: sessionAuth.userId })
+    const existing = await getOwnedSavedViewById({
+      id,
+      userId: sessionAuth.userId,
+    })
     if (!existing) {
       return apiError('Saved view not found', 404)
     }

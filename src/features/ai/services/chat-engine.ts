@@ -16,8 +16,16 @@ import {
 } from './chat-constants'
 import { finalizeCachedAnswer } from './chat-cached-answer'
 import { composeConversationMessages } from './chat-history'
-import { detectBlockedPrompt, detectIntentSignals, usesAnyAdvancedIntent } from './chat-intent'
-import { buildFunctionDeclarations, dispatchToolCall, getAssistantTool } from './chat-tools'
+import {
+  detectBlockedPrompt,
+  detectIntentSignals,
+  usesAnyAdvancedIntent,
+} from './chat-intent'
+import {
+  buildFunctionDeclarations,
+  dispatchToolCall,
+  getAssistantTool,
+} from './chat-tools'
 import {
   estimateTokens,
   sanitizeAssistantOutput,
@@ -104,7 +112,8 @@ const runToolCallingLoop = async (params: {
   aiConfig: Awaited<ReturnType<typeof getAiConfigCached>>
 }): Promise<string> => {
   const declarations = buildFunctionDeclarations(params.toolRegistry)
-  let contents: ChatMessage[] | ReturnType<typeof toGoogleContents> = params.contents
+  let contents: ChatMessage[] | ReturnType<typeof toGoogleContents> =
+    params.contents
   let executedToolCalls = 0
   let finalText = ''
   let functionCallsAllowed = declarations.length > 0
@@ -206,7 +215,8 @@ export const runChatEngine = async ({
   const prepared = await parseAndValidateRequest(request, anchorProductId)
   if (!prepared.ok) return apiError(prepared.error, 400)
 
-  const { identity, persistHistory, threadId, sanitizedMessages } = prepared.prepared
+  const { identity, persistHistory, threadId, sanitizedMessages } =
+    prepared.prepared
   const { userId, isAuthenticated } = identity
 
   const allMessages = await composeConversationMessages(
@@ -281,13 +291,16 @@ export const runChatEngine = async ({
     tokenQuota: aiConfig.dailyTokenQuota ?? DAILY_TOKEN_QUOTA,
     usesAdvancedFeatures,
     advancedQuota:
-      aiConfig.advancedFeatureDailyRequestQuota ??
-      ADVANCED_DAILY_REQUEST_QUOTA,
+      aiConfig.advancedFeatureDailyRequestQuota ?? ADVANCED_DAILY_REQUEST_QUOTA,
   })
   if (quotaError) return apiError(quotaError, 429)
 
   if (isSingleTurn && lastUserText) {
-    const cached = await getCachedAiResponse(surface, lastUserText, currencyCode)
+    const cached = await getCachedAiResponse(
+      surface,
+      lastUserText,
+      currencyCode
+    )
     if (cached !== null) {
       await finalizeCachedAnswer(cached, {
         surface,

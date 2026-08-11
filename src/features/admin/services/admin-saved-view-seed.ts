@@ -1,7 +1,10 @@
 import { adminSavedViews } from '@/lib/schema'
 import { primaryDrizzleDb } from '@/lib/db'
 import type { AdminPermission } from '@/lib/constants/roles'
-import type { SavedViewCriteria, AdminResourceKey } from '@/lib/validations/admin'
+import type {
+  SavedViewCriteria,
+  AdminResourceKey,
+} from '@/lib/validations/admin'
 
 export interface BuiltInAdminSavedView {
   readonly id: string
@@ -30,7 +33,10 @@ export const BUILT_IN_ADMIN_SAVED_VIEWS: readonly BuiltInAdminSavedView[] = [
     'svord01',
     'orders',
     'Awaiting fulfilment',
-    { filters: { status: 'PROCESSING' }, sort: { field: 'createdAt', direction: 'asc' } },
+    {
+      filters: { status: 'PROCESSING' },
+      sort: { field: 'createdAt', direction: 'asc' },
+    },
     'orders:read'
   ),
   builtInView(
@@ -54,14 +60,20 @@ export const BUILT_IN_ADMIN_SAVED_VIEWS: readonly BuiltInAdminSavedView[] = [
     'svrev01',
     'reviews',
     'Awaiting moderation',
-    { filters: { status: 'pending' }, sort: { field: 'createdAt', direction: 'desc' } },
+    {
+      filters: { status: 'pending' },
+      sort: { field: 'createdAt', direction: 'desc' },
+    },
     'reviews:moderate'
   ),
   builtInView(
     'sveml01',
     'email-failures',
     'Needs retry',
-    { filters: { status: 'pending,failed' }, sort: { field: 'createdAt', direction: 'desc' } },
+    {
+      filters: { status: 'pending,failed' },
+      sort: { field: 'createdAt', direction: 'desc' },
+    },
     'system:manage'
   ),
 ] as const

@@ -34,8 +34,12 @@ interface ActivityCursor {
   readonly id: string
 }
 
-const asChangeRecord = (value: unknown): value is { before?: unknown; after?: unknown } =>
-  typeof value === 'object' && value !== null && ('before' in value || 'after' in value)
+const asChangeRecord = (
+  value: unknown
+): value is { before?: unknown; after?: unknown } =>
+  typeof value === 'object' &&
+  value !== null &&
+  ('before' in value || 'after' in value)
 
 export const normalizeActivityChanges = (
   diff: Record<string, unknown>

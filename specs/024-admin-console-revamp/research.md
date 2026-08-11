@@ -27,7 +27,7 @@ decisions the plan needs that the spec left to engineering discretion.
 - **Alternatives considered**: Adopting a different third-party admin table
   library — rejected; it would duplicate `zenput`'s existing investment and
   is explicitly Out of Scope ("Replacing … the admin component library").
-  Building selection/bulk state as a wrapper *around* `AdminDataView` rather
+  Building selection/bulk state as a wrapper _around_ `AdminDataView` rather
   than inside it — rejected because filter chips, sort indication, and the
   four list states need to coordinate with the same server-side pagination
   props `AdminDataView` already owns; a wrapper would either duplicate that
@@ -43,7 +43,7 @@ decisions the plan needs that the spec left to engineering discretion.
   `EmailFailuresClient`, order/product list pages) already manage local
   `useState` for search/pagination; FR-F05 requires interactive state that
   exists only for one screen to remain local to that screen, so this state is
-  *not* promoted to Redux. Reflecting it in the URL (not client-only state)
+  _not_ promoted to Redux. Reflecting it in the URL (not client-only state)
   is what makes it bookmarkable/shareable per FR-A07, and cursor-based
   pagination (not offset) is preserved per FR-A06/NFR-004.
 - **Alternatives considered**: Storing list state in the existing Redux admin
@@ -66,7 +66,7 @@ decisions the plan needs that the spec left to engineering discretion.
   the only option consistent with that constraint. User-created views must
   be invisible to every other user regardless of permission (FR-A18), so
   ownership is enforced at the query layer (`WHERE ownerId = :currentUserId
-  OR isBuiltIn = true`), never by a shared "visibility" flag a user could
+OR isBuiltIn = true`), never by a shared "visibility" flag a user could
   set. Built-in views ship as seed data gated by `requiredPermission`,
   matching FR-A20's "visible only to users holding the permission required
   by the underlying resource."
@@ -165,7 +165,7 @@ decisions the plan needs that the spec left to engineering discretion.
   surfaces land, gated the same way.
 - **Rationale**: A command palette already exists and already satisfies most
   of FR-E08's mechanics (fuzzy search, keyboard operation); the gap is
-  permission-accuracy for the *client-side* item list, since
+  permission-accuracy for the _client-side_ item list, since
   `requireAdminPermission` only gates the destination page itself, not
   whether the palette should offer it. This is additive filtering, not a
   new component.
@@ -204,7 +204,7 @@ decisions the plan needs that the spec left to engineering discretion.
   "type this value to confirm" mode for the three actions FR-C03 names.
   `DeleteConfirmModal` call sites are migrated to it rather than kept as a
   second, parallel primitive (FR-C01 requires exactly one).
-- **Rationale**: `DeleteConfirmModal` already exists as *a* confirmation
+- **Rationale**: `DeleteConfirmModal` already exists as _a_ confirmation
   component per the Baseline, but is "not used by every destructive action,"
   making this an adoption problem with an existing primitive extended for
   the typed-confirmation case, consistent with how the list and form
@@ -212,7 +212,7 @@ decisions the plan needs that the spec left to engineering discretion.
 - **Alternatives considered**: Keeping `DeleteConfirmModal` for deletes and
   adding a second component for typed-confirmation actions — rejected; FR-C01
   mandates a single confirmation primitive for every destructive, irreversible,
-  or high-consequence action, and SC-004 measures 100% routing through *one*
+  or high-consequence action, and SC-004 measures 100% routing through _one_
   shared primitive.
 
 ## 10. Dashboard actionable queues (FR-G01–FR-G07)

@@ -48,7 +48,11 @@ vi.mock('@/lib/ai/gateway', () => ({
       systemInstruction: string,
       options?: {
         functionCallingMode?: string
-        tools?: readonly { name: string; description: string; parametersJsonSchema?: unknown }[]
+        tools?: readonly {
+          name: string
+          description: string
+          parametersJsonSchema?: unknown
+        }[]
       }
     ) => ({
       systemInstruction,
@@ -134,10 +138,14 @@ describe('chat-engine', () => {
   it('stops issuing tool calls once the configured maximum is reached', async () => {
     generateContentMock
       .mockResolvedValueOnce({
-      functionCalls: [{ id: 'call-1', name: 'search_catalog', args: { query: 'red bag' } }],
+        functionCalls: [
+          { id: 'call-1', name: 'search_catalog', args: { query: 'red bag' } },
+        ],
       })
       .mockResolvedValueOnce({
-      functionCalls: [{ id: 'call-2', name: 'search_catalog', args: { query: 'red bag' } }],
+        functionCalls: [
+          { id: 'call-2', name: 'search_catalog', args: { query: 'red bag' } },
+        ],
         text: 'Here is the best answer from the first lookup.',
       })
 
@@ -174,7 +182,10 @@ describe('chat-engine', () => {
     expect(logBusinessEventMock).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'ai_chat_tool_call',
-        details: expect.objectContaining({ toolName: 'search_catalog', callCount: 1 }),
+        details: expect.objectContaining({
+          toolName: 'search_catalog',
+          callCount: 1,
+        }),
       })
     )
   })

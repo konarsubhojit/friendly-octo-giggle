@@ -2,11 +2,7 @@ import { waitUntil } from '@vercel/functions'
 import { setCachedAiResponse } from '@/lib/ai/ai-cache'
 import { logError, logBusinessEvent } from '@/lib/logger'
 import type { CurrencyCode } from '@/lib/currency'
-import type {
-  AssistantSurface,
-  ChatMessage,
-  DailyUsage,
-} from './chat-types'
+import type { AssistantSurface, ChatMessage, DailyUsage } from './chat-types'
 import {
   estimateTokens,
   sanitizeAssistantOutput,

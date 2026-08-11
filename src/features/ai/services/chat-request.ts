@@ -78,7 +78,9 @@ export const parseAndValidateRequest = async (
   const body = await parseJsonBody(request, ChatRequestSchema)
 
   const identity = await resolveRequestIdentity(request)
-  const surface: AssistantSurface = productId ? `product:${productId}` : 'catalog'
+  const surface: AssistantSurface = productId
+    ? `product:${productId}`
+    : 'catalog'
 
   if (
     body.messages.some(

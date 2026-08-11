@@ -218,9 +218,9 @@ test.describe('AI Product Assistant — stock privacy', () => {
     await input.fill('Compare your best travel bags')
     await assistant.getByRole('button', { name: 'Send message' }).click()
 
-    await expect(
-      assistant.getByText('Comparison candidates:')
-    ).toBeVisible({ timeout: 10_000 })
+    await expect(assistant.getByText('Comparison candidates:')).toBeVisible({
+      timeout: 10_000,
+    })
 
     const responseText = await assistant.textContent()
     expect(responseText).not.toMatch(/\b\d+\b\s*(units|in stock|left)/iu)
@@ -240,9 +240,9 @@ test.describe('AI Product Assistant — stock privacy', () => {
       .click()
 
     const assistant = page.locator('section[aria-label="Storefront assistant"]')
-    await assistant.getByLabel('Ask the storefront assistant').fill(
-      'Where is my order?'
-    )
+    await assistant
+      .getByLabel('Ask the storefront assistant')
+      .fill('Where is my order?')
     await assistant.getByRole('button', { name: 'Send message' }).click()
 
     await expect(
@@ -262,13 +262,15 @@ test.describe('AI Product Assistant — stock privacy', () => {
       .click()
 
     const assistant = page.locator('section[aria-label="Storefront assistant"]')
-    await assistant.getByLabel('Ask the storefront assistant').fill(
-      'Check other user order ORD1234'
-    )
+    await assistant
+      .getByLabel('Ask the storefront assistant')
+      .fill('Check other user order ORD1234')
     await assistant.getByRole('button', { name: 'Send message' }).click()
 
     await expect(
-      assistant.getByText('No order with ID "ORD1234" was found for this account.')
+      assistant.getByText(
+        'No order with ID "ORD1234" was found for this account.'
+      )
     ).toBeVisible({ timeout: 10_000 })
   })
 })

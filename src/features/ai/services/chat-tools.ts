@@ -1,6 +1,10 @@
 import type { FunctionDeclaration } from '@google/genai'
 import { z } from 'zod'
-import type { AssistantTool, AssistantToolName, ToolExecutionContext } from './chat-types'
+import type {
+  AssistantTool,
+  AssistantToolName,
+  ToolExecutionContext,
+} from './chat-types'
 import {
   compareProductsTool,
   getProductDetailsTool,
@@ -16,8 +20,9 @@ type RegisteredAssistantTool = {
   execute: (args: unknown, ctx: ToolExecutionContext) => Promise<string>
 }
 
-const asRegisteredTool = <Args>(tool: AssistantTool<Args>): RegisteredAssistantTool =>
-  tool as RegisteredAssistantTool
+const asRegisteredTool = <Args>(
+  tool: AssistantTool<Args>
+): RegisteredAssistantTool => tool as RegisteredAssistantTool
 
 export const assistantToolRegistry: readonly RegisteredAssistantTool[] = [
   asRegisteredTool(searchCatalogTool),

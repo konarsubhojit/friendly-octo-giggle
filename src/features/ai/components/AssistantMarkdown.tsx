@@ -9,7 +9,8 @@ interface AssistantMarkdownProps {
 
 const renderInline = (line: string, keyPrefix: string): JSX.Element[] => {
   const parts: JSX.Element[] = []
-  const pattern = /(\[[^\]]+\]\((\/products\/[^)]+)\)|\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g
+  const pattern =
+    /(\[[^\]]+\]\((\/products\/[^)]+)\)|\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g
   let lastIndex = 0
   let match: RegExpExecArray | null = pattern.exec(line)
   let i = 0

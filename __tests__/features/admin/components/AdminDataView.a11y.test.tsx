@@ -56,7 +56,9 @@ describe('AdminDataView accessibility', () => {
       screen.getByRole('button', { name: /mark shipped/i })
     ).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: /remove status filter/i }))
+    fireEvent.click(
+      screen.getByRole('button', { name: /remove status filter/i })
+    )
     fireEvent.click(screen.getByRole('button', { name: /clear all/i }))
 
     expect(onRemoveFilter).toHaveBeenCalledWith('status')

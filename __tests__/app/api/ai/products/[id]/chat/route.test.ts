@@ -87,7 +87,11 @@ vi.mock('@/lib/ai/gateway', () => ({
       systemInstruction: string,
       options?: {
         functionCallingMode?: string
-        tools?: readonly { name: string; description: string; parametersJsonSchema?: unknown }[]
+        tools?: readonly {
+          name: string
+          description: string
+          parametersJsonSchema?: unknown
+        }[]
       }
     ) => ({
       systemInstruction,
@@ -95,7 +99,9 @@ vi.mock('@/lib/ai/gateway', () => ({
       toolConfig: options?.functionCallingMode
         ? { functionCallingConfig: { mode: options.functionCallingMode } }
         : undefined,
-      tools: options?.tools ? [{ functionDeclarations: [...options.tools] }] : undefined,
+      tools: options?.tools
+        ? [{ functionDeclarations: [...options.tools] }]
+        : undefined,
     })
   ),
 }))
@@ -917,7 +923,9 @@ describe('POST /api/ai/products/[id]/chat', () => {
     await response.text()
     await Promise.all(waitUntilMock.mock.calls.map(([promise]) => promise))
     expect(redisSetMock).toHaveBeenCalledWith(
-      expect.stringContaining('ai:chat:history:user-123:product:abc1234:thread-1'),
+      expect.stringContaining(
+        'ai:chat:history:user-123:product:abc1234:thread-1'
+      ),
       expect.any(String),
       expect.objectContaining({ ex: expect.any(Number) })
     )

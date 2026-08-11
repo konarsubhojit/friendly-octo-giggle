@@ -95,5 +95,9 @@ export type AdminActivityQuery = z.infer<typeof AdminActivityQuerySchema>
 export type SavedViewCriteria = z.infer<typeof SavedViewCriteriaSchema>
 export type SavedViewSort = z.infer<typeof SavedViewSortSchema>
 export type AdminResourceKey = z.infer<typeof AdminResourceSchema>
-export type CreateSavedViewRequest = z.infer<typeof CreateSavedViewRequestSchema>
-export type RenameSavedViewRequest = z.infer<typeof RenameSavedViewRequestSchema>
+export type CreateSavedViewRequest = z.infer<
+  typeof CreateSavedViewRequestSchema
+>
+export type RenameSavedViewRequest = z.infer<
+  typeof RenameSavedViewRequestSchema
+>

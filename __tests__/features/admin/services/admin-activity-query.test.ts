@@ -19,8 +19,6 @@ describe('normalizeActivityChanges', () => {
       normalizeActivityChanges({
         status: { before: 'PROCESSING', after: 'SHIPPED' },
       })
-    ).toEqual([
-      { field: 'status', before: 'PROCESSING', after: 'SHIPPED' },
-    ])
+    ).toEqual([{ field: 'status', before: 'PROCESSING', after: 'SHIPPED' }])
   })
 })

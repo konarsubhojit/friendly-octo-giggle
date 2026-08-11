@@ -39,6 +39,7 @@ baseline gap #2 for the anchored surface too, at no cost to existing behavior wh
 questions stay about the anchor product alone.
 
 **Unchanged**:
+
 - 404 if the product itself does not exist (`db.products.findById(id)` check happens first,
   before any tool is offered).
 - `MAX_CONVERSATION_TURNS`, quota enforcement, `detectBlockedPrompt`, streaming shape, and

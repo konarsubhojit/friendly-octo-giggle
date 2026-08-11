@@ -1,6 +1,9 @@
 import { and, eq, inArray, isNull, or } from 'drizzle-orm'
 import { primaryDrizzleDb } from '@/lib/db'
-import { adminSavedViews, type AdminSavedViewCriteriaRecord } from '@/lib/schema'
+import {
+  adminSavedViews,
+  type AdminSavedViewCriteriaRecord,
+} from '@/lib/schema'
 import type { AdminPermission } from '@/lib/constants/roles'
 import type {
   AdminResourceKey,

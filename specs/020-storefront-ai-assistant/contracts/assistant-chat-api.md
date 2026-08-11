@@ -24,6 +24,7 @@ Content-Type: application/json
 ```
 
 Validation identical to the existing `ChatRequestSchema`:
+
 - Each `messages[i].text` MUST be 1–`MAX_INPUT_MESSAGE_CHARS` (500) characters after
   sanitization (`sanitizePromptText`); otherwise `400`.
 - `messages` MUST have at least one entry; otherwise `400`.
@@ -70,29 +71,34 @@ Identical shape to the anchored route:
 
 ## Guardrails asserted by this contract (traceable to spec Functional Requirements)
 
-| Guarantee                                                                 | FR      |
-| -------------------------------------------------------------------------- | ------- |
-| Every product claim is grounded in a tool result; no invented products      | FR-002  |
-| Soft-deleted/unpublished products never appear in tool results              | FR-003  |
-| Only the four declared tools are ever offered to the model                  | FR-004  |
-| Every tool argument is Zod-validated before execution                       | FR-005  |
-| `get_order_status` requires authentication and is scoped server-side        | FR-006  |
-| No tool performs a mutation                                                 | FR-007  |
-| No response discloses an exact stock count                                  | FR-008  |
-| Guest conversations are never persisted; guest id stays one-way hashed      | FR-009  |
-| Retrieved content is treated as untrusted and cannot alter instructions     | FR-010  |
-| Tool-calling depth and per-turn tokens are bounded                          | FR-011  |
-| Semantic retrieval falls back to Upstash then DB search                     | FR-012  |
-| AI-provider unavailability degrades to conventional search, no error page   | FR-013  |
-| Strict `/api/ai` rate limiting applies (via existing proxy prefix match)    | FR-014  |
-| Logs/metrics exclude raw guest ids, credentials, and prompt PII             | FR-015  |
-| Model config is Edge-Config-driven with hardcoded defaults                  | FR-016  |
+| Guarantee                                                                 | FR     |
+| ------------------------------------------------------------------------- | ------ |
+| Every product claim is grounded in a tool result; no invented products    | FR-002 |
+| Soft-deleted/unpublished products never appear in tool results            | FR-003 |
+| Only the four declared tools are ever offered to the model                | FR-004 |
+| Every tool argument is Zod-validated before execution                     | FR-005 |
+| `get_order_status` requires authentication and is scoped server-side      | FR-006 |
+| No tool performs a mutation                                               | FR-007 |
+| No response discloses an exact stock count                                | FR-008 |
+| Guest conversations are never persisted; guest id stays one-way hashed    | FR-009 |
+| Retrieved content is treated as untrusted and cannot alter instructions   | FR-010 |
+| Tool-calling depth and per-turn tokens are bounded                        | FR-011 |
+| Semantic retrieval falls back to Upstash then DB search                   | FR-012 |
+| AI-provider unavailability degrades to conventional search, no error page | FR-013 |
+| Strict `/api/ai` rate limiting applies (via existing proxy prefix match)  | FR-014 |
+| Logs/metrics exclude raw guest ids, credentials, and prompt PII           | FR-015 |
+| Model config is Edge-Config-driven with hardcoded defaults                | FR-016 |
 
 ## Example exchange
 
 Request:
+
 ```json
-{ "messages": [{ "role": "user", "text": "I need a waterproof jacket under 3000 rupees" }] }
+{
+  "messages": [
+    { "role": "user", "text": "I need a waterproof jacket under 3000 rupees" }
+  ]
+}
 ```
 
 Tool calls the model may issue: `search_catalog({ query: "waterproof jacket", maxPriceInDisplayCurrency: 3000 })`.

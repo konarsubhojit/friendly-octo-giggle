@@ -982,9 +982,7 @@ export const adminSavedViews = pgTable(
     }),
     resource: text('resource').notNull(),
     name: text('name').notNull(),
-    criteria: json('criteria')
-      .$type<AdminSavedViewCriteriaRecord>()
-      .notNull(),
+    criteria: json('criteria').$type<AdminSavedViewCriteriaRecord>().notNull(),
     isBuiltIn: boolean('isBuiltIn').notNull().default(false),
     requiredPermission: text('requiredPermission').$type<AdminPermission>(),
     createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
@@ -1579,12 +1577,15 @@ export const adminAuditLogsRelations = relations(adminAuditLogs, ({ one }) => ({
   }),
 }))
 
-export const adminSavedViewsRelations = relations(adminSavedViews, ({ one }) => ({
-  owner: one(users, {
-    fields: [adminSavedViews.ownerId],
-    references: [users.id],
-  }),
-}))
+export const adminSavedViewsRelations = relations(
+  adminSavedViews,
+  ({ one }) => ({
+    owner: one(users, {
+      fields: [adminSavedViews.ownerId],
+      references: [users.id],
+    }),
+  })
+)
 
 export const categoriesRelations = relations(categories, () => ({}))
 

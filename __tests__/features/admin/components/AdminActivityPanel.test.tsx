@@ -13,7 +13,9 @@ describe('AdminActivityPanel', () => {
             entityId: 'ORD123',
             action: 'status_change',
             actor: { userId: 'support-1', role: 'SUPPORT' },
-            changes: [{ field: 'status', before: 'PROCESSING', after: 'SHIPPED' }],
+            changes: [
+              { field: 'status', before: 'PROCESSING', after: 'SHIPPED' },
+            ],
             createdAt: '2026-01-01T00:00:00.000Z',
           },
         ]}
@@ -39,7 +41,9 @@ describe('AdminActivityPanel', () => {
             entityId: 'ORD123',
             action: 'status_change',
             actor: { userId: 'support-1', role: 'SUPPORT' },
-            changes: [{ field: 'status', before: 'PROCESSING', after: 'SHIPPED' }],
+            changes: [
+              { field: 'status', before: 'PROCESSING', after: 'SHIPPED' },
+            ],
             createdAt: '2026-01-01T00:00:00.000Z',
           },
         ]}

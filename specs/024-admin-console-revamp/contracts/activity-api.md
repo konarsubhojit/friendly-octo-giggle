@@ -10,7 +10,7 @@ shape (Principle VIII).
 - `GET` requires the viewer to hold the permission gating the activity
   surface — reusing `system:manage` per the spec's Assumptions ("this
   feature adds no new permission … reuses an existing permission where one
-  fits — `system:manage` being the closest fit") for the *global* view.
+  fits — `system:manage` being the closest fit") for the _global_ view.
 - When `entity` + `entityId` query params are present (per-entity panel
   mode), the required permission is the read permission for that entity
   type instead (e.g. `orders:read` for `entity=order`), matching FR-D09

@@ -64,7 +64,10 @@ export const useSavedViews = (resource: AdminResourceKey) => {
   }, [refresh])
 
   const create = useCallback(
-    async (input: { readonly name: string; readonly criteria: SavedViewCriteria }) => {
+    async (input: {
+      readonly name: string
+      readonly criteria: SavedViewCriteria
+    }) => {
       const response = await apiClient.post<SavedViewResponse>(
         '/api/admin/saved-views',
         {
@@ -84,9 +87,7 @@ export const useSavedViews = (resource: AdminResourceKey) => {
       { name }
     )
     setViews((current) =>
-      current.map((view) =>
-        view.id === id ? response.data.view : view
-      )
+      current.map((view) => (view.id === id ? response.data.view : view))
     )
     return response.data.view
   }, [])

@@ -20,7 +20,7 @@ FR-A17–FR-A21.
 
 Returns the views visible to the current viewer for that resource: their own
 private views plus built-in views gated by `requiredPermission` (FR-A21 —
-evaluated against the viewer's *current* permissions at request time, not
+evaluated against the viewer's _current_ permissions at request time, not
 permissions at creation time).
 
 ```ts
@@ -29,7 +29,11 @@ interface SavedViewsListResponse {
     id: string
     resource: string
     name: string
-    criteria: { search?: string; filters?: Record<string, unknown>; sort?: { field: string; direction: 'asc' | 'desc' } }
+    criteria: {
+      search?: string
+      filters?: Record<string, unknown>
+      sort?: { field: string; direction: 'asc' | 'desc' }
+    }
     isBuiltIn: boolean
     owned: boolean // true only when ownerId === currentUserId
   }>
@@ -47,7 +51,11 @@ post-filtering, so a bug can't leak rows through an unfiltered response
 interface CreateSavedViewRequest {
   resource: string
   name: string
-  criteria: { search?: string; filters?: Record<string, unknown>; sort?: { field: string; direction: 'asc' | 'desc' } }
+  criteria: {
+    search?: string
+    filters?: Record<string, unknown>
+    sort?: { field: string; direction: 'asc' | 'desc' }
+  }
 }
 ```
 
