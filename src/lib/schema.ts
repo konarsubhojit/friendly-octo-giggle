@@ -22,7 +22,7 @@ import { generateShortId, generateOrderId } from './short-id'
 import { MONEY_DECIMAL_PLACES } from './money'
 import { PAYMENT_PROVIDERS } from './payments/providers'
 import { SHIPPING_METHODS } from './shipping/methods'
-import { USER_ROLES } from './constants/roles'
+import { USER_ROLES, type AdminPermission } from './constants/roles'
 import { RETURN_STATUSES, RETURN_REASONS } from './constants/returns'
 
 // ─── Money columns ───────────────────────────────────────
@@ -953,6 +953,46 @@ export const adminAuditLogs = pgTable(
     index('AdminAuditLog_userId_idx').on(t.userId),
     index('AdminAuditLog_entity_idx').on(t.entity),
     index('AdminAuditLog_createdAt_idx').on(t.createdAt),
+    index('AdminAuditLog_entity_entityId_createdAt_idx').on(
+      t.entity,
+      t.entityId,
+      t.createdAt
+    ),
+    index('AdminAuditLog_action_createdAt_idx').on(t.action, t.createdAt),
+  ]
+)
+
+export interface AdminSavedViewCriteriaRecord {
+  readonly search?: string
+  readonly filters?: Record<string, unknown>
+  readonly sort?: {
+    readonly field: string
+    readonly direction: 'asc' | 'desc'
+  }
+}
+
+export const adminSavedViews = pgTable(
+  'AdminSavedView',
+  {
+    id: varchar('id', { length: 7 })
+      .primaryKey()
+      .$defaultFn(() => generateShortId()),
+    ownerId: text('ownerId').references(() => users.id, {
+      onDelete: 'cascade',
+    }),
+    resource: text('resource').notNull(),
+    name: text('name').notNull(),
+    criteria: json('criteria')
+      .$type<AdminSavedViewCriteriaRecord>()
+      .notNull(),
+    isBuiltIn: boolean('isBuiltIn').notNull().default(false),
+    requiredPermission: text('requiredPermission').$type<AdminPermission>(),
+    createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+    updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
+  },
+  (t) => [
+    index('AdminSavedView_ownerId_resource_idx').on(t.ownerId, t.resource),
+    index('AdminSavedView_resource_isBuiltIn_idx').on(t.resource, t.isBuiltIn),
   ]
 )
 
@@ -1212,6 +1252,7 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   wishlists: many(wishlists),
   reviewVotes: many(reviewVotes),
   adminAuditLogs: many(adminAuditLogs),
+  adminSavedViews: many(adminSavedViews),
   notificationPreference: one(notificationPreferences),
   pushSubscriptions: many(pushSubscriptions),
   abandonedCartReminders: many(abandonedCartReminders),
@@ -1534,6 +1575,13 @@ export const productSharesRelations = relations(productShares, ({ one }) => ({
 export const adminAuditLogsRelations = relations(adminAuditLogs, ({ one }) => ({
   user: one(users, {
     fields: [adminAuditLogs.userId],
+    references: [users.id],
+  }),
+}))
+
+export const adminSavedViewsRelations = relations(adminSavedViews, ({ one }) => ({
+  owner: one(users, {
+    fields: [adminSavedViews.ownerId],
     references: [users.id],
   }),
 }))

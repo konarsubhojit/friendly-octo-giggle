@@ -25,8 +25,8 @@ import { AdminDataView } from '@/features/admin/components/AdminDataView'
 const ProductFormModal = lazy(
   () => import('@/features/admin/components/ProductFormModal')
 )
-const DeleteConfirmModal = lazy(
-  () => import('@/features/admin/components/DeleteConfirmModal')
+const AdminConfirmDialog = lazy(
+  () => import('@/features/admin/components/AdminConfirmDialog')
 )
 
 const PAGE_SIZE = 20
@@ -187,7 +187,9 @@ export default function ProductsManagement() {
   }
 
   const confirmDelete = async () => {
-    if (!productToDelete || deleting) return
+    if (!productToDelete || deleting) {
+      return { status: 'failure', reason: 'No product selected.' } as const
+    }
     setDeleting(true)
     try {
       const res = await fetch(`/api/admin/products/${productToDelete}`, {
@@ -199,14 +201,14 @@ export default function ProductsManagement() {
       }
       toast.success('Product deleted successfully')
       setProducts((prev) => prev.filter((p) => p.id !== productToDelete))
-      setShowDeleteModal(false)
-      setProductToDelete(null)
+      return { status: 'success' } as const
     } catch (err) {
-      toast.error(
+      const reason =
         err instanceof Error
           ? err.message
           : 'Something went wrong. Please try again.'
-      )
+      toast.error(reason)
+      return { status: 'failure', reason } as const
     } finally {
       setDeleting(false)
     }
@@ -418,10 +420,14 @@ export default function ProductsManagement() {
             </div>
           }
         >
-          <DeleteConfirmModal
+          <AdminConfirmDialog
+            open={showDeleteModal}
+            onClose={cancelDelete}
+            title="Delete product"
+            description={`Delete product ${productToDelete ?? ''} from the catalogue.`}
+            reversible={false}
+            confirmLabel="Delete product"
             onConfirm={confirmDelete}
-            onCancel={cancelDelete}
-            loading={deleting}
           />
         </Suspense>
       )}

@@ -113,7 +113,7 @@ const NAV_GROUPS: readonly NavGroup[] = [
  * Drop nav entries the current role cannot use, and any group left empty, so
  * staff never see a link that would bounce them back to the dashboard.
  */
-function getVisibleNavGroups(
+export function getVisibleNavGroups(
   permissions: readonly AdminPermission[]
 ): NavGroup[] {
   return NAV_GROUPS.map((group) => ({
@@ -124,7 +124,7 @@ function getVisibleNavGroups(
   })).filter((group) => Boolean(group.href) || (group.items?.length ?? 0) > 0)
 }
 
-function getAllNavItems(
+export function getAllNavItems(
   groups: readonly NavGroup[],
   failedEmailCount: number
 ): NavItem[] {
