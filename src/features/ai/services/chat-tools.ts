@@ -8,17 +8,28 @@ import {
 } from './chat-tools-catalog'
 import { getOrderStatusTool } from './chat-tools-orders'
 
-export const assistantToolRegistry: readonly AssistantTool<any>[] = [
-  searchCatalogTool,
-  getProductDetailsTool,
-  compareProductsTool,
-  getOrderStatusTool,
+type RegisteredAssistantTool = {
+  name: AssistantToolName
+  description: string
+  argsSchema: z.ZodType<unknown>
+  requiresAuth: boolean
+  execute: (args: unknown, ctx: ToolExecutionContext) => Promise<string>
+}
+
+const asRegisteredTool = <Args>(tool: AssistantTool<Args>): RegisteredAssistantTool =>
+  tool as RegisteredAssistantTool
+
+export const assistantToolRegistry: readonly RegisteredAssistantTool[] = [
+  asRegisteredTool(searchCatalogTool),
+  asRegisteredTool(getProductDetailsTool),
+  asRegisteredTool(compareProductsTool),
+  asRegisteredTool(getOrderStatusTool),
 ]
 
 export const getAssistantTool = (
   name: string,
-  registry: readonly AssistantTool<any>[] = assistantToolRegistry
-): AssistantTool<any> | undefined =>
+  registry: readonly RegisteredAssistantTool[] = assistantToolRegistry
+): RegisteredAssistantTool | undefined =>
   registry.find((tool) => tool.name === name)
 
 const formatValidationError = (toolName: string, error: z.ZodError): string => {
@@ -35,7 +46,7 @@ const formatValidationError = (toolName: string, error: z.ZodError): string => {
 }
 
 export const buildFunctionDeclarations = (
-  registry: readonly AssistantTool<any>[] = assistantToolRegistry
+  registry: readonly RegisteredAssistantTool[] = assistantToolRegistry
 ): FunctionDeclaration[] =>
   registry.map((tool) => ({
     name: tool.name,
@@ -47,7 +58,7 @@ export const dispatchToolCall = async (
   name: AssistantToolName | string,
   rawArgs: unknown,
   ctx: ToolExecutionContext,
-  registry: readonly AssistantTool<any>[] = assistantToolRegistry
+  registry: readonly RegisteredAssistantTool[] = assistantToolRegistry
 ): Promise<string> => {
   const tool = getAssistantTool(name, registry)
   if (!tool) {

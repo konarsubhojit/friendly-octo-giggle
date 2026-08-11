@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { getCachedAiResponse } from '@/lib/ai/ai-cache'
 import { buildGenerateConfig, genAI, getAiConfigCached } from '@/lib/ai/gateway'
 import { apiError } from '@/lib/api-utils'
-import { formatPriceForCurrency } from '@/lib/currency'
+import { formatPriceForCurrency, type CurrencyCode } from '@/lib/currency'
 import { logBusinessEvent } from '@/lib/logger'
 import {
   ADVANCED_DAILY_REQUEST_QUOTA,
@@ -31,7 +31,17 @@ import type { AssistantSurface, AssistantTool, ChatMessage } from './chat-types'
 export type RunChatEngineParams = {
   request: NextRequest
   surface: AssistantSurface
-  systemPrompt: string
+  systemPrompt:
+    | string
+    | ((params: {
+        readonly anchorProductId?: string
+        readonly currencyCode: CurrencyCode
+        readonly formatPrice: (priceInINR: number) => string
+        readonly identity: { userId: string; isAuthenticated: boolean }
+        readonly intents: ReturnType<typeof detectIntentSignals>
+        readonly lastUserText: string
+        readonly surface: AssistantSurface
+      }) => Promise<string> | string)
   anchorProductId?: string
   toolRegistry?: readonly AssistantTool<unknown>[]
 }
@@ -69,9 +79,8 @@ const buildChatResponse = (
 const createToolExecutionContext = (params: {
   userId: string
   isAuthenticated: boolean
-  currencyCode: ReturnType<typeof resolveCurrencyForUser> extends Promise<infer T>
-    ? T
-    : never
+  currencyCode: CurrencyCode
+  formatPrice: (priceInINR: number) => string
   anchorProductId?: string
 }) => ({
   identity: {
@@ -79,8 +88,7 @@ const createToolExecutionContext = (params: {
     isAuthenticated: params.isAuthenticated,
   },
   currencyCode: params.currencyCode,
-  formatPrice: (priceInINR: number) =>
-    formatPriceForCurrency(priceInINR, params.currencyCode),
+  formatPrice: params.formatPrice,
   anchorProductId: params.anchorProductId,
 })
 
@@ -230,6 +238,8 @@ export const runChatEngine = async ({
   const currencyCode = isAuthenticated
     ? await resolveCurrencyForUser(userId)
     : 'INR'
+  const formatPrice = (priceInINR: number) =>
+    formatPriceForCurrency(priceInINR, currencyCode)
 
   const aiConfig = await getAiConfigCached()
   if (aiConfig.enabled === false) {
@@ -240,6 +250,18 @@ export const runChatEngine = async ({
   }
 
   const chatModel = aiConfig.chatModel
+  const resolvedSystemPrompt =
+    typeof systemPrompt === 'string'
+      ? systemPrompt
+      : await systemPrompt({
+          anchorProductId,
+          currencyCode,
+          formatPrice,
+          identity,
+          intents,
+          lastUserText,
+          surface,
+        })
   const trimmed = allMessages.slice(
     -Math.min(aiConfig.maxHistoryMessages, MAX_CONVERSATION_TURNS * 2)
   )
@@ -290,7 +312,7 @@ export const runChatEngine = async ({
   const finalText = await runToolCallingLoop({
     chatModel,
     contents: toGoogleContents(trimmed),
-    systemPrompt,
+    systemPrompt: resolvedSystemPrompt,
     maxOutputTokens: Math.min(aiConfig.maxResponseTokens, MAX_OUTPUT_TOKENS),
     maxToolCalls: aiConfig.maxToolCallsPerTurn ?? MAX_TOOL_CALLS_PER_TURN,
     toolRegistry,
@@ -298,6 +320,7 @@ export const runChatEngine = async ({
       userId,
       isAuthenticated,
       currencyCode,
+      formatPrice,
       anchorProductId,
     }),
     surface,

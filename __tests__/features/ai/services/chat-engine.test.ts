@@ -43,7 +43,14 @@ vi.mock('@/lib/ai/gateway', () => ({
     })
   ),
   buildGenerateConfig: vi.fn(
-    (_config, systemInstruction: string, options?: { functionCallingMode?: string }) => ({
+    (
+      _config,
+      systemInstruction: string,
+      options?: {
+        functionCallingMode?: string
+        tools?: readonly { name: string; description: string; parametersJsonSchema?: unknown }[]
+      }
+    ) => ({
       systemInstruction,
       toolConfig: options?.functionCallingMode
         ? { functionCallingConfig: { mode: options.functionCallingMode } }
@@ -127,10 +134,10 @@ describe('chat-engine', () => {
   it('stops issuing tool calls once the configured maximum is reached', async () => {
     generateContentMock
       .mockResolvedValueOnce({
-        functionCalls: [{ id: 'call-1', name: 'test_tool', args: { query: 'red bag' } }],
+      functionCalls: [{ id: 'call-1', name: 'search_catalog', args: { query: 'red bag' } }],
       })
       .mockResolvedValueOnce({
-        functionCalls: [{ id: 'call-2', name: 'test_tool', args: { query: 'red bag' } }],
+      functionCalls: [{ id: 'call-2', name: 'search_catalog', args: { query: 'red bag' } }],
         text: 'Here is the best answer from the first lookup.',
       })
 
@@ -145,7 +152,7 @@ describe('chat-engine', () => {
       systemPrompt: 'System prompt',
       toolRegistry: [
         {
-          name: 'test_tool',
+          name: 'search_catalog',
           description: 'A test tool',
           argsSchema: (await import('zod')).z.object({
             query: (await import('zod')).z.string(),
@@ -167,7 +174,7 @@ describe('chat-engine', () => {
     expect(logBusinessEventMock).toHaveBeenCalledWith(
       expect.objectContaining({
         event: 'ai_chat_tool_call',
-        details: expect.objectContaining({ toolName: 'test_tool', callCount: 1 }),
+        details: expect.objectContaining({ toolName: 'search_catalog', callCount: 1 }),
       })
     )
   })

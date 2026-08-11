@@ -32,7 +32,7 @@ const redisGetMock = vi.hoisted(() => vi.fn())
 const redisSetMock = vi.hoisted(() => vi.fn())
 const waitUntilMock = vi.hoisted(() => vi.fn())
 
-const mockStreamChunks = vi.hoisted(() => vi.fn())
+const generateContentMock = vi.hoisted(() => vi.fn())
 
 vi.mock('@/lib/db', () => ({
   db: {
@@ -62,7 +62,7 @@ vi.mock('@/lib/db', () => ({
 vi.mock('@/lib/ai/gateway', () => ({
   genAI: {
     models: {
-      generateContentStream: mockStreamChunks,
+      generateContent: generateContentMock,
     },
   },
   getAiConfigCached: vi.fn(() =>
@@ -81,10 +81,23 @@ vi.mock('@/lib/ai/gateway', () => ({
       includeThoughts: false,
     })
   ),
-  buildGenerateConfig: vi.fn((_config, systemInstruction: string) => ({
-    systemInstruction,
-    maxOutputTokens: 512,
-  })),
+  buildGenerateConfig: vi.fn(
+    (
+      _config,
+      systemInstruction: string,
+      options?: {
+        functionCallingMode?: string
+        tools?: readonly { name: string; description: string; parametersJsonSchema?: unknown }[]
+      }
+    ) => ({
+      systemInstruction,
+      maxOutputTokens: 512,
+      toolConfig: options?.functionCallingMode
+        ? { functionCallingConfig: { mode: options.functionCallingMode } }
+        : undefined,
+      tools: options?.tools ? [{ functionDeclarations: [...options.tools] }] : undefined,
+    })
+  ),
 }))
 
 vi.mock('@/lib/ai/product-rag', () => ({
@@ -171,12 +184,6 @@ const validBody = {
   messages: [{ role: 'user', text: 'Is this product in stock?' }],
 }
 
-const makeAsyncGenerator = async function* (chunks: string[]) {
-  for (const text of chunks) {
-    yield { text }
-  }
-}
-
 describe('POST /api/ai/products/[id]/chat', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -194,7 +201,7 @@ describe('POST /api/ai/products/[id]/chat', () => {
     vi.mocked(drizzleDb.query.orders.findFirst).mockResolvedValue(null as never)
     vi.mocked(drizzleDb.query.orders.findMany).mockResolvedValue([] as never)
     buildProductContextMock.mockClear()
-    mockStreamChunks.mockReturnValue(makeAsyncGenerator(['Hello', ' world']))
+    generateContentMock.mockResolvedValue({ text: 'Hello world' })
   })
 
   it('supports guest users when not authenticated', async () => {
@@ -250,6 +257,49 @@ describe('POST /api/ai/products/[id]/chat', () => {
     expect(response.status).toBe(400)
   })
 
+  it('returns 400 for malformed JSON', async () => {
+    vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
+    vi.mocked(auth).mockResolvedValue({ user: { id: 'user-123' } } as never)
+
+    const request = new NextRequest(
+      'http://localhost/api/ai/products/abc1234/chat',
+      { method: 'POST', body: '{"messages":' }
+    )
+
+    const response = await POST(request, {
+      params: Promise.resolve({ id: 'abc1234' }),
+    })
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual(
+      expect.objectContaining({ error: 'Invalid JSON body' })
+    )
+  })
+
+  it('returns 400 when the request body is too large', async () => {
+    vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
+    vi.mocked(auth).mockResolvedValue({ user: { id: 'user-123' } } as never)
+
+    const request = new NextRequest(
+      'http://localhost/api/ai/products/abc1234/chat',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          messages: [{ role: 'user', text: 'a'.repeat(70_000) }],
+        }),
+      }
+    )
+
+    const response = await POST(request, {
+      params: Promise.resolve({ id: 'abc1234' }),
+    })
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual(
+      expect.objectContaining({ error: 'Request body too large' })
+    )
+  })
+
   it('returns 503 when AI is disabled', async () => {
     vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
     vi.mocked(auth).mockResolvedValue({ user: { id: 'user-123' } } as never)
@@ -280,7 +330,7 @@ describe('POST /api/ai/products/[id]/chat', () => {
     expect(response.status).toBe(503)
     const data = await response.json()
     expect(data.error).toBe('AI features are currently unavailable')
-    expect(mockStreamChunks).not.toHaveBeenCalled()
+    expect(generateContentMock).not.toHaveBeenCalled()
   })
 
   it('streams plain-text response on cache miss', async () => {
@@ -308,7 +358,7 @@ describe('POST /api/ai/products/[id]/chat', () => {
       expect.objectContaining({
         event: 'ai_chat_request',
         success: true,
-        details: expect.objectContaining({ productId: 'abc1234' }),
+        details: expect.objectContaining({ surface: 'product:abc1234' }),
       })
     )
     expect(logBusinessEvent).toHaveBeenCalledWith(
@@ -316,7 +366,7 @@ describe('POST /api/ai/products/[id]/chat', () => {
         event: 'ai_chat_usage',
         success: true,
         details: expect.objectContaining({
-          productId: 'abc1234',
+          surface: 'product:abc1234',
           cached: false,
         }),
       })
@@ -341,7 +391,7 @@ describe('POST /api/ai/products/[id]/chat', () => {
     expect(response.status).toBe(200)
     const data = await response.json()
     expect(data.text).toBe('Cached AI response')
-    expect(mockStreamChunks).not.toHaveBeenCalled()
+    expect(generateContentMock).not.toHaveBeenCalled()
     expect(waitUntilMock).not.toHaveBeenCalled()
     expect(logBusinessEvent).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -369,7 +419,7 @@ describe('POST /api/ai/products/[id]/chat', () => {
     expect(waitUntilMock).toHaveBeenCalledWith(expect.any(Promise))
     await Promise.all(waitUntilMock.mock.calls.map(([promise]) => promise))
     expect(setCachedAiResponseMock).toHaveBeenCalledWith(
-      'abc1234',
+      'product:abc1234',
       'Is this product in stock?',
       'INR',
       'Hello world'
@@ -424,7 +474,7 @@ describe('POST /api/ai/products/[id]/chat', () => {
       })
     )
     expect(getCachedAiResponseMock).toHaveBeenCalledWith(
-      'abc1234',
+      'product:abc1234',
       'Is this product in stock?',
       'EUR'
     )
@@ -565,7 +615,7 @@ describe('POST /api/ai/products/[id]/chat', () => {
     })
 
     expect(response.status).toBe(429)
-    expect(mockStreamChunks).not.toHaveBeenCalled()
+    expect(generateContentMock).not.toHaveBeenCalled()
   })
 
   it('returns 429 when daily token quota is exhausted', async () => {
@@ -583,10 +633,10 @@ describe('POST /api/ai/products/[id]/chat', () => {
     })
 
     expect(response.status).toBe(429)
-    expect(mockStreamChunks).not.toHaveBeenCalled()
+    expect(generateContentMock).not.toHaveBeenCalled()
   })
 
-  it('adds commerce comparison context for product comparison questions', async () => {
+  it('enables comparison tools for product comparison questions', async () => {
     vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
     vi.mocked(auth).mockResolvedValue({ user: { id: 'user-123' } } as never)
     vi.mocked(drizzleDb.query.products.findMany).mockResolvedValue([
@@ -619,16 +669,23 @@ describe('POST /api/ai/products/[id]/chat', () => {
     })
 
     expect(response.status).toBe(200)
-    expect(mockStreamChunks).toHaveBeenCalledWith(
+    expect(generateContentMock).toHaveBeenCalledWith(
       expect.objectContaining({
         config: expect.objectContaining({
-          systemInstruction: expect.stringContaining('Comparison candidates:'),
+          tools: [
+            expect.objectContaining({
+              functionDeclarations: expect.arrayContaining([
+                expect.objectContaining({ name: 'compare_products' }),
+              ]),
+            }),
+          ],
         }),
       })
     )
+    expect(drizzleDb.query.products.findMany).not.toHaveBeenCalled()
   })
 
-  it('adds recommendation context for budget questions', async () => {
+  it('enables catalog search tools for budget questions', async () => {
     vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
     vi.mocked(auth).mockResolvedValue({ user: { id: 'user-123' } } as never)
     vi.mocked(drizzleDb.query.products.findMany).mockResolvedValue([
@@ -661,16 +718,23 @@ describe('POST /api/ai/products/[id]/chat', () => {
     })
 
     expect(response.status).toBe(200)
-    expect(mockStreamChunks).toHaveBeenCalledWith(
+    expect(generateContentMock).toHaveBeenCalledWith(
       expect.objectContaining({
         config: expect.objectContaining({
-          systemInstruction: expect.stringContaining('under'),
+          tools: [
+            expect.objectContaining({
+              functionDeclarations: expect.arrayContaining([
+                expect.objectContaining({ name: 'search_catalog' }),
+              ]),
+            }),
+          ],
         }),
       })
     )
+    expect(drizzleDb.query.products.findMany).not.toHaveBeenCalled()
   })
 
-  it('supports recommendation budget with postfix currency symbol', async () => {
+  it('supports budget questions with postfix currency symbols via tools', async () => {
     vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
     vi.mocked(auth).mockResolvedValue({ user: { id: 'user-123' } } as never)
     vi.mocked(drizzleDb.query.products.findMany).mockResolvedValue([] as never)
@@ -690,13 +754,20 @@ describe('POST /api/ai/products/[id]/chat', () => {
     })
 
     expect(response.status).toBe(200)
-    expect(mockStreamChunks).toHaveBeenCalledWith(
+    expect(generateContentMock).toHaveBeenCalledWith(
       expect.objectContaining({
         config: expect.objectContaining({
-          systemInstruction: expect.stringContaining('under'),
+          tools: [
+            expect.objectContaining({
+              functionDeclarations: expect.arrayContaining([
+                expect.objectContaining({ name: 'search_catalog' }),
+              ]),
+            }),
+          ],
         }),
       })
     )
+    expect(drizzleDb.query.products.findMany).not.toHaveBeenCalled()
   })
 
   it('adds review summary and delivery estimate context when requested', async () => {
@@ -729,7 +800,7 @@ describe('POST /api/ai/products/[id]/chat', () => {
 
     expect(response.status).toBe(200)
     expect(getShippingConfig).toHaveBeenCalled()
-    expect(mockStreamChunks).toHaveBeenCalledWith(
+    expect(generateContentMock).toHaveBeenCalledWith(
       expect.objectContaining({
         config: expect.objectContaining({
           systemInstruction: expect.stringContaining('Review summary:'),
@@ -738,7 +809,7 @@ describe('POST /api/ai/products/[id]/chat', () => {
     )
   })
 
-  it('adds authenticated order status context for order-tracking questions', async () => {
+  it('enables authenticated order-status tools for order-tracking questions', async () => {
     vi.mocked(db.products.findById).mockResolvedValue(mockProduct)
     vi.mocked(auth).mockResolvedValue({ user: { id: 'user-123' } } as never)
     vi.mocked(drizzleDb.query.orders.findMany).mockResolvedValue([
@@ -766,13 +837,20 @@ describe('POST /api/ai/products/[id]/chat', () => {
     })
 
     expect(response.status).toBe(200)
-    expect(mockStreamChunks).toHaveBeenCalledWith(
+    expect(generateContentMock).toHaveBeenCalledWith(
       expect.objectContaining({
         config: expect.objectContaining({
-          systemInstruction: expect.stringContaining('Recent order status:'),
+          tools: [
+            expect.objectContaining({
+              functionDeclarations: expect.arrayContaining([
+                expect.objectContaining({ name: 'get_order_status' }),
+              ]),
+            }),
+          ],
         }),
       })
     )
+    expect(drizzleDb.query.orders.findMany).not.toHaveBeenCalled()
   })
 
   it('returns 503 when advanced features are disabled', async () => {
@@ -808,7 +886,7 @@ describe('POST /api/ai/products/[id]/chat', () => {
     })
 
     expect(response.status).toBe(503)
-    expect(mockStreamChunks).not.toHaveBeenCalled()
+    expect(generateContentMock).not.toHaveBeenCalled()
   })
 
   it('loads and persists chat history when persistHistory is enabled', async () => {
@@ -839,7 +917,7 @@ describe('POST /api/ai/products/[id]/chat', () => {
     await response.text()
     await Promise.all(waitUntilMock.mock.calls.map(([promise]) => promise))
     expect(redisSetMock).toHaveBeenCalledWith(
-      expect.stringContaining('ai:chat:history:user-123:abc1234:thread-1'),
+      expect.stringContaining('ai:chat:history:user-123:product:abc1234:thread-1'),
       expect.any(String),
       expect.objectContaining({ ex: expect.any(Number) })
     )

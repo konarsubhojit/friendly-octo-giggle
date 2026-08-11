@@ -41,7 +41,14 @@ vi.mock('@/lib/ai/gateway', () => ({
     })
   ),
   buildGenerateConfig: vi.fn(
-    (_config, systemInstruction: string, options?: { functionCallingMode?: string }) => ({
+    (
+      _config,
+      systemInstruction: string,
+      options?: {
+        functionCallingMode?: string
+        tools?: readonly { name: string; description: string; parametersJsonSchema?: unknown }[]
+      }
+    ) => ({
       systemInstruction,
       toolConfig: options?.functionCallingMode
         ? { functionCallingConfig: { mode: options.functionCallingMode } }
@@ -109,6 +116,7 @@ vi.mock('@/features/ai/services/chat-stream', () => ({
   scheduleStreamSideEffects: scheduleStreamSideEffectsMock,
 }))
 
+import { getAiConfigCached } from '@/lib/ai/gateway'
 import { POST } from '@/app/api/ai/assistant/chat/route'
 
 describe('POST /api/ai/assistant/chat', () => {
@@ -146,6 +154,36 @@ describe('POST /api/ai/assistant/chat', () => {
     expect(response.status).toBe(400)
   })
 
+  it('returns 400 for malformed JSON', async () => {
+    const response = await POST(
+      new NextRequest('http://localhost/api/ai/assistant/chat', {
+        method: 'POST',
+        body: '{"messages":',
+      })
+    )
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual(
+      expect.objectContaining({ error: 'Invalid JSON body' })
+    )
+  })
+
+  it('returns 400 when the request body is too large', async () => {
+    const response = await POST(
+      new NextRequest('http://localhost/api/ai/assistant/chat', {
+        method: 'POST',
+        body: JSON.stringify({
+          messages: [{ role: 'user', text: 'a'.repeat(70_000) }],
+        }),
+      })
+    )
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual(
+      expect.objectContaining({ error: 'Request body too large' })
+    )
+  })
+
   it('streams a plain-text response on cache miss', async () => {
     const response = await POST(
       new NextRequest('http://localhost/api/ai/assistant/chat', {
@@ -176,5 +214,34 @@ describe('POST /api/ai/assistant/chat', () => {
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({ text: 'Cached answer', threadId: undefined })
     expect(generateContentMock).not.toHaveBeenCalled()
+  })
+
+  it('returns 503 when the AI provider is disabled', async () => {
+    vi.mocked(getAiConfigCached).mockResolvedValueOnce({
+      enabled: false,
+      chatModel: 'gemini-2.0-flash',
+      embeddingModel: 'text-embedding-004',
+      maxResponseTokens: 512,
+      maxContextChunks: 3,
+      maxHistoryMessages: 10,
+      advancedFeaturesEnabled: true,
+      dailyRequestQuota: 40,
+      dailyTokenQuota: 12000,
+      advancedFeatureDailyRequestQuota: 15,
+      maxToolCallsPerTurn: 3,
+      thinkingLevel: 'none',
+      includeThoughts: false,
+    })
+
+    const response = await POST(
+      new NextRequest('http://localhost/api/ai/assistant/chat', {
+        method: 'POST',
+        body: JSON.stringify({
+          messages: [{ role: 'user', text: 'Find me a travel bag' }],
+        }),
+      })
+    )
+
+    expect(response.status).toBe(503)
   })
 })

@@ -1,4 +1,5 @@
 import HeaderWrapper from '@/components/layout/HeaderWrapper'
+import StorefrontAssistant from '@/features/ai/components/StorefrontAssistant'
 
 /**
  * Layout for the public-facing storefront route group.
@@ -23,6 +24,7 @@ export default function PublicLayout({
       <main id="main-content" className="relative">
         {children}
       </main>
+      <StorefrontAssistant />
     </>
   )
 }

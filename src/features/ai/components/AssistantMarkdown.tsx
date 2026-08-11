@@ -28,7 +28,7 @@ const renderInline = (line: string, keyPrefix: string): JSX.Element[] => {
         parts.push(
           <Link
             key={`${keyPrefix}-l${i}`}
-            href={linkMatch[2]}
+            href={linkMatch[2] as `/products/${string}`}
             className="font-medium text-[var(--accent-warm)] underline underline-offset-2"
           >
             {linkMatch[1]}

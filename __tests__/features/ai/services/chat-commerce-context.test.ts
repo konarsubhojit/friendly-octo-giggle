@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const productsFindManyMock = vi.hoisted(() => vi.fn())
 const reviewsFindManyMock = vi.hoisted(() => vi.fn())
 const getShippingConfigMock = vi.hoisted(() => vi.fn())
 
