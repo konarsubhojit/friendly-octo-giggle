@@ -7,6 +7,7 @@ import {
   MAX_INPUT_MESSAGE_CHARS,
   PRODUCT_CONTEXT_MAX_CHARS,
   SUPPLEMENTAL_CONTEXT_MAX_CHARS,
+  TOOL_RESULT_MAX_CHARS,
 } from './chat-constants'
 
 const SYSTEM_PROMPT_LEAK_PATTERNS = [
@@ -61,6 +62,9 @@ export const sanitizePromptText = (
     .replace(/\s+/gu, ' ')
     .trim()
     .slice(0, maxChars)
+
+export const sanitizeToolResultText = (text: string): string =>
+  sanitizePromptText(text, TOOL_RESULT_MAX_CHARS)
 
 export const sanitizeAssistantOutput = (text: string): string =>
   SYSTEM_PROMPT_LEAK_PATTERNS.reduce(

@@ -11,6 +11,7 @@ import {
   TOOL_RESULT_MAX_CHARS,
 } from './chat-constants'
 import { toStockLabel } from './chat-commerce-context'
+import { sanitizeToolResultText } from './chat-prompt'
 import type { AssistantTool } from './chat-types'
 
 const MAX_QUERY_LENGTH = 200
@@ -23,9 +24,11 @@ const escapeLikeValue = (value: string): string =>
   value.replace(/[\\%_]/g, String.raw`\$&`)
 
 const truncateToolResult = (value: string): string =>
-  value.length > TOOL_RESULT_MAX_CHARS
-    ? `${value.slice(0, TOOL_RESULT_MAX_CHARS - 1)}…`
-    : value
+  sanitizeToolResultText(
+    value.length > TOOL_RESULT_MAX_CHARS
+      ? `${value.slice(0, TOOL_RESULT_MAX_CHARS - 1)}…`
+      : value
+  )
 
 type CatalogResultProduct = {
   id: string

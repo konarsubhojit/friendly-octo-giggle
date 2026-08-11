@@ -28,6 +28,7 @@ Key current-state points:
 - Redis, Upstash Search, MailerSend, Google SMTP, and Vercel Edge Config are all optional integrations; the codebase degrades gracefully when those environment variables are absent.
 - Email delivery is asynchronous and event-driven, with failed-email persistence plus retry cron jobs.
 - Exchange rates are refreshed on a schedule and cached by UTC date.
+- Storefront AI now has two entry points — product-anchored and catalog-wide — backed by one shared tool-calling engine so quota, cache, history, and privacy guardrails stay identical across both surfaces.
 
 ---
 
@@ -237,6 +238,23 @@ Authenticated order routes are dynamic and session-aware:
 3. `POST /api/orders` validates the caller and delegates to `lib/order-service`.
 4. Service code handles validation, pricing, stock checks, persistence, cache invalidation, and downstream events.
 
+### Storefront AI flow
+
+The AI assistant now runs through one shared orchestration layer in
+`src/features/ai/services/chat-engine.ts`:
+
+1. `POST /api/ai/products/[id]/chat` or `POST /api/ai/assistant/chat` parses the chat request, resolves the server-side identity, and derives a surface key (`product:{id}` or `catalog`).
+2. The engine loads persisted history only for authenticated callers, enforces the shared daily request/token/advanced-intent quotas, and checks the shared single-turn response cache under `ai:response:{surface}:{currency}:{normalizedQuestion}`.
+3. The model receives a bounded set of function declarations from `chat-tools.ts`: `search_catalog`, `get_product_details`, `compare_products`, and `get_order_status`.
+4. Tool calls execute server-side with Zod-validated arguments. `get_order_status` is dispatcher-enforced: guests still see the tool advertised so the model can ask for it, but the tool refuses with “Sign in to check your orders” and never queries the database unless `ctx.identity.isAuthenticated` is true.
+5. The tool loop is capped (`MAX_TOOL_CALLS_PER_TURN`, overridable from Edge Config as `aiConfig.maxToolCallsPerTurn`). Once the cap is hit the engine disables further function calling and asks the model for a best-effort final answer from the gathered results.
+6. Tool output is sanitized as untrusted retrieval context before it is wrapped back into `FunctionResponse` parts, so injected instructions inside product names, descriptions, or reviews cannot modify assistant behavior.
+
+This preserves the feature’s ordered fallback chain:
+
+- catalog retrieval: cached Upstash Search → uncached Upstash Search → Drizzle SQL search
+- whole-assistant availability: when the AI provider is disabled, both chat routes return `503` and the conventional `/shop` search UI remains the discovery path
+
 ### Cart Model
 
 The current cart architecture still supports two ownership modes:
@@ -288,6 +306,12 @@ In a serverless deployment the two layers also differ in durability: the Cache
 Components store is per-instance and does not survive a deployment, whereas
 Redis is shared across instances. Redis remains the mechanism for cross-instance
 reuse; Cache Components is what puts catalog markup into the initial HTML.
+
+The AI assistant adds two more Redis-backed keys that are intentionally scoped by
+identity rather than by route:
+
+- `ai:chat:usage:{userId}:{utc-date}` and `ai:chat:advanced:{userId}:{utc-date}` share the same quota budget across both the anchored and catalog-wide chat surfaces.
+- `ai:chat:history:{userId}:{surface}:{threadId}` persists only authenticated history and keeps the `catalog` and `product:{id}` conversations disjoint.
 
 ### Cache Components model
 

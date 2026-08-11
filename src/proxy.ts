@@ -101,6 +101,9 @@ const STRICT_RATE_LIMIT_PATHS = [
 // from sharing the same tight bucket as the write endpoint (POST /api/checkout).
 const STRICT_RATE_LIMIT_EXACT_PATHS = ['/api/checkout']
 
+// Prefix matching is intentional: one `/api/ai` bucket covers both the
+// product-anchored chat route and the catalog-wide `/api/ai/assistant/chat`
+// surface, so adding a second route does not create a second rate-limit budget.
 const AI_RATE_LIMIT_PATHS = ['/api/ai']
 const AI_RATE_LIMIT_MAX_REQUESTS = 10 // stricter: 10 per minute for AI
 // In-memory sliding-window counters keyed by IP + path prefix.

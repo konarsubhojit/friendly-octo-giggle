@@ -3,14 +3,17 @@ import { z } from 'zod'
 import { drizzleDb } from '@/lib/db'
 import { orders } from '@/lib/schema'
 import { TOOL_RESULT_MAX_CHARS } from './chat-constants'
+import { sanitizeToolResultText } from './chat-prompt'
 import type { AssistantTool } from './chat-types'
 
 const ORDER_ID_REGEX = /^[A-Za-z0-9]{7,10}$/
 
 const truncateToolResult = (value: string): string =>
-  value.length > TOOL_RESULT_MAX_CHARS
-    ? `${value.slice(0, TOOL_RESULT_MAX_CHARS - 1)}…`
-    : value
+  sanitizeToolResultText(
+    value.length > TOOL_RESULT_MAX_CHARS
+      ? `${value.slice(0, TOOL_RESULT_MAX_CHARS - 1)}…`
+      : value
+  )
 
 export const GetOrderStatusArgs = z.object({
   orderId: z.string().trim().regex(ORDER_ID_REGEX).optional(),
