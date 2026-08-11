@@ -1,7 +1,6 @@
 import { and, desc, eq, ilike, isNull, or } from 'drizzle-orm'
 import { z } from 'zod'
-import { drizzleDb } from '@/lib/db'
-import { db } from '@/lib/db'
+import { db, drizzleDb } from '@/lib/db'
 import { products } from '@/lib/schema'
 import { searchProductIds, searchProductIdsCached } from '@/lib/search'
 import { convertPriceToINR, type CurrencyCode } from '@/lib/currency'
