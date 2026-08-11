@@ -83,15 +83,21 @@ const mockAiChatApi = async (page: Page) => {
 
     const body = request.postDataJSON()
     capturedChatBodies.push(body)
+    const latestMessage = body.messages.at(-1)?.text?.toLowerCase?.() ?? ''
+    const responseText = latestMessage.includes('other user')
+      ? 'No order with ID "ORD1234" was found for this account.'
+      : latestMessage.includes('order')
+        ? 'Sign in to check your orders.'
+        : [
+            'Comparison candidates:',
+            '- [Travel Bag](/products/prod-1) — Price: ₹1999 — Availability: In Stock',
+            '- [Weekend Backpack](/products/prod-2) — Price: ₹2499 — Availability: Low Stock',
+          ].join('\n')
 
     await route.fulfill({
       contentType: 'application/json',
       json: {
-        text: [
-          'Comparison candidates:',
-          '- [Travel Bag](/products/prod-1) — Price: ₹1999 — Availability: In Stock',
-          '- [Weekend Backpack](/products/prod-2) — Price: ₹2499 — Availability: Low Stock',
-        ].join('\n'),
+        text: responseText,
       },
     })
   })
@@ -220,5 +226,49 @@ test.describe('AI Product Assistant — stock privacy', () => {
     expect(responseText).not.toMatch(/\b\d+\b\s*(units|in stock|left)/iu)
     expect(responseText).toContain('Availability: In Stock')
     expect(responseText).toContain('Availability: Low Stock')
+  })
+
+  test('should decline guest order questions on the storefront assistant', async ({
+    page,
+  }) => {
+    await mockExchangeRates(page)
+    await mockAiChatApi(page)
+
+    await page.goto('/shop', { waitUntil: 'networkidle' })
+    await page
+      .getByRole('button', { name: 'Open storefront assistant' })
+      .click()
+
+    const assistant = page.locator('section[aria-label="Storefront assistant"]')
+    await assistant.getByLabel('Ask the storefront assistant').fill(
+      'Where is my order?'
+    )
+    await assistant.getByRole('button', { name: 'Send message' }).click()
+
+    await expect(
+      assistant.getByText('Sign in to check your orders.')
+    ).toBeVisible({ timeout: 10_000 })
+  })
+
+  test('should refuse cross-user order lookups on the storefront assistant', async ({
+    page,
+  }) => {
+    await mockExchangeRates(page)
+    await mockAiChatApi(page)
+
+    await page.goto('/shop', { waitUntil: 'networkidle' })
+    await page
+      .getByRole('button', { name: 'Open storefront assistant' })
+      .click()
+
+    const assistant = page.locator('section[aria-label="Storefront assistant"]')
+    await assistant.getByLabel('Ask the storefront assistant').fill(
+      'Check other user order ORD1234'
+    )
+    await assistant.getByRole('button', { name: 'Send message' }).click()
+
+    await expect(
+      assistant.getByText('No order with ID "ORD1234" was found for this account.')
+    ).toBeVisible({ timeout: 10_000 })
   })
 })

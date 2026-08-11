@@ -2,18 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const productsFindManyMock = vi.hoisted(() => vi.fn())
 const reviewsFindManyMock = vi.hoisted(() => vi.fn())
-const ordersFindManyMock = vi.hoisted(() => vi.fn())
-const ordersFindFirstMock = vi.hoisted(() => vi.fn())
 const getShippingConfigMock = vi.hoisted(() => vi.fn())
 
 vi.mock('@/lib/db', () => ({
   drizzleDb: {
     query: {
       reviews: { findMany: reviewsFindManyMock },
-      orders: {
-        findMany: ordersFindManyMock,
-        findFirst: ordersFindFirstMock,
-      },
     },
   },
 }))
@@ -24,7 +18,6 @@ vi.mock('@/lib/edge-config', () => ({
 
 import {
   buildCommerceContext,
-  fetchOrderStatusContext,
   fetchReviewSummaryContext,
   toStockLabel,
 } from '@/features/ai/services/chat-commerce-context'
@@ -62,8 +55,6 @@ describe('chat-commerce-context', () => {
     vi.clearAllMocks()
     getShippingConfigMock.mockResolvedValue({ estimatedDeliveryDays: 5 })
     reviewsFindManyMock.mockResolvedValue([])
-    ordersFindManyMock.mockResolvedValue([])
-    ordersFindFirstMock.mockResolvedValue(undefined)
   })
 
   describe('toStockLabel', () => {
@@ -90,20 +81,6 @@ describe('chat-commerce-context', () => {
       expect(sections).toEqual([
         'Estimated delivery: approximately 5 business days (standard shipping).',
       ])
-    })
-
-    it('prompts guests to sign in for order status', async () => {
-      const sections = await buildCommerceContext({
-        ...baseParams,
-        isAuthenticated: false,
-        messageText: 'where is my order',
-        intents: { ...noIntents, wantsOrderStatus: true },
-      })
-
-      expect(sections).toEqual([
-        'Sign in to check your recent orders and tracking details for your account.',
-      ])
-      expect(ordersFindManyMock).not.toHaveBeenCalled()
     })
   })
 
@@ -133,50 +110,6 @@ describe('chat-commerce-context', () => {
 
       const summary = await fetchReviewSummaryContext('p1')
       expect(summary).toContain(`${'a'.repeat(120)}...`)
-    })
-  })
-
-  describe('fetchOrderStatusContext', () => {
-    it('looks up a specific order id when present', async () => {
-      ordersFindFirstMock.mockResolvedValue({
-        id: 'ORD1234',
-        status: 'SHIPPED',
-        trackingNumber: 'TRK1',
-        shippingProvider: 'BlueDart',
-      })
-
-      await expect(
-        fetchOrderStatusContext('user-1', 'status of ORD1234')
-      ).resolves.toBe(
-        'Order ORD1234: SHIPPED, tracking TRK1, carrier BlueDart.'
-      )
-    })
-
-    it('reports a missing order for the account', async () => {
-      await expect(
-        fetchOrderStatusContext('user-1', 'status of ORD1234')
-      ).resolves.toBe('No order with ID "ORD1234" was found for this account.')
-    })
-
-    it('lists recent orders when no id is given', async () => {
-      ordersFindManyMock.mockResolvedValue([
-        {
-          id: 'ORD1',
-          status: 'PENDING',
-          trackingNumber: null,
-          shippingProvider: null,
-        },
-      ])
-
-      await expect(fetchOrderStatusContext('user-1', 'my order')).resolves.toBe(
-        'Recent order status:\n- ORD1: PENDING, tracking not available, carrier not assigned'
-      )
-    })
-
-    it('reports when the account has no orders', async () => {
-      await expect(fetchOrderStatusContext('user-1', 'my order')).resolves.toBe(
-        'No orders were found for this account yet.'
-      )
     })
   })
 })

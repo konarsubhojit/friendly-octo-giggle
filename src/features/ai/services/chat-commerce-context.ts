@@ -1,12 +1,11 @@
 import { drizzleDb } from '@/lib/db'
 import { getShippingConfig } from '@/lib/edge-config'
-import { orders, reviews } from '@/lib/schema'
-import { and, desc, eq } from 'drizzle-orm'
+import { reviews } from '@/lib/schema'
+import { desc, eq } from 'drizzle-orm'
 import type { CurrencyCode } from '@/lib/currency'
 import type { Product } from '@/lib/types'
 import type { IntentSignals } from './chat-types'
 import { MAX_REVIEW_COMMENT_CHARS } from './chat-constants'
-import { ORDER_ID_PATTERN } from './chat-intent'
 
 export const toStockLabel = (stock: number): string => {
   if (stock > 5) return 'In Stock'
@@ -16,14 +15,6 @@ export const toStockLabel = (stock: number): string => {
 
 const truncateForSummary = (text: string, maxChars: number): string =>
   text.length > maxChars ? `${text.slice(0, maxChars)}...` : text
-
-const formatOrderStatusLine = (order: {
-  id: string
-  status: string
-  trackingNumber: string | null
-  shippingProvider: string | null
-}): string =>
-  `${order.id}: ${order.status}, tracking ${order.trackingNumber ?? 'not available'}, carrier ${order.shippingProvider ?? 'not assigned'}`
 
 export const fetchReviewSummaryContext = async (
   productId: string
@@ -58,66 +49,6 @@ export const fetchReviewSummaryContext = async (
   ].join('\n')
 }
 
-export const fetchOrderStatusContext = async (
-  userId: string,
-  text: string
-): Promise<string | null> => {
-  const orderId = ORDER_ID_PATTERN.exec(text)?.[0] ?? null
-  if (orderId) {
-    const order = await drizzleDb.query.orders.findFirst({
-      where: and(eq(orders.id, orderId), eq(orders.userId, userId)),
-      columns: {
-        id: true,
-        status: true,
-        trackingNumber: true,
-        shippingProvider: true,
-        createdAt: true,
-      },
-    })
-    if (!order) {
-      return `No order with ID "${orderId}" was found for this account.`
-    }
-    return `Order ${formatOrderStatusLine(order)}.`
-  }
-
-  const recentOrders = await drizzleDb.query.orders.findMany({
-    where: eq(orders.userId, userId),
-    columns: {
-      id: true,
-      status: true,
-      trackingNumber: true,
-      shippingProvider: true,
-      createdAt: true,
-    },
-    orderBy: desc(orders.createdAt),
-    limit: 3,
-  })
-
-  if (recentOrders.length === 0) {
-    return 'No orders were found for this account yet.'
-  }
-
-  return [
-    'Recent order status:',
-    ...recentOrders.map((order) => `- ${formatOrderStatusLine(order)}`),
-  ].join('\n')
-}
-
-const fetchOrderStatusSection = (params: {
-  userId: string
-  isAuthenticated: boolean
-  messageText: string
-  intents: IntentSignals
-}): Promise<string | null> => {
-  if (!params.intents.wantsOrderStatus) return Promise.resolve(null)
-  if (!params.isAuthenticated) {
-    return Promise.resolve(
-      'Sign in to check your recent orders and tracking details for your account.'
-    )
-  }
-  return fetchOrderStatusContext(params.userId, params.messageText)
-}
-
 /**
  * Dispatches the intent-selected commerce "tools" and returns the supplemental
  * prompt sections they produced, in a stable order.
@@ -140,14 +71,11 @@ export const buildCommerceContext = async (params: {
     )
   }
 
-  const [reviewSummary, orderStatus] = await Promise.all([
-    params.intents.wantsReviewSummary
-      ? fetchReviewSummaryContext(params.product.id)
-      : Promise.resolve(null),
-    fetchOrderStatusSection(params),
-  ])
+  const reviewSummary = params.intents.wantsReviewSummary
+    ? await fetchReviewSummaryContext(params.product.id)
+    : null
 
-  for (const section of [reviewSummary, orderStatus]) {
+  for (const section of [reviewSummary]) {
     if (section) sections.push(section)
   }
   return sections

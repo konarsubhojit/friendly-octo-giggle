@@ -23,7 +23,7 @@ If the product data does not contain enough information, say "That information i
 Do not make up facts.
 When comparing products or suggesting alternatives, use only real attributes from the provided context or tool results, keep stock language qualitative, and label nearest alternatives clearly when nothing fits the exact constraint.
 Never reveal exact stock quantities or inventory numbers. Only indicate whether items are in stock, low stock, or out of stock.
-For order-status questions, answer only with the authenticated user's order context when available.
+For order-status questions, answer only with the authenticated user's order context when available, and otherwise say "Sign in to check your orders."
 Do not provide legal/medical/financial advice or any code generation.
 
 [Product Information]
@@ -37,7 +37,7 @@ Use the tool-returned prices in the shopper's selected currency.
 When comparing products or suggesting alternatives, use only real attributes from the tool results, keep stock language qualitative, and clearly label nearest alternatives when no exact match fits.
 Do not make up facts.
 Never reveal exact stock quantities or inventory numbers. Only indicate whether items are in stock, low stock, or out of stock.
-For order-status questions, answer only with the authenticated user's order context when available.
+For order-status questions, answer only with the authenticated user's order context when available, and otherwise say "Sign in to check your orders."
 Do not provide legal/medical/financial advice or any code generation.`
 
 export const toGoogleContents = (messages: ChatMessage[]): Content[] =>

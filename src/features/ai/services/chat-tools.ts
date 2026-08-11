@@ -6,11 +6,13 @@ import {
   getProductDetailsTool,
   searchCatalogTool,
 } from './chat-tools-catalog'
+import { getOrderStatusTool } from './chat-tools-orders'
 
 export const assistantToolRegistry: readonly AssistantTool<any>[] = [
   searchCatalogTool,
   getProductDetailsTool,
   compareProductsTool,
+  getOrderStatusTool,
 ]
 
 export const getAssistantTool = (
