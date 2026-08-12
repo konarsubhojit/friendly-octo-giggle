@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { drizzleDb, primaryDrizzleDb } from '@/lib/db'
 import { users } from '@/lib/schema'
-import { eq, and, count } from 'drizzle-orm'
+import { eq, count } from 'drizzle-orm'
 import {
   apiSuccess,
   apiError,
@@ -47,7 +47,7 @@ export async function PATCH(
         const [{ value: adminCount }] = await drizzleDb
           .select({ value: count() })
           .from(users)
-          .where(and(eq(users.role, 'ADMIN')))
+          .where(eq(users.role, 'ADMIN'))
         if (adminCount <= 1) {
           return apiError(
             'Cannot remove the last administrator. At least one user must hold the ADMIN role.',
