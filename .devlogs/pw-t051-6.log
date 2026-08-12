@@ -1,0 +1,15 @@
+◇ injected env (10) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+◇ injected env (0) from .env.local // tip: ⌘ suppress logs { quiet: true }
+
+Running 8 tests using 2 workers
+
+  ✓  2 [admin-mobile] › playwright-tests/admin-views.spec.ts:655:3 › US2: Activity visibility › T051 - global activity page renders and filters by entity + action together (3.1s)
+  ✓  1 [admin-desktop] › playwright-tests/admin-views.spec.ts:655:3 › US2: Activity visibility › T051 - global activity page renders and filters by entity + action together (3.8s)
+  ✓  4 [admin-desktop] › playwright-tests/admin-views.spec.ts:692:3 › US2: Activity visibility › T051 - order detail row expansion shows scoped activity history (2.2s)
+  ✓  3 [admin-mobile] › playwright-tests/admin-views.spec.ts:692:3 › US2: Activity visibility › T051 - order detail row expansion shows scoped activity history (5.8s)
+  ✓  5 [admin-desktop] › playwright-tests/admin-views.spec.ts:720:3 › US2: Activity visibility › T051 - product detail screen shows scoped activity history (4.4s)
+  ✓  7 [admin-desktop] › playwright-tests/admin-views.spec.ts:756:3 › US2: Activity visibility › T051 - user row expansion shows scoped activity history (3.4s)
+  ✓  6 [admin-mobile] › playwright-tests/admin-views.spec.ts:720:3 › US2: Activity visibility › T051 - product detail screen shows scoped activity history (5.8s)
+  ✓  8 [admin-mobile] › playwright-tests/admin-views.spec.ts:756:3 › US2: Activity visibility › T051 - user row expansion shows scoped activity history (2.1s)
+
+  8 passed (22.9s)

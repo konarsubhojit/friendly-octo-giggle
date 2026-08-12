@@ -6,6 +6,7 @@ const mockDb = vi.hoisted(() => ({
   query: {
     users: { findFirst: vi.fn() },
   },
+  select: vi.fn(),
   update: vi.fn(() => ({
     set: vi.fn(() => ({
       where: vi.fn(() => ({
@@ -82,6 +83,75 @@ describe('PATCH /api/admin/users/[id]', () => {
     const data = await res.json()
     expect(res.status).toBe(403)
     expect(data.error).toBe('Cannot modify your own role')
+  })
+
+  // T060: last-administrator-removal refusal (FR-C05). Demoting a *different*
+  // user away from ADMIN must be refused when they are the sole remaining
+  // administrator, even though the self-demotion guard above does not apply.
+  it('returns 403 when demoting the last remaining administrator', async () => {
+    mockAuth.mockResolvedValue(adminSession as never)
+    // drizzleDb.select().from().where() is called twice: once to read the
+    // target user's current role, once to count total administrators.
+    const targetUserWhere = vi
+      .fn()
+      .mockResolvedValue([{ role: 'ADMIN' }])
+    const adminCountWhere = vi.fn().mockResolvedValue([{ value: 1 }])
+    const selectFrom = vi
+      .fn()
+      .mockReturnValueOnce({ where: targetUserWhere })
+      .mockReturnValueOnce({ where: adminCountWhere })
+    vi.mocked(drizzleDb.select).mockReturnValue({
+      from: selectFrom,
+    } as never)
+
+    const res = await PATCH(
+      makeRequest({ role: 'CUSTOMER' }),
+      makeParams('lone-admin-user')
+    )
+    const data = await res.json()
+
+    expect(res.status).toBe(403)
+    expect(data.error).toBe(
+      'Cannot remove the last administrator. At least one user must hold the ADMIN role.'
+    )
+    expect(primaryDrizzleDb.update).not.toHaveBeenCalled()
+  })
+
+  it('allows demoting an administrator when other administrators remain', async () => {
+    mockAuth.mockResolvedValue(adminSession as never)
+    const targetUserWhere = vi
+      .fn()
+      .mockResolvedValue([{ role: 'ADMIN' }])
+    const adminCountWhere = vi.fn().mockResolvedValue([{ value: 2 }])
+    const selectFrom = vi
+      .fn()
+      .mockReturnValueOnce({ where: targetUserWhere })
+      .mockReturnValueOnce({ where: adminCountWhere })
+    vi.mocked(drizzleDb.select).mockReturnValue({
+      from: selectFrom,
+    } as never)
+
+    const updatedUser = {
+      id: 'other-admin-user',
+      name: 'Other Admin',
+      email: 'other-admin@test.com',
+      role: 'CUSTOMER',
+    }
+    const returning = vi.fn().mockResolvedValue([updatedUser])
+    const where = vi.fn(() => ({ returning }))
+    const set = vi.fn(() => ({ where }))
+    vi.mocked(primaryDrizzleDb.update).mockReturnValue({ set } as never)
+    mockInvalidateAdminUserCaches.mockResolvedValue(undefined as never)
+
+    const res = await PATCH(
+      makeRequest({ role: 'CUSTOMER' }),
+      makeParams('other-admin-user')
+    )
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.data.user).toEqual(updatedUser)
+    expect(primaryDrizzleDb.update).toHaveBeenCalled()
   })
 
   it('returns 400 for invalid role', async () => {

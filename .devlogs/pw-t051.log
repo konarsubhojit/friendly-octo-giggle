@@ -1,0 +1,134 @@
+◇ injected env (10) from .env // tip: ⌁ auth for agents [www.vestauth.com]
+◇ injected env (0) from .env.local // tip: ◈ encrypted .env [www.dotenvx.com]
+
+Running 4 tests using 1 worker
+
+  ✘  1 [admin-desktop] › playwright-tests/admin-views.spec.ts:655:3 › US2: Activity visibility › T051 - global activity page renders and filters by entity + action together (9.1s)
+  ✘  2 [admin-desktop] › playwright-tests/admin-views.spec.ts:687:3 › US2: Activity visibility › T051 - order detail row expansion shows scoped activity history (8.9s)
+  ✘  3 [admin-desktop] › playwright-tests/admin-views.spec.ts:708:3 › US2: Activity visibility › T051 - product detail screen shows scoped activity history (8.8s)
+  ✘  4 [admin-desktop] › playwright-tests/admin-views.spec.ts:722:3 › US2: Activity visibility › T051 - user row expansion shows scoped activity history (8.0s)
+
+
+  1) [admin-desktop] › playwright-tests/admin-views.spec.ts:655:3 › US2: Activity visibility › T051 - global activity page renders and filters by entity + action together 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator:  getByText('status_change').first()
+    Expected: visible
+    Received: hidden
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByText('status_change').first()
+        14 × locator resolved to <option value="status_change">status_change</option>
+           - unexpected value "hidden"
+
+
+      661 |
+      662 |     // Unfiltered: every mock entry's action text is present.
+    > 663 |     await expect(page.getByText('status_change').first()).toBeVisible()
+          |                                                           ^
+      664 |     await expect(page.getByText('refund').first()).toBeVisible()
+      665 |     await expect(page.getByText('role_change').first()).toBeVisible()
+      666 |
+        at /home/runner/work/friendly-octo-giggle/friendly-octo-giggle/playwright-tests/admin-views.spec.ts:663:59
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/admin-views-US2-Activity-v-dd751-s-by-entity-action-together-admin-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/admin-views-US2-Activity-v-dd751-s-by-entity-action-together-admin-desktop/error-context.md
+
+  2) [admin-desktop] › playwright-tests/admin-views.spec.ts:687:3 › US2: Activity visibility › T051 - order detail row expansion shows scoped activity history 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('Activity History')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByText('Activity History')
+
+
+      698 |     }
+      699 |
+    > 700 |     await expect(page.getByText('Activity History')).toBeVisible()
+          |                                                      ^
+      701 |     await expect(page.getByText('SHIPPED')).toBeVisible()
+      702 |     await page.screenshot({
+      703 |       path: screenshotPath('admin-order-activity-history'),
+        at /home/runner/work/friendly-octo-giggle/friendly-octo-giggle/playwright-tests/admin-views.spec.ts:700:54
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/admin-views-US2-Activity-v-5eb34-ows-scoped-activity-history-admin-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/admin-views-US2-Activity-v-5eb34-ows-scoped-activity-history-admin-desktop/error-context.md
+
+  3) [admin-desktop] › playwright-tests/admin-views.spec.ts:708:3 › US2: Activity visibility › T051 - product detail screen shows scoped activity history 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('Activity History')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByText('Activity History')
+
+
+      713 |     await page.waitForLoadState('networkidle')
+      714 |
+    > 715 |     await expect(page.getByText('Activity History')).toBeVisible()
+          |                                                      ^
+      716 |     await page.screenshot({
+      717 |       path: screenshotPath('admin-product-activity-history'),
+      718 |       fullPage: true,
+        at /home/runner/work/friendly-octo-giggle/friendly-octo-giggle/playwright-tests/admin-views.spec.ts:715:54
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/admin-views-US2-Activity-v-f91bd-ows-scoped-activity-history-admin-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/admin-views-US2-Activity-v-f91bd-ows-scoped-activity-history-admin-desktop/error-context.md
+
+  4) [admin-desktop] › playwright-tests/admin-views.spec.ts:722:3 › US2: Activity visibility › T051 - user row expansion shows scoped activity history 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('Activity History')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 5000ms
+      - waiting for getByText('Activity History')
+
+
+      731 |     }
+      732 |
+    > 733 |     await expect(page.getByText('Activity History')).toBeVisible()
+          |                                                      ^
+      734 |     await page.screenshot({
+      735 |       path: screenshotPath('admin-user-activity-history'),
+      736 |       fullPage: true,
+        at /home/runner/work/friendly-octo-giggle/friendly-octo-giggle/playwright-tests/admin-views.spec.ts:733:54
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/admin-views-US2-Activity-v-31442-ows-scoped-activity-history-admin-desktop/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/admin-views-US2-Activity-v-31442-ows-scoped-activity-history-admin-desktop/error-context.md
+
+  4 failed
+    [admin-desktop] › playwright-tests/admin-views.spec.ts:655:3 › US2: Activity visibility › T051 - global activity page renders and filters by entity + action together 
+    [admin-desktop] › playwright-tests/admin-views.spec.ts:687:3 › US2: Activity visibility › T051 - order detail row expansion shows scoped activity history 
+    [admin-desktop] › playwright-tests/admin-views.spec.ts:708:3 › US2: Activity visibility › T051 - product detail screen shows scoped activity history 
+    [admin-desktop] › playwright-tests/admin-views.spec.ts:722:3 › US2: Activity visibility › T051 - user row expansion shows scoped activity history 

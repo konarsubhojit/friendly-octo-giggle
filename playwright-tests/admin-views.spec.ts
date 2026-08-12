@@ -621,6 +621,104 @@ test.describe('Admin Users - role change confirmation', () => {
       fullPage: false,
     })
   })
+
+  // T060: self-demotion and last-administrator-removal are refused by the
+  // API (see src/app/api/admin/users/[id]/route.ts, FR-C04/FR-C05). These
+  // tests mock the PATCH endpoint to return the same 403 responses the real
+  // API returns for those two guards, and confirm the admin console leaves
+  // the displayed role unchanged (the list is only refreshed on success —
+  // see handleRoleChange in src/app/admin/users/page.tsx) rather than
+  // silently applying a change the server refused.
+  test('refuses self-demotion and leaves the role unchanged', async ({
+    page,
+  }) => {
+    await mockAdminRoutes(page)
+    // The signed-in test account is MOCK_USERS[0] (dev-copilot-admin).
+    // Overriding this pattern after mockAdminRoutes means it is matched
+    // first (Playwright resolves overlapping routes most-recently-added
+    // first).
+    await page.route('**/api/admin/users/dev-copilot-admin', (route) => {
+      if (route.request().method() !== 'PATCH') {
+        return route.fallback()
+      }
+      return route.fulfill({
+        status: 403,
+        json: { success: false, error: 'Cannot modify your own role' },
+      })
+    })
+    await page.goto('/admin/users')
+    await expect(page.getByText('User Management')).toBeVisible()
+
+    const selfRoleSelect = page.getByLabel(/change role for/i).first()
+    await expect(selfRoleSelect).toHaveValue('ADMIN')
+    await selfRoleSelect.selectOption('CUSTOMER')
+
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await page.getByRole('textbox').fill('CHANGE ROLE')
+    await page.getByRole('button', { name: 'Confirm', exact: true }).click()
+    await expect(page.getByRole('dialog')).not.toBeVisible()
+
+    // The server refused the change, so the list was never refreshed and
+    // the select must still reflect the original ADMIN role.
+    await expect(selfRoleSelect).toHaveValue('ADMIN')
+    await page.screenshot({
+      path: screenshotPath('admin-user-self-demotion-refused'),
+      fullPage: false,
+    })
+  })
+
+  test('refuses removing the last administrator and leaves the role unchanged', async ({
+    page,
+  }) => {
+    await mockAdminRoutes(page)
+    // Simulate a second administrator distinct from the signed-in user
+    // (usr0001) so the last-administrator guard can be exercised on a
+    // non-self row without also tripping the self-demotion guard.
+    await page.route('**/api/admin/users**', (route) => {
+      const url = route.request().url()
+      if (ADMIN_USER_DETAIL_PATTERN.test(url)) {
+        return route.fulfill({
+          json: { success: true, data: { user: MOCK_USERS[0] } },
+        })
+      }
+      const usersWithSecondAdmin = MOCK_USERS.map((user) =>
+        user.id === 'usr0001' ? { ...user, role: 'ADMIN' } : user
+      )
+      return route.fulfill({
+        json: { success: true, data: { users: usersWithSecondAdmin } },
+      })
+    })
+    await page.route('**/api/admin/users/usr0001', (route) => {
+      if (route.request().method() !== 'PATCH') {
+        return route.fallback()
+      }
+      return route.fulfill({
+        status: 403,
+        json: {
+          success: false,
+          error:
+            'Cannot remove the last administrator. At least one user must hold the ADMIN role.',
+        },
+      })
+    })
+    await page.goto('/admin/users')
+    await expect(page.getByText('User Management')).toBeVisible()
+
+    const targetRoleSelect = page.getByLabel(/change role for priya sharma/i)
+    await expect(targetRoleSelect).toHaveValue('ADMIN')
+    await targetRoleSelect.selectOption('CUSTOMER')
+
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await page.getByRole('textbox').fill('CHANGE ROLE')
+    await page.getByRole('button', { name: 'Confirm', exact: true }).click()
+    await expect(page.getByRole('dialog')).not.toBeVisible()
+
+    await expect(targetRoleSelect).toHaveValue('ADMIN')
+    await page.screenshot({
+      path: screenshotPath('admin-user-last-admin-removal-refused'),
+      fullPage: false,
+    })
+  })
 })
 
 // T041: FULFILMENT-role scenario — dashboard queue → orders list → bulk action
