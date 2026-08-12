@@ -5,22 +5,46 @@ import { GET } from '@/app/api/admin/activity/route'
 vi.mock('@/features/admin/services/admin-auth', () => ({
   checkAdminAuth: vi.fn(),
 }))
-vi.mock('@/features/admin/services/admin-activity-query', () => ({
-  getActivityRequiredPermission: vi.fn(),
-  queryAdminActivity: vi.fn(),
-}))
+vi.mock(
+  '@/features/admin/services/admin-activity-query',
+  async (importOriginal) => {
+    // Keep `getAllowedActivityEntities` real: it is the pure, security-critical
+    // permission-scoping logic exercised by the "no records for an
+    // unpermitted entity" test below (FR-D09, scenario 6). Only the
+    // DB-touching functions are stubbed.
+    const actual = await importOriginal<
+      typeof import('@/features/admin/services/admin-activity-query')
+    >()
+    return {
+      ...actual,
+      getActivityRequiredPermission: vi.fn(),
+      queryAdminActivity: vi.fn(),
+    }
+  }
+)
+vi.mock('@/lib/constants/roles', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/lib/constants/roles')>()
+  return {
+    ...actual,
+    getRolePermissions: vi.fn(actual.getRolePermissions),
+  }
+})
 
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import {
   getActivityRequiredPermission,
+  getAllowedActivityEntities,
   queryAdminActivity,
 } from '@/features/admin/services/admin-activity-query'
+import { getRolePermissions } from '@/lib/constants/roles'
 
 const mockCheckAdminAuth = vi.mocked(checkAdminAuth)
 const mockGetActivityRequiredPermission = vi.mocked(
   getActivityRequiredPermission
 )
 const mockQueryAdminActivity = vi.mocked(queryAdminActivity)
+const mockGetRolePermissions = vi.mocked(getRolePermissions)
 
 describe('GET /api/admin/activity', () => {
   beforeEach(() => {
@@ -107,5 +131,61 @@ describe('GET /api/admin/activity', () => {
     )
 
     expect(response.status).toBe(403)
+  })
+
+  it('scopes the global activity view to entities the caller may read, excluding entities without permission (FR-D09, scenario 6)', async () => {
+    // A hypothetical role that can see the global activity view
+    // (`system:manage`) but was never granted `reviews:moderate`. No
+    // built-in role currently matches this shape (ADMIN holds every
+    // permission), so `getRolePermissions` is stubbed to simulate one and
+    // exercise the fail-closed entity scoping in isolation.
+    const restrictedPermissions = [
+      'system:manage',
+      'orders:read',
+    ] as const
+    mockGetRolePermissions.mockReturnValue(restrictedPermissions)
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'restricted-1',
+      role: 'ADMIN',
+    })
+
+    const allEntries = [
+      { id: 'log-order', entity: 'order' },
+      { id: 'log-review', entity: 'review' },
+      { id: 'log-product', entity: 'product' },
+    ]
+    mockQueryAdminActivity.mockImplementation(async ({ permissions }) => {
+      const allowedEntities = getAllowedActivityEntities(permissions)
+      return {
+        entries: allEntries
+          .filter((entry) => allowedEntities.includes(entry.entity))
+          .map((entry) => ({
+            ...entry,
+            entityId: 'irrelevant',
+            action: 'status_change',
+            actor: { userId: 'restricted-1', role: 'ADMIN' },
+            changes: [],
+            createdAt: '2026-01-01T00:00:00.000Z',
+          })),
+        nextCursor: null,
+      }
+    })
+
+    const response = await GET(
+      new NextRequest('http://localhost/api/admin/activity')
+    )
+    const payload = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(mockQueryAdminActivity).toHaveBeenCalledWith(
+      expect.objectContaining({ permissions: restrictedPermissions })
+    )
+    const returnedEntities = (
+      payload.data.entries as Array<{ entity: string }>
+    ).map((entry) => entry.entity)
+    expect(returnedEntities).toContain('order')
+    expect(returnedEntities).not.toContain('review')
+    expect(returnedEntities).not.toContain('product')
   })
 })

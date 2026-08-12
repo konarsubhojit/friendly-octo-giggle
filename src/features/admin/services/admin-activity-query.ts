@@ -3,7 +3,10 @@ import type { AdminPermission } from '@/lib/constants/roles'
 import { drizzleDb } from '@/lib/db'
 import { adminAuditLogs } from '@/lib/schema'
 import type { AdminActivityQuery } from '@/lib/validations/admin'
-import { getActivityEntityPermission } from './admin-resource-permissions'
+import {
+  ACTIVITY_ENTITY_PERMISSIONS,
+  getActivityEntityPermission,
+} from './admin-resource-permissions'
 
 export interface ActivityChange {
   readonly field: string
@@ -81,34 +84,25 @@ const decodeCursor = (cursor: string): ActivityCursor | null => {
   return null
 }
 
+/**
+ * Every activity entity type the caller's permission set allows them to
+ * read, per `ACTIVITY_ENTITY_PERMISSIONS` (FR-D09). Exported as a pure
+ * function so the entity-scoping rule that ultimately builds the SQL
+ * `WHERE` clause below is directly unit-testable without a database
+ * (acceptance scenario 6: a viewer without permission to read an entity
+ * type receives no records for that type from the global activity view).
+ */
+export const getAllowedActivityEntities = (
+  permissions: readonly AdminPermission[]
+): readonly string[] =>
+  Object.entries(ACTIVITY_ENTITY_PERMISSIONS)
+    .filter(([, permission]) => permissions.includes(permission))
+    .map(([entity]) => entity)
+
 const buildPermissionScopedEntityFilter = (
   permissions: readonly AdminPermission[]
 ): SQL | undefined => {
-  const allowedEntities = Object.entries({
-    order: 'orders:read',
-    orders: 'orders:read',
-    product: 'products:read',
-    products: 'products:read',
-    user: 'users:read',
-    users: 'users:read',
-    review: 'reviews:moderate',
-    reviews: 'reviews:moderate',
-    return: 'orders:returns',
-    returns: 'orders:returns',
-    category: 'products:write',
-    categories: 'products:write',
-    coupon: 'coupons:manage',
-    coupons: 'coupons:manage',
-    'checkout-request': 'orders:read',
-    'checkout-requests': 'orders:read',
-    recommendation: 'system:manage',
-    recommendations: 'system:manage',
-    'email-failure': 'system:manage',
-    'email-failures': 'system:manage',
-    search: 'system:manage',
-  } satisfies Record<string, AdminPermission>)
-    .filter(([, permission]) => permissions.includes(permission))
-    .map(([entity]) => entity)
+  const allowedEntities = getAllowedActivityEntities(permissions)
 
   return allowedEntities.length > 0
     ? inArray(adminAuditLogs.entity, allowedEntities)
