@@ -60,10 +60,10 @@ export default function AdminActivityPage() {
     const params = buildParams()
     fetch(`/api/admin/activity?${params.toString()}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error('fail'))))
-      .then((data) => {
+      .then((body) => {
         if (!cancelled) {
-          setEntries(data.entries ?? [])
-          setNextCursor(data.nextCursor ?? null)
+          setEntries(body.data?.entries ?? [])
+          setNextCursor(body.data?.nextCursor ?? null)
           setLoading(false)
         }
       })
@@ -84,9 +84,9 @@ export default function AdminActivityPage() {
     const params = buildParams(nextCursor)
     fetch(`/api/admin/activity?${params.toString()}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error('fail'))))
-      .then((data) => {
-        setEntries((prev) => [...prev, ...data.entries])
-        setNextCursor(data.nextCursor ?? null)
+      .then((body) => {
+        setEntries((prev) => [...prev, ...(body.data?.entries ?? [])])
+        setNextCursor(body.data?.nextCursor ?? null)
         setLoading(false)
       })
       .catch(() => {

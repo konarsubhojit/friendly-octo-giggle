@@ -14,6 +14,7 @@ import {
   MOCK_ORDERS,
   MOCK_USERS,
   MOCK_SALES,
+  MOCK_ACTIVITY_ENTRIES,
 } from './mock-data.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -74,6 +75,27 @@ async function mockAdminRoutes(page: Page) {
       },
     })
   )
+  // Activity log (T051) — filters the in-memory fixture the same way the
+  // real API filters by entity/entityId/action so combined filtering can be
+  // exercised deterministically without a database.
+  await page.route('**/api/admin/activity**', (route) => {
+    const url = new URL(route.request().url())
+    const entity = url.searchParams.get('entity')
+    const entityId = url.searchParams.get('entityId')
+    const action = url.searchParams.get('action')
+    const entries = MOCK_ACTIVITY_ENTRIES.filter(
+      (entry) =>
+        (!entity || entry.entity === entity) &&
+        (!entityId || entry.entityId === entityId) &&
+        (!action || entry.action === action)
+    )
+    return route.fulfill({
+      json: {
+        success: true,
+        data: { entries, nextCursor: null, retentionWindowMonths: 24 },
+      },
+    })
+  })
 }
 
 // ─── Admin Dashboard ─────────────────────────────────────────────────────────
@@ -627,13 +649,126 @@ test.describe('US1: Fulfilment staff clear the order queue', () => {
   })
 })
 
-// T051: Activity panel visibility
+// T051: Activity panel visibility — global combined filtering plus per-entity
+// panels mounted on order/product/user detail screens.
 test.describe('US2: Activity visibility', () => {
-  test('T051 - global activity page renders', async ({ page }) => {
+  test('T051 - global activity page renders and filters by entity + action together', async ({
+    page,
+  }) => {
+    await mockAdminRoutes(page)
     await page.goto('/admin/activity')
     await page.waitForLoadState('networkidle')
+
+    // Scope assertions to the rendered activity list (an <ol>) so they
+    // don't accidentally match the same action names inside the (hidden)
+    // "Action" <select> options.
+    const activityList = page.getByRole('list')
+
+    // Unfiltered: every mock entry's action text is present.
+    await expect(activityList.getByText('status_change').first()).toBeVisible()
+    await expect(activityList.getByText('refund').first()).toBeVisible()
+    await expect(activityList.getByText('role_change').first()).toBeVisible()
+
     await page.screenshot({
       path: screenshotPath('admin-global-activity'),
+      fullPage: true,
+    })
+
+    // Combined entity + action filter narrows to a single record.
+    await page.getByLabel('Entity').selectOption('order')
+    await page.getByLabel('Action').selectOption('status_change')
+    await page.waitForLoadState('networkidle')
+
+    await expect(activityList.getByText('status_change')).toBeVisible()
+    await expect(activityList.getByText('refund')).toHaveCount(0)
+    await expect(activityList.getByText('role_change')).toHaveCount(0)
+
+    await page.screenshot({
+      path: screenshotPath('admin-global-activity-filtered'),
+      fullPage: true,
+    })
+  })
+
+  test('T051 - order detail row expansion shows scoped activity history', async ({
+    page,
+  }, testInfo) => {
+    await mockAdminRoutes(page)
+    await page.goto('/admin/orders')
+    await expect(
+      page.getByRole('heading', { name: /order management/i })
+    ).toBeVisible()
+
+    if (!testInfo.project.name.includes('mobile')) {
+      // Two levels of expansion: the AdminDataView row itself, then the
+      // AdminOrderCard's own internal "Show details" toggle that reveals
+      // the EntityActivitySection.
+      await page.getByText(MOCK_ORDERS[0].customerName).first().click()
+    }
+    await page
+      .getByRole('button', { name: /show details/i })
+      .first()
+      .click()
+
+    await expect(page.getByText('Activity History')).toBeVisible()
+    await expect(page.getByText('After: SHIPPED')).toBeVisible()
+    await page.screenshot({
+      path: screenshotPath('admin-order-activity-history'),
+      fullPage: true,
+    })
+  })
+
+  test('T051 - product detail screen shows scoped activity history', async ({
+    page,
+  }) => {
+    // The product detail screen is a Server Component that reads the
+    // product directly from the database (bypassing route mocking), so we
+    // let the products list hit the real backend and navigate to whichever
+    // product actually exists there instead of a fixed mock id. Only the
+    // Activity Log API (an independent client-side fetch made by
+    // EntityActivitySection) is mocked, so the assertion stays deterministic.
+    await page.route('**/api/admin/activity**', (route) => {
+      const url = new URL(route.request().url())
+      const entity = url.searchParams.get('entity')
+      const entries = MOCK_ACTIVITY_ENTRIES.filter(
+        (entry) => !entity || entry.entity === entity
+      )
+      return route.fulfill({
+        json: {
+          success: true,
+          data: { entries, nextCursor: null, retentionWindowMonths: 24 },
+        },
+      })
+    })
+    await page.goto('/admin/products')
+    await expect(
+      page.getByRole('heading', { name: /product management/i })
+    ).toBeVisible()
+    await page.getByRole('link', { name: /^open/i }).first().click()
+    await page.waitForLoadState('networkidle')
+
+    await expect(page.getByText('Activity History')).toBeVisible()
+    await page.screenshot({
+      path: screenshotPath('admin-product-activity-history'),
+      fullPage: true,
+    })
+  })
+
+  test('T051 - user row expansion shows scoped activity history', async ({
+    page,
+  }, testInfo) => {
+    await mockAdminRoutes(page)
+    await page.goto('/admin/users')
+    await page.waitForLoadState('networkidle')
+
+    if (!testInfo.project.name.includes('mobile')) {
+      // Click on the row's unique email text (the user's name also appears
+      // in the header "Copilot Admin" badge, which would match first()).
+      await page.getByText(MOCK_USERS[0].email).first().click()
+    }
+
+    await expect(page.getByText('Activity History').first()).toBeVisible()
+    await page.screenshot({
+      path: screenshotPath('admin-user-activity-history'),
       fullPage: true,
     })
   })

@@ -157,7 +157,7 @@ timestamp, action, and before/after values.
 
 ### Tests for User Story 2
 
-- [ ] T051 [P] [US2] Extend `playwright-tests/admin-views.spec.ts`: perform an order status change, open the order detail screen, confirm the activity panel shows actor/role/timestamp/action/before-after; open `/admin/activity`, filter by entity+action+actor+date together, confirm combined results, with screenshot capture
+- [x] T051 [P] [US2] Extend `playwright-tests/admin-views.spec.ts`: perform an order status change, open the order detail screen, confirm the activity panel shows actor/role/timestamp/action/before-after; open `/admin/activity`, filter by entity+action+actor+date together, confirm combined results, with screenshot capture
 - [x] T052 [P] [US2] Playwright/unit test confirming a viewer without permission to read an entity type receives no records for that type from the global activity view (FR-D09, acceptance scenario 6) in `__tests__/app/api/admin/activity/route.test.ts` (extend from T027)
 
 ### Implementation for User Story 2

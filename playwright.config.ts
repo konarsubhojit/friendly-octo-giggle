@@ -16,9 +16,9 @@ export default defineConfig({
   webServer: isLocal
     ? {
         command: 'npm run dev',
-        // Probe a route that returns 200 ('/' redirects/404s before a locale
-        // prefix is applied), so reuseExistingServer detects a running server.
-        url: `${BASE_URL}/en/shop`,
+        // Probe a route that returns 200 ('/' itself 30x-redirects before
+        // resolving), so reuseExistingServer detects a running server.
+        url: `${BASE_URL}/shop`,
         // Always reuse an existing server (avoids cert issues with the
         // health-check poll and allows running 'npm run dev' externally before
         // the suite).

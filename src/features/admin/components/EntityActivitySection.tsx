@@ -39,10 +39,10 @@ export function EntityActivitySection({
     let cancelled = false
     fetch(buildUrl())
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error('fail'))))
-      .then((data) => {
+      .then((body) => {
         if (!cancelled) {
-          setEntries(data.entries ?? [])
-          setNextCursor(data.nextCursor ?? null)
+          setEntries(body.data?.entries ?? [])
+          setNextCursor(body.data?.nextCursor ?? null)
           setLoading(false)
         }
       })
@@ -62,9 +62,9 @@ export function EntityActivitySection({
     setLoading(true)
     fetch(buildUrl(nextCursor))
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error('fail'))))
-      .then((data) => {
-        setEntries((prev) => [...prev, ...data.entries])
-        setNextCursor(data.nextCursor ?? null)
+      .then((body) => {
+        setEntries((prev) => [...prev, ...(body.data?.entries ?? [])])
+        setNextCursor(body.data?.nextCursor ?? null)
         setLoading(false)
       })
       .catch(() => {
