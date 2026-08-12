@@ -96,15 +96,15 @@ export default function AdminActivityPage() {
 
   return (
     <AdminPageShell
-      breadcrumbs={[
-        { label: 'Admin', href: '/admin' },
-        { label: 'Activity' },
-      ]}
+      breadcrumbs={[{ label: 'Admin', href: '/admin' }, { label: 'Activity' }]}
       eyebrow="Operations"
       title="Activity Log"
       description={`Administrative change history. Records older than ${RETENTION_MONTHS} months are automatically removed.`}
     >
-      <AdminPanel title="Filters" description="Narrow activity by entity, action, actor, or date.">
+      <AdminPanel
+        title="Filters"
+        description="Narrow activity by entity, action, actor, or date."
+      >
         <AdminActivityFilters
           value={filters}
           entityOptions={ENTITY_OPTIONS}

@@ -24,16 +24,32 @@ describe('orders ResourceListDefinition', () => {
   it('excludes refund row action for FULFILMENT role', () => {
     const perms: AdminPermission[] = ['orders:read', 'orders:update']
     const def = createOrdersDefinition(perms, handlers)
-    const row = { id: '1', customer: 'A', status: 'PENDING', total: '100', date: '2026-01-01' }
+    const row = {
+      id: '1',
+      customer: 'A',
+      status: 'PENDING',
+      total: '100',
+      date: '2026-01-01',
+    }
     const actionKeys = def.rowActions(row).map((a) => a.key)
     expect(actionKeys).not.toContain('refund')
     expect(actionKeys).toContain('update_status')
   })
 
   it('includes refund row action for ADMIN role', () => {
-    const perms: AdminPermission[] = ['orders:read', 'orders:update', 'orders:refund']
+    const perms: AdminPermission[] = [
+      'orders:read',
+      'orders:update',
+      'orders:refund',
+    ]
     const def = createOrdersDefinition(perms, handlers)
-    const row = { id: '1', customer: 'A', status: 'PENDING', total: '100', date: '2026-01-01' }
+    const row = {
+      id: '1',
+      customer: 'A',
+      status: 'PENDING',
+      total: '100',
+      date: '2026-01-01',
+    }
     const actionKeys = def.rowActions(row).map((a) => a.key)
     expect(actionKeys).toContain('refund')
   })

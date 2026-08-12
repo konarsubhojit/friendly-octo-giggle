@@ -51,11 +51,13 @@ describe('AdminNavLinksClient', () => {
         permissions={ADMIN_PERMISSIONS}
       />
     )
-    expect(screen.getByRole('button', { name: /Catalogue/i })).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: /People/i })
+      screen.getByRole('button', { name: /Catalogue/i })
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Operations/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /People/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /Operations/i })
+    ).toBeInTheDocument()
   })
 
   it('renders Jump to... quick navigation button', () => {

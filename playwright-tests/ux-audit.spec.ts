@@ -276,9 +276,7 @@ test.describe('US4: Accessibility sweep', () => {
   ]
 
   for (const screenPath of screens) {
-    test(`T076 - axe WCAG 2.1 AA sweep on ${screenPath}`, async ({
-      page,
-    }) => {
+    test(`T076 - axe WCAG 2.1 AA sweep on ${screenPath}`, async ({ page }) => {
       await page.goto(screenPath)
       await page.waitForLoadState('networkidle')
 
