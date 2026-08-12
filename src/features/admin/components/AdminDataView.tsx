@@ -14,6 +14,7 @@ import {
   type DataTableColumn,
 } from 'zenput'
 import { AdminBulkActionBar } from './AdminBulkActionBar'
+import { AdminExportControl } from './AdminExportControl'
 import type { ResourceListDefinition } from './resource-list-definition'
 
 interface AdminDataPagination {
@@ -72,6 +73,15 @@ interface AdminDataViewProps<T extends Record<string, unknown>> {
    * caller doesn't offer bulk actions or entire-result-set application.
    */
   readonly filterSnapshot?: Record<string, unknown>
+  /**
+   * Wires an `AdminExportControl` for the resource's existing `export/*`
+   * route into the toolbar without changing that route's contract (FR-A12).
+   */
+  readonly csvExport?: {
+    readonly exportUrl: string
+    readonly filenameFallback: string
+    readonly idleLabel?: string
+  }
 }
 
 const MOBILE_QUERY = '(max-width: 767px)'
@@ -149,6 +159,7 @@ export function AdminDataView<T extends Record<string, unknown>>({
   renderToolbarEnd,
   activeSortLabel,
   filterSnapshot,
+  csvExport,
 }: AdminDataViewProps<T>) {
   const [isMobile, setIsMobile] = useState(false)
   const [selectedRowIds, setSelectedRowIds] = useState<
@@ -262,7 +273,8 @@ export function AdminDataView<T extends Record<string, unknown>>({
     filterChips.length > 0 ||
     renderSavedViewPicker ||
     renderToolbarEnd ||
-    activeSortLabel ? (
+    activeSortLabel ||
+    csvExport ? (
       <div className="mb-4 space-y-3">
         <div className="flex flex-wrap items-center gap-3">
           {renderSavedViewPicker}
@@ -272,6 +284,13 @@ export function AdminDataView<T extends Record<string, unknown>>({
             </span>
           ) : null}
           {renderToolbarEnd}
+          {csvExport ? (
+            <AdminExportControl
+              exportUrl={csvExport.exportUrl}
+              filenameFallback={csvExport.filenameFallback}
+              idleLabel={csvExport.idleLabel}
+            />
+          ) : null}
         </div>
         {filterChips.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2">
