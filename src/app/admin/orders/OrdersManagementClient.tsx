@@ -446,9 +446,7 @@ export default function OrdersManagementClient({
           }
         }
         setOrders((prev) =>
-          prev.map((o) =>
-            orderIds.includes(o.id) ? { ...o, status } : o
-          )
+          prev.map((o) => (orderIds.includes(o.id) ? { ...o, status } : o))
         )
         return { succeeded: orderIds, failed: [] }
       } catch (err) {
