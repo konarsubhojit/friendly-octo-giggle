@@ -136,7 +136,7 @@ are offered.
 - [x] T046 [P] [US1] Define each dashboard `Actionable queue` tuple (`resource`, `filter`, `permission`) — orders awaiting fulfilment, stock below threshold, failed emails, reviews awaiting moderation, refunds in progress — in `src/features/admin/services/actionable-queues.ts` per data-model.md §5
 - [x] T047 [US1] Rebuild `src/app/admin/page.tsx` so its primary content is actionable-queue cards, each behind its own `Suspense` boundary reading `actionable-queues.ts` (FR-G01–G04, FR-G06, FR-G07), with existing analytics figures relocated to a secondary `analytics:read`-gated section (not recomputed) — depends on T046
 - [x] T048 [US1] Wire the CSV export control (T013) into the orders list screen for the existing `export/orders` route, surfacing progress/completion/failure (FR-A12, User Story 1 acceptance scenario 6) — depends on T013, T045
-- [ ] T049 [US1] Add live-region announcements for bulk-action progress/success/failure and export progress/completion/failure on the orders screen (FR-H04) — depends on T045, T048
+- [x] T049 [US1] Add live-region announcements for bulk-action progress/success/failure and export progress/completion/failure on the orders screen (FR-H04) — depends on T045, T048
 - [x] T050 [US1] Add permanent redirect route for `/admin/sales` → `/admin` in `src/app/admin/sales/page.tsx` (replacing `AdminSalesDashboardClient` usage there), per FR-E04/FR-E10 and research.md §8 — depends on T047
 
 **Checkpoint**: User Story 1 is fully functional and independently testable —
