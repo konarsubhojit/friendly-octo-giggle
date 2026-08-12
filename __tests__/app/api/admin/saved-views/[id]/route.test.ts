@@ -89,7 +89,7 @@ describe('/api/admin/saved-views/[id]', () => {
   })
 
   it('returns 404 for an unknown saved view', async () => {
-    mockGetOwnedSavedViewById.mockResolvedValue(null)
+    mockGetOwnedSavedViewById.mockResolvedValue(undefined)
 
     const response = await DELETE(
       new NextRequest('http://localhost/api/admin/saved-views/unknown', {

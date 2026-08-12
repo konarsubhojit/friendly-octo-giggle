@@ -54,7 +54,7 @@ describe('AdminDataView', () => {
       <AdminDataView
         ariaLabel="Orders"
         columns={[...columns]}
-        data={[]}
+        data={[] as (typeof row)[]}
         rowKey={(item) => item.id}
         renderMobileCard={() => null}
         listState={{ status: 'loading' }}
@@ -69,7 +69,7 @@ describe('AdminDataView', () => {
       <AdminDataView
         ariaLabel="Orders"
         columns={[...columns]}
-        data={[]}
+        data={[] as (typeof row)[]}
         rowKey={(item) => item.id}
         renderMobileCard={() => null}
         listState={{ status: 'empty', message: 'No orders yet.' }}
@@ -82,7 +82,7 @@ describe('AdminDataView', () => {
       <AdminDataView
         ariaLabel="Orders"
         columns={[...columns]}
-        data={[]}
+        data={[] as (typeof row)[]}
         rowKey={(item) => item.id}
         renderMobileCard={() => null}
         listState={{
@@ -104,7 +104,7 @@ describe('AdminDataView', () => {
       <AdminDataView
         ariaLabel="Orders"
         columns={[...columns]}
-        data={[]}
+        data={[] as (typeof row)[]}
         rowKey={(item) => item.id}
         renderMobileCard={() => null}
         listState={{
