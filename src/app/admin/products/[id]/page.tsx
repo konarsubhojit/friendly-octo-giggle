@@ -5,6 +5,7 @@ import { products } from '@/lib/schema'
 import { eq, and, isNull } from 'drizzle-orm'
 import Link from 'next/link'
 import { AdminPageShell } from '@/features/admin/components/AdminPageShell'
+import { EntityActivitySection } from '@/features/admin/components/EntityActivitySection'
 import VariantList from '@/features/admin/components/VariantList'
 import ProductEditForm from '@/features/admin/components/ProductEditForm'
 import { serializeVariant } from '@/lib/serializers'
@@ -97,6 +98,7 @@ export default async function AdminProductEditPage({ params }: PageProps) {
         productId={product.id}
         initialVariants={serializedVariants}
       />
+      <EntityActivitySection entity="product" entityId={product.id} />
     </AdminPageShell>
   )
 }
