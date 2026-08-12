@@ -5,6 +5,7 @@ import {
   parseJsonBody,
 } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
+import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 import { drizzleDb } from '@/lib/db'
 import { categories } from '@/lib/schema'
 import { eq, and, isNull, ne } from 'drizzle-orm'
@@ -73,6 +74,15 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     revalidateCacheTags([categoriesTag()], 'admin_category_update')
 
+    await recordAdminAuditLog({
+      userId: authCheck.userId,
+      role: authCheck.role,
+      entity: 'category',
+      entityId: id,
+      action: 'update',
+      diff: validated,
+    })
+
     return apiSuccess({
       category: {
         ...updated,
@@ -111,6 +121,14 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
       .where(eq(categories.id, id))
 
     revalidateCacheTags([categoriesTag()], 'admin_category_delete')
+
+    await recordAdminAuditLog({
+      userId: authCheck.userId,
+      role: authCheck.role,
+      entity: 'category',
+      entityId: id,
+      action: 'delete',
+    })
 
     return apiSuccess({ deleted: true })
   } catch (error) {

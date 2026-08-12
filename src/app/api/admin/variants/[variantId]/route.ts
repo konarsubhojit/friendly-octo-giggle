@@ -14,6 +14,7 @@ import {
   parseJsonBody,
 } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
+import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 import { invalidateProductCaches } from '@/lib/cache'
 import { serializeVariant } from '@/lib/serializers'
 
@@ -151,6 +152,19 @@ export async function PUT(
 
     await invalidateProductCaches(existing.productId)
 
+    await recordAdminAuditLog({
+      userId: authCheck.userId,
+      role: authCheck.role,
+      entity: 'variant',
+      entityId: variantId,
+      action: 'update',
+      diff: {
+        productId: existing.productId,
+        ...validated,
+        ...(optionValueIds !== undefined ? { optionValueIds } : {}),
+      },
+    })
+
     return apiSuccess({ variant: serializeVariant(updated) })
   } catch (error) {
     if (error instanceof ReservedStockError) {
@@ -236,6 +250,15 @@ export async function DELETE(
     }
 
     await invalidateProductCaches(existing.productId)
+
+    await recordAdminAuditLog({
+      userId: authCheck.userId,
+      role: authCheck.role,
+      entity: 'variant',
+      entityId: variantId,
+      action: 'delete',
+      diff: { productId: existing.productId },
+    })
 
     return apiSuccess({
       message: 'Variant soft-deleted successfully',

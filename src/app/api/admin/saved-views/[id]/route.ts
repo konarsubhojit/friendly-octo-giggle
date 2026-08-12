@@ -17,6 +17,7 @@ import {
   getOwnedSavedViewById,
   renameSavedView,
 } from '@/features/admin/services/saved-views'
+import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 
 export async function PATCH(
   request: NextRequest,
@@ -57,6 +58,15 @@ export async function PATCH(
       return apiError('Saved view not found', 404)
     }
 
+    await recordAdminAuditLog({
+      userId: sessionAuth.userId,
+      role: sessionAuth.role,
+      entity: 'saved_view',
+      entityId: id,
+      action: 'rename',
+      diff: { name: body.name },
+    })
+
     return apiSuccess({ view })
   } catch (error) {
     return handleApiError(error)
@@ -95,6 +105,15 @@ export async function DELETE(
     if (!deleted) {
       return apiError('Saved view not found', 404)
     }
+
+    await recordAdminAuditLog({
+      userId: sessionAuth.userId,
+      role: sessionAuth.role,
+      entity: 'saved_view',
+      entityId: id,
+      action: 'delete',
+      diff: { resource: existing.resource, name: existing.name },
+    })
 
     return apiSuccess({ deleted: true })
   } catch (error) {

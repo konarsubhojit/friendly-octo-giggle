@@ -16,6 +16,7 @@ import {
   parseJsonBody,
 } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
+import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 import { invalidateProductCaches } from '@/lib/cache'
 
 const GenerateOptionsSchema = z.object({
@@ -206,6 +207,15 @@ export async function POST(
         createdAt: val.createdAt.toISOString(),
       })),
     }))
+
+    await recordAdminAuditLog({
+      userId: authCheck.userId,
+      role: authCheck.role,
+      entity: 'product_option',
+      entityId: result.map((option) => option.id).join(','),
+      action: 'generate_from_variants',
+      diff: { productId: id, optionNames, delimiter, variantsLinked: skuSegments.length },
+    })
 
     return apiSuccess(
       {

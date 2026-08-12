@@ -5,6 +5,7 @@ import {
   parseJsonBody,
 } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
+import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 import { primaryDrizzleDb } from '@/lib/db'
 import { categories } from '@/lib/schema'
 import { eq } from 'drizzle-orm'
@@ -43,6 +44,15 @@ export const PATCH = async (request: Request) => {
     })
 
     revalidateCacheTags([categoriesTag()], 'admin_category_reorder')
+
+    await recordAdminAuditLog({
+      userId: authCheck.userId,
+      role: authCheck.role,
+      entity: 'category',
+      entityId: validated.items.map((item) => item.id).join(','),
+      action: 'reorder',
+      diff: validated,
+    })
 
     return apiSuccess({ reordered: true })
   } catch (error) {

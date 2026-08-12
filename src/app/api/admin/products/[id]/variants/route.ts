@@ -14,6 +14,7 @@ import {
   parseJsonBody,
 } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
+import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 import { invalidateProductCaches } from '@/lib/cache'
 import { serializeVariant } from '@/lib/serializers'
 
@@ -118,6 +119,15 @@ export async function POST(
     }
 
     await invalidateProductCaches(id)
+
+    await recordAdminAuditLog({
+      userId: authCheck.userId,
+      role: authCheck.role,
+      entity: 'variant',
+      entityId: variant.id,
+      action: 'create',
+      diff: { productId: id, ...validated, optionValueIds: optionValueIds ?? [] },
+    })
 
     return apiSuccess({ variant: serializeVariant(variant) }, 201)
   } catch (error) {

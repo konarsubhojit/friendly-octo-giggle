@@ -13,6 +13,7 @@ import {
 import { invalidateProductCaches, cacheAdminProductsList } from '@/lib/cache'
 import { indexProduct, searchProductIds } from '@/lib/search'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
+import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 
 const PAGE_SIZE = 20
 
@@ -180,6 +181,15 @@ export const POST = async (request: NextRequest) => {
     const product = await db.products.create(validated)
 
     await invalidateProductCaches()
+
+    await recordAdminAuditLog({
+      userId: authCheck.userId,
+      role: authCheck.role,
+      entity: 'product',
+      entityId: product.id,
+      action: 'create',
+      diff: validated,
+    })
 
     void indexProduct(product)
 

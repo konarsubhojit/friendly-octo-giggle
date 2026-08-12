@@ -8,6 +8,7 @@ import {
   parseJsonBody,
 } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
+import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 import { invalidateProductCaches } from '@/lib/cache'
 import { indexProduct, removeProduct } from '@/lib/search'
 
@@ -31,6 +32,15 @@ export async function PUT(
     }
 
     await invalidateProductCaches(id)
+
+    await recordAdminAuditLog({
+      userId: authCheck.userId,
+      role: authCheck.role,
+      entity: 'product',
+      entityId: id,
+      action: 'update',
+      diff: validated,
+    })
 
     void indexProduct(product)
 
@@ -59,6 +69,14 @@ export async function DELETE(
     }
 
     await invalidateProductCaches(id)
+
+    await recordAdminAuditLog({
+      userId: authCheck.userId,
+      role: authCheck.role,
+      entity: 'product',
+      entityId: id,
+      action: 'delete',
+    })
 
     void removeProduct(id)
 

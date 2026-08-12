@@ -66,6 +66,12 @@ interface AdminDataViewProps<T extends Record<string, unknown>> {
   readonly renderSavedViewPicker?: ReactNode
   readonly renderToolbarEnd?: ReactNode
   readonly activeSortLabel?: string | null
+  /**
+   * Current filter/search/sort criteria, used only to build the
+   * `entire_filtered_result` bulk-selection scope (FR-A16). Omit when the
+   * caller doesn't offer bulk actions or entire-result-set application.
+   */
+  readonly filterSnapshot?: Record<string, unknown>
 }
 
 const MOBILE_QUERY = '(max-width: 767px)'
@@ -142,6 +148,7 @@ export function AdminDataView<T extends Record<string, unknown>>({
   renderSavedViewPicker,
   renderToolbarEnd,
   activeSortLabel,
+  filterSnapshot,
 }: AdminDataViewProps<T>) {
   const [isMobile, setIsMobile] = useState(false)
   const [selectedRowIds, setSelectedRowIds] = useState<
@@ -308,6 +315,16 @@ export function AdminDataView<T extends Record<string, unknown>>({
             }}
             selectedCount={effectiveSelectedRowIds.length}
             onClearSelection={selectionContext.clearSelection}
+            entireFilteredResult={
+              pagination &&
+              pagination.totalCount > visibleRowIds.length &&
+              effectiveSelectedRowIds.length === visibleRowIds.length
+                ? {
+                    totalCount: pagination.totalCount,
+                    filterSnapshot: filterSnapshot ?? {},
+                  }
+                : undefined
+            }
           />
         ) : null))
       : null

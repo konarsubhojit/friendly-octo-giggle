@@ -14,6 +14,7 @@ import {
   listSavedViews,
 } from '@/features/admin/services/saved-views'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
+import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 import { getRolePermissions } from '@/lib/constants/roles'
 import { ADMIN_RESOURCE_READ_PERMISSIONS } from '@/features/admin/services/admin-resource-permissions'
 
@@ -56,6 +57,15 @@ export async function POST(request: NextRequest) {
       userId: authCheck.userId,
       resource: body.resource,
       input: body,
+    })
+
+    await recordAdminAuditLog({
+      userId: authCheck.userId,
+      role: authCheck.role,
+      entity: 'saved_view',
+      entityId: view.id,
+      action: 'create',
+      diff: { resource: body.resource, name: body.name, criteria: body.criteria },
     })
 
     return apiSuccess({ view }, 201)
