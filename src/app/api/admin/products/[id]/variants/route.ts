@@ -126,7 +126,11 @@ export async function POST(
       entity: 'variant',
       entityId: variant.id,
       action: 'create',
-      diff: { productId: id, ...validated, optionValueIds: optionValueIds ?? [] },
+      diff: {
+        productId: id,
+        ...validated,
+        optionValueIds: optionValueIds ?? [],
+      },
     })
 
     return apiSuccess({ variant: serializeVariant(variant) }, 201)

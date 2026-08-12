@@ -65,7 +65,11 @@ export async function POST(request: NextRequest) {
       entity: 'saved_view',
       entityId: view.id,
       action: 'create',
-      diff: { resource: body.resource, name: body.name, criteria: body.criteria },
+      diff: {
+        resource: body.resource,
+        name: body.name,
+        criteria: body.criteria,
+      },
     })
 
     return apiSuccess({ view }, 201)

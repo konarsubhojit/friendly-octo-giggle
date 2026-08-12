@@ -34,9 +34,9 @@ describe('admin API audit coverage', () => {
     const missingCoverage = collectRouteFiles(ADMIN_API_ROOT)
       .map((filePath) => {
         const source = fs.readFileSync(filePath, 'utf8')
-        const mutatingVerbs = [...source.matchAll(MUTATING_HTTP_VERB_EXPORT)].map(
-          ([, verb]) => verb
-        )
+        const mutatingVerbs = [
+          ...source.matchAll(MUTATING_HTTP_VERB_EXPORT),
+        ].map(([, verb]) => verb)
 
         if (mutatingVerbs.length === 0) {
           return null

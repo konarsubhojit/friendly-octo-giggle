@@ -75,9 +75,7 @@ export function AdminBulkActionBar({
             <input
               type="checkbox"
               checked={applyToEntireResult}
-              onChange={(event) =>
-                setApplyToEntireResult(event.target.checked)
-              }
+              onChange={(event) => setApplyToEntireResult(event.target.checked)}
               disabled={pendingKey !== null}
               className="h-3.5 w-3.5 rounded border-sky-300 text-sky-600 focus:ring-sky-500"
             />

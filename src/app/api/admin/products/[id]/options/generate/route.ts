@@ -214,7 +214,12 @@ export async function POST(
       entity: 'product_option',
       entityId: result.map((option) => option.id).join(','),
       action: 'generate_from_variants',
-      diff: { productId: id, optionNames, delimiter, variantsLinked: skuSegments.length },
+      diff: {
+        productId: id,
+        optionNames,
+        delimiter,
+        variantsLinked: skuSegments.length,
+      },
     })
 
     return apiSuccess(
