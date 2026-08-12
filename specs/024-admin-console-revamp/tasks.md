@@ -132,10 +132,10 @@ are offered.
 ### Implementation for User Story 1
 
 - [x] T044 [P] [US1] Define the `ResourceListDefinition` for orders in `src/features/admin/resources/orders.ts` — columns, filters (status, shipping method, date), sort options, `searchable: true`, permission-filtered row actions and bulk actions (mark shipped, cancel, refund gated on `orders:refund`), `exportable: true`, distinct empty/filtered-empty messages (FR-A02–FR-A05, FR-A09, FR-A14, FR-A15)
-- [ ] T045 [US1] Convert `src/app/admin/orders/page.tsx` to consume the extended `AdminDataView` with the orders `ResourceListDefinition`, replacing its existing bespoke wiring atomically (no dual implementation, FR-I03) — depends on T010, T044
+- [x] T045 [US1] Convert `src/app/admin/orders/page.tsx` to consume the extended `AdminDataView` with the orders `ResourceListDefinition`, replacing its existing bespoke wiring atomically (no dual implementation, FR-I03) — depends on T010, T044
 - [x] T046 [P] [US1] Define each dashboard `Actionable queue` tuple (`resource`, `filter`, `permission`) — orders awaiting fulfilment, stock below threshold, failed emails, reviews awaiting moderation, refunds in progress — in `src/features/admin/services/actionable-queues.ts` per data-model.md §5
 - [x] T047 [US1] Rebuild `src/app/admin/page.tsx` so its primary content is actionable-queue cards, each behind its own `Suspense` boundary reading `actionable-queues.ts` (FR-G01–G04, FR-G06, FR-G07), with existing analytics figures relocated to a secondary `analytics:read`-gated section (not recomputed) — depends on T046
-- [ ] T048 [US1] Wire the CSV export control (T013) into the orders list screen for the existing `export/orders` route, surfacing progress/completion/failure (FR-A12, User Story 1 acceptance scenario 6) — depends on T013, T045
+- [x] T048 [US1] Wire the CSV export control (T013) into the orders list screen for the existing `export/orders` route, surfacing progress/completion/failure (FR-A12, User Story 1 acceptance scenario 6) — depends on T013, T045
 - [ ] T049 [US1] Add live-region announcements for bulk-action progress/success/failure and export progress/completion/failure on the orders screen (FR-H04) — depends on T045, T048
 - [x] T050 [US1] Add permanent redirect route for `/admin/sales` → `/admin` in `src/app/admin/sales/page.tsx` (replacing `AdminSalesDashboardClient` usage there), per FR-E04/FR-E10 and research.md §8 — depends on T047
 
@@ -162,9 +162,9 @@ timestamp, action, and before/after values.
 
 ### Implementation for User Story 2
 
-- [ ] T053 [P] [US2] Mount `AdminActivityPanel` on the order detail screen (`src/app/admin/orders/[id]/page.tsx` or equivalent order detail composition) gated by `orders:read` — depends on T029
+- [x] T053 [P] [US2] Mount `AdminActivityPanel` on the order detail screen (`src/app/admin/orders/[id]/page.tsx` or equivalent order detail composition) gated by `orders:read` — depends on T029
 - [x] T054 [P] [US2] Mount `AdminActivityPanel` on the product detail screen (`src/app/admin/products/[id]/page.tsx`) gated by `products:read` — depends on T029
-- [ ] T055 [P] [US2] Mount `AdminActivityPanel` on the user detail screen (wherever user detail is presented, e.g. within `src/features/admin/components/UsersTable.tsx`'s expanded row or a new user detail screen) gated by `users:read` — depends on T029
+- [x] T055 [P] [US2] Mount `AdminActivityPanel` on the user detail screen (wherever user detail is presented, e.g. within `src/features/admin/components/UsersTable.tsx`'s expanded row or a new user detail screen) gated by `users:read` — depends on T029
 - [x] T056 [US2] Create `src/app/admin/activity/page.tsx` — the global activity view, gated by `requireAdminPermission('system:manage')`, composing `AdminActivityFilters` and a paginated list of entries, stating the 24-month retention window explicitly (FR-D04, FR-D14) — depends on T028, T030
 - [x] T057 [US2] Add `/admin/activity` to the navigation grouping and command palette entries (coordinates with T040's permission filtering) — depends on T056, T040
 
@@ -201,8 +201,8 @@ identical validation, dirty-state, and save/cancel behaviour across all of them.
 - [ ] T068 [US3] Add consistent save/cancel affordance positioning and duplicate-submission prevention while a save is in flight, across all converted forms (FR-B06) — depends on T066, T067
 - [ ] T069 [US3] Add stale-record detection (modified/deleted by another user since the form opened) surfaced distinctly from validation failure, across all converted forms (FR-B07/FR-B08) — depends on T066
 - [x] T070 [P] [US3] Migrate the role-change call site (`RoleAction.tsx`) to `AdminConfirmDialog` with `typedConfirmationValue` set to a documented per-action string (FR-C03) — depends on T023
-- [ ] T071 [P] [US3] Migrate the refund call site (order refund action) to `AdminConfirmDialog` with `typedConfirmationValue` (FR-C03) — depends on T023
-- [ ] T072 [P] [US3] Migrate every bulk-delete call site to `AdminConfirmDialog` with `typedConfirmationValue` (FR-C03) — depends on T023, T011
+- [x] T071 [P] [US3] Migrate the refund call site (order refund action) to `AdminConfirmDialog` with `typedConfirmationValue` (FR-C03) — depends on T023
+- [x] T072 [P] [US3] Migrate every bulk-delete call site to `AdminConfirmDialog` with `typedConfirmationValue` (FR-C03) — depends on T023, T011
 - [x] T073 [US3] Verify/enforce server-side self-demotion and last-administrator-removal refusal in the users role-update route (`src/app/api/admin/users/[id]/route.ts`), independent of and prior to any confirmation dialog (FR-C04/FR-C05) — depends on T060
 
 **Checkpoint**: User Stories 1, 2, AND 3 all work independently — order queue,

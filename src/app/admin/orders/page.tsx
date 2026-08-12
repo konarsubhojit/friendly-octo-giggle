@@ -436,6 +436,10 @@ export default function OrdersManagement() {
       renderMobileCard={(row) => (
         <MobileOrderRow row={row} renderExpandedOrder={renderExpandedOrder} />
       )}
+      csvExport={{
+        exportUrl: '/api/admin/export/orders',
+        filenameFallback: 'orders.csv',
+      }}
     />
   )
 

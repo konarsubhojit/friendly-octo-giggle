@@ -5,6 +5,7 @@ import { AdminDataView } from '@/features/admin/components/AdminDataView'
 import { RoleAction } from '@/features/admin/components/RoleAction'
 import { RoleBadge } from '@/features/admin/components/RoleBadge'
 import { UserAvatar } from '@/features/admin/components/UserAvatar'
+import { EntityActivitySection } from '@/features/admin/components/EntityActivitySection'
 import { isStaffRole, type UserRole } from '@/lib/constants/roles'
 
 interface AdminUser {
@@ -74,6 +75,11 @@ export function UsersTable({
       columns={columns}
       data={rows}
       rowKey={(user) => user.id}
+      expandedRowRender={(user) => (
+        <div className="px-4 pb-4">
+          <EntityActivitySection entity="user" entityId={user.id} />
+        </div>
+      )}
       renderMobileCard={(user) => (
         <div className="min-w-0">
           <div className="flex items-start gap-3">
@@ -121,6 +127,9 @@ export function UsersTable({
               isUpdating={updatingUserId === user.id}
               onRoleChange={onRoleChange}
             />
+          </div>
+          <div className="-mx-4 mt-4 border-t border-slate-200 pt-4 dark:border-slate-700">
+            <EntityActivitySection entity="user" entityId={user.id} />
           </div>
         </div>
       )}
