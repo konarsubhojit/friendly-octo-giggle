@@ -261,6 +261,10 @@ each role may open.
 - [x] T093 Run `npm run test` (including the audit-coverage check from T032) and `npm run docs:check`; fix any regressions
 - [ ] T094 Execute every verification step in `quickstart.md` end to end (roles, list surface, saved views, activity, confirmations, navigation/redirects, automated verification, schema changes) and record results
 - [ ] T095 [P] Review the full diff for any lingering `DeleteConfirmModal` references, dual-implementation screens, or route-segment configuration (`dynamic`/`revalidate`/`runtime` exports) introduced accidentally (FR-F04, FR-I03) and remove them
+- [x] T096 Consume `createOrdersDefinition` from `src/app/admin/orders/page.tsx`: split the page into a server-component permission gate (`OrdersManagementClient` props) and wire `AdminDataView`'s `definition` prop (columns, filters, bulk actions) instead of the page's own inline `orderColumns`/no bulk wiring; bulk `mark_shipped`/`cancel` now call the existing `/api/admin/orders/bulk` route for both `loaded_page` and `entire_filtered_result` selection scopes — pilot for T097–T099
+- [ ] T097 [P] Consume `createProductsDefinition` from `src/app/admin/products/page.tsx`, replacing its inline columns/filter/bulk-action wiring the same way as T096 (depends on T096 as the reference pattern)
+- [ ] T098 [P] Consume `createUsersDefinition` from `src/features/admin/components/UsersTable.tsx`/`src/app/admin/users/page.tsx`, replacing inline columns and wiring role-change as a definition-driven action (depends on T096)
+- [ ] T099 [P] Consume the remaining resource definitions (`reviews`, `returns`, `checkout-requests`, `email-failures`) from their respective admin screens, one screen per commit, verifying no behavioral regression per screen (depends on T096)
 
 ---
 
