@@ -12,9 +12,10 @@ vi.mock(
     // permission-scoping logic exercised by the "no records for an
     // unpermitted entity" test below (FR-D09, scenario 6). Only the
     // DB-touching functions are stubbed.
-    const actual = await importOriginal<
-      typeof import('@/features/admin/services/admin-activity-query')
-    >()
+    const actual =
+      await importOriginal<
+        typeof import('@/features/admin/services/admin-activity-query')
+      >()
     return {
       ...actual,
       getActivityRequiredPermission: vi.fn(),
@@ -23,8 +24,7 @@ vi.mock(
   }
 )
 vi.mock('@/lib/constants/roles', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('@/lib/constants/roles')>()
+  const actual = await importOriginal<typeof import('@/lib/constants/roles')>()
   return {
     ...actual,
     getRolePermissions: vi.fn(actual.getRolePermissions),
@@ -139,10 +139,7 @@ describe('GET /api/admin/activity', () => {
     // built-in role currently matches this shape (ADMIN holds every
     // permission), so `getRolePermissions` is stubbed to simulate one and
     // exercise the fail-closed entity scoping in isolation.
-    const restrictedPermissions = [
-      'system:manage',
-      'orders:read',
-    ] as const
+    const restrictedPermissions = ['system:manage', 'orders:read'] as const
     mockGetRolePermissions.mockReturnValue(restrictedPermissions)
     mockCheckAdminAuth.mockResolvedValue({
       authorized: true,

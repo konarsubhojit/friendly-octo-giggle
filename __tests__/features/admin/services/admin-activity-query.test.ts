@@ -10,9 +10,7 @@ describe('getAllowedActivityEntities', () => {
 
     expect(allowed).toEqual(expect.arrayContaining(['order', 'orders']))
     expect(allowed).not.toEqual(expect.arrayContaining(['review', 'reviews']))
-    expect(allowed).not.toEqual(
-      expect.arrayContaining(['product', 'products'])
-    )
+    expect(allowed).not.toEqual(expect.arrayContaining(['product', 'products']))
     expect(allowed).not.toEqual(expect.arrayContaining(['user', 'users']))
   })
 
@@ -58,9 +56,7 @@ describe('getAllowedActivityEntities', () => {
     expect(allowed).toEqual(
       expect.arrayContaining(['order', 'orders', 'review', 'reviews'])
     )
-    expect(allowed).not.toEqual(
-      expect.arrayContaining(['product', 'products'])
-    )
+    expect(allowed).not.toEqual(expect.arrayContaining(['product', 'products']))
   })
 })
 

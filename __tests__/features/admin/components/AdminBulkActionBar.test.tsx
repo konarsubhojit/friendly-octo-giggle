@@ -1,11 +1,5 @@
 // @vitest-environment jsdom
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { AdminBulkActionBar } from '@/features/admin/components/AdminBulkActionBar'
 import type {
   BulkAction,

@@ -92,9 +92,7 @@ describe('PATCH /api/admin/users/[id]', () => {
     mockAuth.mockResolvedValue(adminSession as never)
     // drizzleDb.select().from().where() is called twice: once to read the
     // target user's current role, once to count total administrators.
-    const targetUserWhere = vi
-      .fn()
-      .mockResolvedValue([{ role: 'ADMIN' }])
+    const targetUserWhere = vi.fn().mockResolvedValue([{ role: 'ADMIN' }])
     const adminCountWhere = vi.fn().mockResolvedValue([{ value: 1 }])
     const selectFrom = vi
       .fn()
@@ -119,9 +117,7 @@ describe('PATCH /api/admin/users/[id]', () => {
 
   it('allows demoting an administrator when other administrators remain', async () => {
     mockAuth.mockResolvedValue(adminSession as never)
-    const targetUserWhere = vi
-      .fn()
-      .mockResolvedValue([{ role: 'ADMIN' }])
+    const targetUserWhere = vi.fn().mockResolvedValue([{ role: 'ADMIN' }])
     const adminCountWhere = vi.fn().mockResolvedValue([{ value: 2 }])
     const selectFrom = vi
       .fn()
