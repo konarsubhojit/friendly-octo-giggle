@@ -19,8 +19,7 @@ describe('products ResourceListDefinition', () => {
     const bulkKeys = def.bulkActions.map((a) => a.key)
     expect(bulkKeys).toContain('delete')
     expect(
-      def.bulkActions.find((a) => a.key === 'delete')
-        ?.requiresTypedConfirmation
+      def.bulkActions.find((a) => a.key === 'delete')?.requiresTypedConfirmation
     ).toBe(true)
   })
 
