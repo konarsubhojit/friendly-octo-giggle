@@ -21,7 +21,7 @@ vi.mock('@/lib/db', () => ({
   drizzleDb: mockDb,
 }))
 vi.mock('@/lib/schema', () => ({ users: { id: 'id', role: 'role' } }))
-vi.mock('drizzle-orm', () => ({ eq: vi.fn() }))
+vi.mock('drizzle-orm', () => ({ eq: vi.fn(), count: vi.fn() }))
 vi.mock('@/lib/auth', () => ({ auth: vi.fn() }))
 vi.mock('@/lib/cache', () => ({
   cacheAdminUserById: vi.fn(),
@@ -32,7 +32,7 @@ vi.mock('@/features/admin/services/admin-audit-log', () => ({
   recordAdminAuditLog: vi.fn(),
 }))
 
-import { primaryDrizzleDb } from '@/lib/db'
+import { primaryDrizzleDb, drizzleDb } from '@/lib/db'
 import { auth } from '@/lib/auth'
 import { cacheAdminUserById, invalidateAdminUserCaches } from '@/lib/cache'
 import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
