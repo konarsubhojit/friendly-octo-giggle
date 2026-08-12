@@ -5,7 +5,7 @@ import * as AdminPageModule from '@/app/admin/page'
 
 const getAdminSalesDashboardData =
   vi.fn<() => Promise<AdminSalesDashboardData>>()
-const checkAdminAuth = vi.fn()
+const checkAdminSessionAuth = vi.fn()
 const connection = vi.fn(async () => undefined)
 const redirect = vi.fn((url: string) => {
   throw new Error(`NEXT_REDIRECT:${url}`)
@@ -20,8 +20,13 @@ vi.mock('next/navigation', () => ({
 }))
 
 vi.mock('@/features/admin/services/admin-auth', () => ({
-  checkAdminAuth: (permission: string) => checkAdminAuth(permission),
+  checkAdminSessionAuth: () => checkAdminSessionAuth(),
 }))
+
+vi.mock('@/lib/constants/roles', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/constants/roles')>()
+  return { ...actual }
+})
 
 vi.mock('@/features/admin/services/admin-sales', () => ({
   getAdminSalesDashboardData: () => getAdminSalesDashboardData(),
@@ -33,6 +38,37 @@ vi.mock('@/features/admin/components/AdminSalesDashboardClient', () => ({
   }: {
     sales: AdminSalesDashboardData
   }) => <div>Sales dashboard: {sales.totalOrders}</div>,
+}))
+
+vi.mock('@/features/admin/components/AdminPageShell', () => ({
+  AdminPageShell: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  AdminPanel: ({
+    children,
+    title,
+  }: {
+    children: React.ReactNode
+    title?: string
+  }) => (
+    <div>
+      {title && <h2>{title}</h2>}
+      {children}
+    </div>
+  ),
+}))
+
+vi.mock('@/features/admin/services/actionable-queues', () => ({
+  ACTIONABLE_QUEUES: [
+    {
+      key: 'orders-awaiting-fulfilment',
+      label: 'Orders awaiting fulfilment',
+      resource: 'orders',
+      filter: { status: 'PENDING' },
+      permission: 'orders:read',
+      href: '/admin/orders?status=PENDING',
+    },
+  ],
 }))
 
 const SALES: AdminSalesDashboardData = {
@@ -64,16 +100,28 @@ describe('AdminDashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     getAdminSalesDashboardData.mockResolvedValue(SALES)
-    checkAdminAuth.mockResolvedValue({
+    checkAdminSessionAuth.mockResolvedValue({
       authorized: true,
       userId: 'user_1',
       role: 'ADMIN',
+      permissions: [
+        'orders:read',
+        'orders:update',
+        'products:read',
+        'products:write',
+        'users:read',
+        'users:manage',
+        'reviews:moderate',
+        'coupons:manage',
+        'analytics:read',
+        'system:manage',
+        'orders:refund',
+        'orders:returns',
+      ],
     })
   })
 
   it('opts out of prerendering instead of declaring a segment config', async () => {
-    // Under Cache Components the legacy `dynamic = 'force-dynamic'` export is
-    // replaced by an explicit `connection()` read.
     expect((AdminPageModule as { dynamic?: string }).dynamic).toBeUndefined()
 
     render(await AdminPageModule.default())
@@ -81,16 +129,15 @@ describe('AdminDashboard', () => {
     expect(connection).toHaveBeenCalledTimes(1)
   })
 
-  it('loads dashboard data and renders the client view', async () => {
+  it('renders actionable queue section for permitted queues', async () => {
     render(await AdminPageModule.default())
 
-    expect(checkAdminAuth).toHaveBeenCalledWith('analytics:read')
-    expect(getAdminSalesDashboardData).toHaveBeenCalledTimes(1)
-    expect(screen.getByText('Sales dashboard: 8')).toBeInTheDocument()
+    // The Work Queue section is rendered for staff with any queue permissions
+    expect(screen.getByText('Work Queue')).toBeInTheDocument()
   })
 
   it('redirects unauthenticated visitors to sign-in', async () => {
-    checkAdminAuth.mockResolvedValue({
+    checkAdminSessionAuth.mockResolvedValue({
       authorized: false,
       error: 'Not authenticated',
       status: 401,
@@ -102,17 +149,35 @@ describe('AdminDashboard', () => {
     expect(getAdminSalesDashboardData).not.toHaveBeenCalled()
   })
 
-  it('explains the restriction to staff without analytics access', async () => {
-    checkAdminAuth.mockResolvedValue({
-      authorized: false,
-      error: 'Not authorized - "analytics:read" permission required',
-      status: 403,
+  it('shows analytics section for users with analytics:read', async () => {
+    render(await AdminPageModule.default())
+
+    expect(getAdminSalesDashboardData).toHaveBeenCalledTimes(1)
+  })
+
+  it('hides analytics section for users without analytics:read', async () => {
+    checkAdminSessionAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'user_2',
+      role: 'FULFILMENT',
+      permissions: ['orders:read', 'orders:update', 'products:read'],
     })
 
     render(await AdminPageModule.default())
 
-    expect(screen.getByText('Sales dashboard unavailable')).toBeInTheDocument()
-    expect(redirect).not.toHaveBeenCalled()
     expect(getAdminSalesDashboardData).not.toHaveBeenCalled()
+  })
+
+  it('still shows queue section for roles without analytics access', async () => {
+    checkAdminSessionAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'user_2',
+      role: 'FULFILMENT',
+      permissions: ['orders:read', 'orders:update', 'products:read'],
+    })
+
+    render(await AdminPageModule.default())
+
+    expect(screen.getByText('Work Queue')).toBeInTheDocument()
   })
 })
