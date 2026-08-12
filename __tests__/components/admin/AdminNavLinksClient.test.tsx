@@ -44,18 +44,18 @@ describe('AdminNavLinksClient', () => {
     )
   })
 
-  it('renders Catalog, Management, System dropdown buttons', () => {
+  it('renders Catalogue, People, Operations dropdown buttons', () => {
     render(
       <AdminNavLinksClient
         failedEmailCount={0}
         permissions={ADMIN_PERMISSIONS}
       />
     )
-    expect(screen.getByRole('button', { name: /Catalog/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Catalogue/i })).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: /Management/i })
+      screen.getByRole('button', { name: /People/i })
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /System/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Operations/i })).toBeInTheDocument()
   })
 
   it('renders Jump to... quick navigation button', () => {
@@ -70,7 +70,7 @@ describe('AdminNavLinksClient', () => {
     ).toBeInTheDocument()
   })
 
-  it('Catalog dropdown is closed initially (no menu items visible)', () => {
+  it('Catalogue dropdown is closed initially (no menu items visible)', () => {
     render(
       <AdminNavLinksClient
         failedEmailCount={0}
@@ -81,14 +81,14 @@ describe('AdminNavLinksClient', () => {
     expect(screen.queryByRole('link', { name: 'Categories' })).toBeNull()
   })
 
-  it('clicking Catalog button opens the dropdown with menu items', async () => {
+  it('clicking Catalogue button opens the dropdown with menu items', async () => {
     render(
       <AdminNavLinksClient
         failedEmailCount={0}
         permissions={ADMIN_PERMISSIONS}
       />
     )
-    const catalogBtn = screen.getByRole('button', { name: /Catalog/i })
+    const catalogBtn = screen.getByRole('button', { name: /Catalogue/i })
     fireEvent.click(catalogBtn)
     await waitFor(() => {
       expect(screen.getByRole('menu')).toBeInTheDocument()
@@ -133,7 +133,7 @@ describe('AdminNavLinksClient', () => {
         permissions={ADMIN_PERMISSIONS}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Catalog/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Catalogue/i }))
 
     await waitFor(() => {
       expect(screen.getByRole('menu')).toHaveStyle({
@@ -173,7 +173,7 @@ describe('AdminNavLinksClient', () => {
         permissions={ADMIN_PERMISSIONS}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Catalog/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Catalogue/i }))
 
     await waitFor(() => {
       expect(screen.getByRole('menu')).toHaveStyle({
@@ -201,25 +201,25 @@ describe('AdminNavLinksClient', () => {
     rectSpy.mockRestore()
   })
 
-  it('Catalog dropdown button has aria-expanded=false initially', () => {
+  it('Catalogue dropdown button has aria-expanded=false initially', () => {
     render(
       <AdminNavLinksClient
         failedEmailCount={0}
         permissions={ADMIN_PERMISSIONS}
       />
     )
-    const catalogBtn = screen.getByRole('button', { name: /Catalog/i })
+    const catalogBtn = screen.getByRole('button', { name: /Catalogue/i })
     expect(catalogBtn).toHaveAttribute('aria-expanded', 'false')
   })
 
-  it('Catalog dropdown button has aria-expanded=true when open', async () => {
+  it('Catalogue dropdown button has aria-expanded=true when open', async () => {
     render(
       <AdminNavLinksClient
         failedEmailCount={0}
         permissions={ADMIN_PERMISSIONS}
       />
     )
-    const catalogBtn = screen.getByRole('button', { name: /Catalog/i })
+    const catalogBtn = screen.getByRole('button', { name: /Catalogue/i })
     fireEvent.click(catalogBtn)
     await waitFor(() => {
       expect(catalogBtn).toHaveAttribute('aria-expanded', 'true')
@@ -233,7 +233,7 @@ describe('AdminNavLinksClient', () => {
         permissions={ADMIN_PERMISSIONS}
       />
     )
-    const catalogBtn = screen.getByRole('button', { name: /Catalog/i })
+    const catalogBtn = screen.getByRole('button', { name: /Catalogue/i })
     fireEvent.click(catalogBtn)
     await waitFor(() => screen.getByRole('menuitem', { name: 'Products' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Products' }))
@@ -242,19 +242,15 @@ describe('AdminNavLinksClient', () => {
     })
   })
 
-  it('Management dropdown opens with Orders, Users, Reviews links', async () => {
+  it('People dropdown opens with Users and Reviews links', async () => {
     render(
       <AdminNavLinksClient
         failedEmailCount={0}
         permissions={ADMIN_PERMISSIONS}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Management/i }))
+    fireEvent.click(screen.getByRole('button', { name: /People/i }))
     await waitFor(() => screen.getByRole('menu'))
-    expect(screen.getByRole('menuitem', { name: 'Orders' })).toHaveAttribute(
-      'href',
-      '/admin/orders'
-    )
     expect(screen.getByRole('menuitem', { name: 'Users' })).toHaveAttribute(
       'href',
       '/admin/users'
@@ -265,14 +261,14 @@ describe('AdminNavLinksClient', () => {
     )
   })
 
-  it('System dropdown opens with Search and Email Failures links', async () => {
+  it('Operations dropdown opens with Search and Email Failures links', async () => {
     render(
       <AdminNavLinksClient
         failedEmailCount={0}
         permissions={ADMIN_PERMISSIONS}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /System/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Operations/i }))
     await waitFor(() => screen.getByRole('menu'))
     expect(screen.getByRole('menuitem', { name: 'Search' })).toHaveAttribute(
       'href',
@@ -290,7 +286,7 @@ describe('AdminNavLinksClient', () => {
         permissions={ADMIN_PERMISSIONS}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /System/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Operations/i }))
     await waitFor(() => screen.getByRole('menu'))
     expect(screen.getByText('5')).toBeInTheDocument()
   })
@@ -302,7 +298,7 @@ describe('AdminNavLinksClient', () => {
         permissions={ADMIN_PERMISSIONS}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /System/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Operations/i }))
     await waitFor(() => screen.getByRole('menu'))
     expect(screen.getByText('99+')).toBeInTheDocument()
   })
@@ -314,7 +310,7 @@ describe('AdminNavLinksClient', () => {
         permissions={ADMIN_PERMISSIONS}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /System/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Operations/i }))
     await waitFor(() => screen.getByRole('menu'))
     expect(screen.queryByText('0')).toBeNull()
   })
@@ -329,7 +325,7 @@ describe('AdminNavLinksClient', () => {
         <div data-testid="outside">outside</div>
       </div>
     )
-    fireEvent.click(screen.getByRole('button', { name: /Catalog/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Catalogue/i }))
     await waitFor(() => screen.getByRole('menu'))
     fireEvent.mouseDown(screen.getByTestId('outside'))
     await waitFor(() => {
@@ -344,7 +340,7 @@ describe('AdminNavLinksClient', () => {
         permissions={ADMIN_PERMISSIONS}
       />
     )
-    const catalogBtn = screen.getByRole('button', { name: /Catalog/i })
+    const catalogBtn = screen.getByRole('button', { name: /Catalogue/i })
     fireEvent.click(catalogBtn)
     await waitFor(() => screen.getByRole('menu'))
     fireEvent.click(catalogBtn)
@@ -511,7 +507,7 @@ describe('AdminNavLinksClient', () => {
       />
     )
 
-    fireEvent.click(screen.getByRole('button', { name: /Catalog/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Catalogue/i }))
     expect(
       screen.getByRole('menuitem', { name: 'Products' })
     ).toBeInTheDocument()
@@ -530,13 +526,13 @@ describe('AdminNavLinksClient', () => {
 
     expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument()
     expect(
-      screen.queryByRole('button', { name: /Catalog/i })
+      screen.queryByRole('button', { name: /Catalogue/i })
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByRole('button', { name: /Management/i })
+      screen.queryByRole('button', { name: /People/i })
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByRole('button', { name: /System/i })
+      screen.queryByRole('button', { name: /Operations/i })
     ).not.toBeInTheDocument()
   })
 })

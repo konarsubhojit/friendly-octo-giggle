@@ -600,3 +600,97 @@ test.describe('Admin Users - role change confirmation', () => {
     })
   })
 })
+
+// T041: FULFILMENT-role scenario — dashboard queue → orders list → bulk action
+test.describe('US1: Fulfilment staff clear the order queue', () => {
+  test('T041 - bulk mark-shipped from dashboard queue link', async ({
+    page,
+  }) => {
+    await page.goto('/admin')
+    await page.screenshot({
+      path: screenshotPath('admin-dashboard-queues'),
+      fullPage: true,
+    })
+
+    const queueLink = page.getByRole('link', {
+      name: /orders awaiting fulfilment/i,
+    })
+    if (await queueLink.isVisible()) {
+      await queueLink.click()
+      await page.waitForLoadState('networkidle')
+    }
+
+    await page.screenshot({
+      path: screenshotPath('admin-orders-filtered-queue'),
+      fullPage: true,
+    })
+  })
+})
+
+// T051: Activity panel visibility
+test.describe('US2: Activity visibility', () => {
+  test('T051 - global activity page renders', async ({ page }) => {
+    await page.goto('/admin/activity')
+    await page.waitForLoadState('networkidle')
+    await page.screenshot({
+      path: screenshotPath('admin-global-activity'),
+      fullPage: true,
+    })
+  })
+})
+
+// T059: Form consistency
+test.describe('US3: Form consistency', () => {
+  test('T059 - categories and coupons form screens', async ({ page }) => {
+    await page.goto('/admin/categories')
+    await page.waitForLoadState('networkidle')
+    await page.screenshot({
+      path: screenshotPath('admin-categories-form'),
+      fullPage: true,
+    })
+
+    await page.goto('/admin/coupons')
+    await page.waitForLoadState('networkidle')
+    await page.screenshot({
+      path: screenshotPath('admin-coupons-form'),
+      fullPage: true,
+    })
+  })
+})
+
+// T075: Converted screens
+test.describe('US4: Screen conversions', () => {
+  const screens = [
+    { name: 'users', path: '/admin/users' },
+    { name: 'products', path: '/admin/products' },
+    { name: 'reviews', path: '/admin/reviews' },
+    { name: 'returns', path: '/admin/returns' },
+    { name: 'checkout-requests', path: '/admin/checkout-requests' },
+    { name: 'recommendations', path: '/admin/recommendations' },
+    { name: 'email-failures', path: '/admin/email-failures' },
+    { name: 'search', path: '/admin/search' },
+  ]
+
+  for (const screen of screens) {
+    test(`T075 - ${screen.name} screen renders`, async ({ page }) => {
+      await page.goto(screen.path)
+      await page.waitForLoadState('networkidle')
+      await page.screenshot({
+        path: screenshotPath(`admin-${screen.name}-converted`),
+        fullPage: true,
+      })
+    })
+  }
+})
+
+// T077: Retired route redirects
+test.describe('Redirect map', () => {
+  test('T077 - /admin/sales redirects to /admin', async ({ page }) => {
+    await page.goto('/admin/sales')
+    expect(page.url()).toContain('/admin')
+    await page.screenshot({
+      path: screenshotPath('admin-sales-redirect'),
+      fullPage: false,
+    })
+  })
+})

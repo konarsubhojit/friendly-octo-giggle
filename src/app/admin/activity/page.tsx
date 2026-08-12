@@ -41,42 +41,57 @@ export default function AdminActivityPage() {
     dateTo?: string
   }>({})
 
-  const fetchActivity = useCallback(
-    async (cursor?: string | null) => {
-      setLoading(true)
-      try {
-        const params = new URLSearchParams()
-        if (filters.entity) params.set('entity', filters.entity)
-        if (filters.action) params.set('action', filters.action)
-        if (filters.actorId) params.set('actorId', filters.actorId)
-        if (filters.dateFrom) params.set('dateFrom', filters.dateFrom)
-        if (filters.dateTo) params.set('dateTo', filters.dateTo)
-        if (cursor) params.set('cursor', cursor)
-
-        const res = await fetch(`/api/admin/activity?${params.toString()}`)
-        if (!res.ok) throw new Error('Failed to load activity')
-        const data = await res.json()
-        if (cursor) {
-          setEntries((prev) => [...prev, ...data.entries])
-        } else {
-          setEntries(data.entries ?? [])
-        }
-        setNextCursor(data.nextCursor ?? null)
-      } catch {
-        setEntries([])
-      } finally {
-        setLoading(false)
-      }
+  const buildParams = useCallback(
+    (cursor?: string | null) => {
+      const params = new URLSearchParams()
+      if (filters.entity) params.set('entity', filters.entity)
+      if (filters.action) params.set('action', filters.action)
+      if (filters.actorId) params.set('actorId', filters.actorId)
+      if (filters.dateFrom) params.set('dateFrom', filters.dateFrom)
+      if (filters.dateTo) params.set('dateTo', filters.dateTo)
+      if (cursor) params.set('cursor', cursor)
+      return params
     },
     [filters]
   )
 
   useEffect(() => {
-    fetchActivity()
-  }, [fetchActivity])
+    let cancelled = false
+    const params = buildParams()
+    fetch(`/api/admin/activity?${params.toString()}`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('fail'))))
+      .then((data) => {
+        if (!cancelled) {
+          setEntries(data.entries ?? [])
+          setNextCursor(data.nextCursor ?? null)
+          setLoading(false)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setEntries([])
+          setLoading(false)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [buildParams])
 
   const handleLoadMore = () => {
-    if (nextCursor) fetchActivity(nextCursor)
+    if (!nextCursor) return
+    setLoading(true)
+    const params = buildParams(nextCursor)
+    fetch(`/api/admin/activity?${params.toString()}`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('fail'))))
+      .then((data) => {
+        setEntries((prev) => [...prev, ...data.entries])
+        setNextCursor(data.nextCursor ?? null)
+        setLoading(false)
+      })
+      .catch(() => {
+        setLoading(false)
+      })
   }
 
   return (

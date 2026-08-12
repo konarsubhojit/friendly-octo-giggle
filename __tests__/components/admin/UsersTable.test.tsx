@@ -50,7 +50,12 @@ describe('UsersTable', () => {
     })
 
     expect(screen.getByText('Change User Role')).toBeInTheDocument()
-    fireEvent.click(screen.getByText('Yes, change role'))
+
+    // AdminConfirmDialog requires typed confirmation
+    const input = screen.getByRole('textbox')
+    fireEvent.change(input, { target: { value: 'CHANGE ROLE' } })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
 
     await waitFor(() => {
       expect(onRoleChange).toHaveBeenCalledWith('user-1', 'ADMIN')

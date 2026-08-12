@@ -80,7 +80,7 @@ export function createOrdersDefinition(
       { field: 'total', label: 'Total' },
       { field: 'date', label: 'Date' },
     ],
-    rowActions: (row: OrderRow): ReadonlyArray<RowAction<OrderRow>> => {
+    rowActions: (_row: OrderRow): ReadonlyArray<RowAction<OrderRow>> => {
       const actions: RowAction<OrderRow>[] = [
         { key: 'view', label: 'View details', onSelect: handlers.onViewDetail },
       ]
