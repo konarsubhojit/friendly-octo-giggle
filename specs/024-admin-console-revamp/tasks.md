@@ -193,7 +193,7 @@ identical validation, dirty-state, and save/cancel behaviour across all of them.
 ### Implementation for User Story 3
 
 - [x] T062 [US3] Document the single overlay-vs-dedicated-screen rule (FR-B02) in `src/features/admin/services/form-presentation-rule.ts` — a small typed function/table keyed on record complexity, consumed by every create/edit call site — depends on T058
-- [ ] T063 [P] [US3] Eliminate `CategoriesClient.tsx`'s inline row editing; convert category create/edit to the rule from T062 (overlay, given its low field count) (FR-B03) — depends on T062
+- [x] T063 [P] [US3] Eliminate `CategoriesClient.tsx`'s inline row editing; convert category create/edit to the rule from T062 (overlay, given its low field count) (FR-B03) — depends on T062
 - [ ] T064 [P] [US3] Convert `CouponsClient.tsx`'s create/edit to the same rule/overlay pattern, replacing any bespoke modal wiring with the canonical form surface (FR-B01) — depends on T062
 - [ ] T065 [P] [US3] Confirm/align `ProductFormModal.tsx`/`VariantFormModal.tsx`/`ProductEditPageForm.tsx` against the canonical rule from T062 (already overlay/dedicated-screen split per Baseline — verify it matches the documented rule and adjust if not) — depends on T062
 - [ ] T066 [US3] Add a shared field-error/error-summary rendering pattern used by every converted form (categories, coupons, products) — adjacent field errors plus a count summary (FR-B04) — depends on T063, T064, T065
