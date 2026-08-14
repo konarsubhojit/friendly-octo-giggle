@@ -288,6 +288,7 @@ const useProductForm = (
 
   const handleSubmit = async (e: BaseSyntheticEvent) => {
     e.preventDefault()
+    if (saving || uploading) return
     if (!validate()) return
     setSaving(true)
     try {
