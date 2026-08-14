@@ -26,9 +26,7 @@ export default function ProductEditPageForm({
   // FR-B02/T065: editing a product also curates variants/options — the
   // nested structure the presentation rule routes to a dedicated screen.
   const layout =
-    getProductFormPresentation('edit') === 'dedicated-screen'
-      ? 'page'
-      : 'modal'
+    getProductFormPresentation('edit') === 'dedicated-screen' ? 'page' : 'modal'
 
   return (
     <ProductFormModal
