@@ -8,6 +8,7 @@ import { apiClient, ApiError } from '@/lib/api-client'
 import { formatMoneyValue } from '@/lib/money'
 import { DISCOUNT_TYPES } from '@/lib/constants/discounts'
 import { RESOURCE_FORM_PRESENTATIONS } from '@/features/admin/services/form-presentation-rule'
+import FormErrorSummary from '@/features/admin/components/FormErrorSummary'
 import type {
   AdminCouponRecord,
   AdminCouponRedemptionSummary,
@@ -155,7 +156,7 @@ interface CouponFormModalProps {
   readonly onClose: () => void
   readonly onSubmit: (
     form: CouponFormState
-  ) => Promise<{ success: boolean; conflict?: boolean }>
+  ) => Promise<{ success: boolean; conflict?: boolean; error?: string }>
 }
 
 /**
@@ -174,6 +175,7 @@ const CouponFormModal = ({
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [conflict, setConflict] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
   const formId = useId()
   const codeInputRef = useRef<HTMLInputElement>(null)
 
@@ -199,12 +201,15 @@ const CouponFormModal = ({
     if (saving) return
     setSaving(true)
     setConflict(false)
+    setFormError(null)
     const result = await onSubmit(form)
     setSaving(false)
     if (result.success) {
       onClose()
     } else if (result.conflict) {
       setConflict(true)
+    } else if (result.error) {
+      setFormError(result.error)
     }
   }
 
@@ -235,6 +240,8 @@ const CouponFormModal = ({
               Reload and try again.
             </p>
           )}
+
+          <FormErrorSummary formError={formError} />
 
           <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -506,7 +513,7 @@ export default function CouponsClient({
 
   const handleCreate = async (
     form: CouponFormState
-  ): Promise<{ success: boolean; conflict?: boolean }> => {
+  ): Promise<{ success: boolean; conflict?: boolean; error?: string }> => {
     try {
       const result = await apiClient.post<{
         data: { coupon: AdminCouponRecord }
@@ -515,17 +522,17 @@ export default function CouponsClient({
       toast.success(`Coupon ${result.data.coupon.code} created`)
       return { success: true }
     } catch (error) {
-      toast.error(
+      const message =
         error instanceof Error ? error.message : 'Failed to create coupon'
-      )
-      return { success: false }
+      toast.error(message)
+      return { success: false, error: message }
     }
   }
 
   const handleUpdate = async (
     coupon: AdminCouponRecord,
     form: CouponFormState
-  ): Promise<{ success: boolean; conflict?: boolean }> => {
+  ): Promise<{ success: boolean; conflict?: boolean; error?: string }> => {
     try {
       const result = await apiClient.patch<{
         data: { coupon: AdminCouponRecord }
@@ -544,16 +551,16 @@ export default function CouponsClient({
         )
         return { success: false, conflict: true }
       }
-      toast.error(
+      const message =
         error instanceof Error ? error.message : 'Failed to update coupon'
-      )
-      return { success: false }
+      toast.error(message)
+      return { success: false, error: message }
     }
   }
 
   const handleFormSubmit = (
     form: CouponFormState
-  ): Promise<{ success: boolean; conflict?: boolean }> => {
+  ): Promise<{ success: boolean; conflict?: boolean; error?: string }> => {
     if (formTarget === 'new') return handleCreate(form)
     if (formTarget) return handleUpdate(formTarget, form)
     return Promise.resolve({ success: false })

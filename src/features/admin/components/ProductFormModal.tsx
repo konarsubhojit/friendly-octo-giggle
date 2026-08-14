@@ -11,6 +11,7 @@ import useProductForm, {
   MAX_IMAGES,
 } from '@/features/admin/hooks/useProductForm'
 import { TextInput, TextArea, SelectInput, FileInput } from 'zenput'
+import FormErrorSummary from '@/features/admin/components/FormErrorSummary'
 
 interface ProductFormModalProps {
   readonly editingProduct: Product | null
@@ -146,6 +147,7 @@ const ProductFormModal = ({
       </h3>
 
       <form noValidate onSubmit={handleSubmit}>
+        <FormErrorSummary fieldErrors={fieldErrors} />
         <div className="space-y-4">
           <TextInput
             label="Name"

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { RESOURCE_FORM_PRESENTATIONS } from '@/features/admin/services/form-presentation-rule'
+import FormErrorSummary from '@/features/admin/components/FormErrorSummary'
 
 // FR-B02/FR-B03: categories are a low-field-count record, so the canonical
 // rule places create/edit in an overlay rather than a dedicated screen.
@@ -149,7 +150,9 @@ const CategoryRow = ({
 interface CategoryFormModalProps {
   readonly editingCategory: Category | null
   readonly onClose: () => void
-  readonly onSubmit: (name: string) => Promise<boolean>
+  readonly onSubmit: (
+    name: string
+  ) => Promise<{ success: boolean; error?: string }>
 }
 
 /**
@@ -165,6 +168,7 @@ const CategoryFormModal = ({
   const [name, setName] = useState(editingCategory?.name ?? '')
   const [submitting, setSubmitting] = useState(false)
   const [dirty, setDirty] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -181,9 +185,14 @@ const CategoryFormModal = ({
     const trimmed = name.trim()
     if (!trimmed || submitting) return
     setSubmitting(true)
-    const success = await onSubmit(trimmed)
+    setFormError(null)
+    const result = await onSubmit(trimmed)
     setSubmitting(false)
-    if (success) onClose()
+    if (result.success) {
+      onClose()
+    } else if (result.error) {
+      setFormError(result.error)
+    }
   }
 
   return (
@@ -201,6 +210,7 @@ const CategoryFormModal = ({
           >
             {isEditing ? 'Edit Category' : 'Add Category'}
           </h3>
+          <FormErrorSummary formError={formError} />
           <label
             htmlFor="category-form-name"
             className="block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400 mb-1"
@@ -255,7 +265,9 @@ const CategoriesClient = ({ initialCategories }: CategoriesClientProps) => {
   const [dragSourceIndex, setDragSourceIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
 
-  const handleCreate = async (name: string): Promise<boolean> => {
+  const handleCreate = async (
+    name: string
+  ): Promise<{ success: boolean; error?: string }> => {
     try {
       const res = await fetch('/api/admin/categories', {
         method: 'POST',
@@ -269,16 +281,19 @@ const CategoriesClient = ({ initialCategories }: CategoriesClientProps) => {
         [...prev, created].sort((a, b) => a.sortOrder - b.sortOrder)
       )
       toast.success(`"${created.name}" added`)
-      return true
+      return { success: true }
     } catch (err) {
-      toast.error(
+      const message =
         err instanceof Error ? err.message : 'Failed to create category'
-      )
-      return false
+      toast.error(message)
+      return { success: false, error: message }
     }
   }
 
-  const handleRename = async (id: string, name: string): Promise<boolean> => {
+  const handleRename = async (
+    id: string,
+    name: string
+  ): Promise<{ success: boolean; error?: string }> => {
     try {
       const res = await fetch(`/api/admin/categories/${id}`, {
         method: 'PUT',
@@ -287,28 +302,30 @@ const CategoriesClient = ({ initialCategories }: CategoriesClientProps) => {
       })
       const data = await res.json()
       if (res.status === 409) {
-        toast.error(
+        const message =
           'This category was changed by someone else. Reload and try again.'
-        )
-        return false
+        toast.error(message)
+        return { success: false, error: message }
       }
       if (!res.ok) throw new Error(data.error ?? 'Failed to rename category')
       const updated = data.data?.category ?? data.category
       setCats((prev) => prev.map((c) => (c.id === id ? updated : c)))
       toast.success(`Renamed to "${updated.name}"`)
-      return true
+      return { success: true }
     } catch (err) {
-      toast.error(
+      const message =
         err instanceof Error ? err.message : 'Failed to rename category'
-      )
-      return false
+      toast.error(message)
+      return { success: false, error: message }
     }
   }
 
-  const handleFormSubmit = async (name: string): Promise<boolean> => {
+  const handleFormSubmit = async (
+    name: string
+  ): Promise<{ success: boolean; error?: string }> => {
     if (formTarget === 'new') return handleCreate(name)
     if (formTarget) return handleRename(formTarget.id, name)
-    return false
+    return { success: false }
   }
 
   const handleDelete = async () => {

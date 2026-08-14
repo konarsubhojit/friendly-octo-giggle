@@ -196,7 +196,7 @@ identical validation, dirty-state, and save/cancel behaviour across all of them.
 - [x] T063 [P] [US3] Eliminate `CategoriesClient.tsx`'s inline row editing; convert category create/edit to the rule from T062 (overlay, given its low field count) (FR-B03) — depends on T062
 - [x] T064 [P] [US3] Convert `CouponsClient.tsx`'s create/edit to the same rule/overlay pattern, replacing any bespoke modal wiring with the canonical form surface (FR-B01) — depends on T062
 - [x] T065 [P] [US3] Confirm/align `ProductFormModal.tsx`/`VariantFormModal.tsx`/`ProductEditPageForm.tsx` against the canonical rule from T062 (already overlay/dedicated-screen split per Baseline — verify it matches the documented rule and adjust if not) — depends on T062
-- [ ] T066 [US3] Add a shared field-error/error-summary rendering pattern used by every converted form (categories, coupons, products) — adjacent field errors plus a count summary (FR-B04) — depends on T063, T064, T065
+- [x] T066 [US3] Add a shared field-error/error-summary rendering pattern used by every converted form (categories, coupons, products) — adjacent field errors plus a count summary (FR-B04) — depends on T063, T064, T065
 - [ ] T067 [US3] Add a shared unsaved-changes guard (navigation/close interception) used by every converted form (FR-B05) — depends on T063, T064, T065
 - [ ] T068 [US3] Add consistent save/cancel affordance positioning and duplicate-submission prevention while a save is in flight, across all converted forms (FR-B06) — depends on T066, T067
 - [ ] T069 [US3] Add stale-record detection (modified/deleted by another user since the form opened) surfaced distinctly from validation failure, across all converted forms (FR-B07/FR-B08) — depends on T066
