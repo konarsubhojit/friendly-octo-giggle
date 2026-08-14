@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { RESOURCE_FORM_PRESENTATIONS } from '@/features/admin/services/form-presentation-rule'
 import FormErrorSummary from '@/features/admin/components/FormErrorSummary'
+import { useUnsavedChangesGuard } from '@/features/admin/hooks/useUnsavedChangesGuard'
 
 // FR-B02/FR-B03: categories are a low-field-count record, so the canonical
 // rule places create/edit in an overlay rather than a dedicated screen.
@@ -170,15 +171,13 @@ const CategoryFormModal = ({
   const [dirty, setDirty] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const { guardClose } = useUnsavedChangesGuard(dirty)
 
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
 
-  const handleClose = () => {
-    if (dirty && !window.confirm('Discard unsaved changes?')) return
-    onClose()
-  }
+  const handleClose = () => guardClose(onClose)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

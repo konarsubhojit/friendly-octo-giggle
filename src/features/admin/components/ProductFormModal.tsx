@@ -12,6 +12,7 @@ import useProductForm, {
 } from '@/features/admin/hooks/useProductForm'
 import { TextInput, TextArea, SelectInput, FileInput } from 'zenput'
 import FormErrorSummary from '@/features/admin/components/FormErrorSummary'
+import { useUnsavedChangesGuard } from '@/features/admin/hooks/useUnsavedChangesGuard'
 
 interface ProductFormModalProps {
   readonly editingProduct: Product | null
@@ -107,6 +108,7 @@ const ProductFormModal = ({
   const {
     formData,
     setFormData,
+    dirty,
     imageFile,
     additionalFiles,
     slotIds,
@@ -124,6 +126,8 @@ const ProductFormModal = ({
     handleSubmit,
   } = useProductForm(editingProduct, onClose, onSuccess)
   const isPageLayout = layout === 'page'
+  const { guardClose } = useUnsavedChangesGuard(dirty)
+  const handleClose = () => guardClose(onClose)
 
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
 
@@ -270,7 +274,7 @@ const ProductFormModal = ({
         <div className="flex gap-3 mt-6">
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             disabled={saving || uploading}
             className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 disabled:bg-gray-100 dark:disabled:bg-gray-800 transition"
           >

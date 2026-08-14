@@ -9,6 +9,7 @@ import { formatMoneyValue } from '@/lib/money'
 import { DISCOUNT_TYPES } from '@/lib/constants/discounts'
 import { RESOURCE_FORM_PRESENTATIONS } from '@/features/admin/services/form-presentation-rule'
 import FormErrorSummary from '@/features/admin/components/FormErrorSummary'
+import { useUnsavedChangesGuard } from '@/features/admin/hooks/useUnsavedChangesGuard'
 import type {
   AdminCouponRecord,
   AdminCouponRedemptionSummary,
@@ -178,6 +179,7 @@ const CouponFormModal = ({
   const [formError, setFormError] = useState<string | null>(null)
   const formId = useId()
   const codeInputRef = useRef<HTMLInputElement>(null)
+  const { guardClose } = useUnsavedChangesGuard(dirty)
 
   useEffect(() => {
     codeInputRef.current?.focus()
@@ -191,10 +193,7 @@ const CouponFormModal = ({
     setDirty(true)
   }
 
-  const handleClose = () => {
-    if (dirty && !window.confirm('Discard unsaved changes?')) return
-    onClose()
-  }
+  const handleClose = () => guardClose(onClose)
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()

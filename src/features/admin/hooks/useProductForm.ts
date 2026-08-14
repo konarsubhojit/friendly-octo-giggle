@@ -107,9 +107,14 @@ const useProductForm = (
   onClose: () => void,
   onSuccess: (product: Product) => void
 ) => {
-  const [formData, setFormData] = useState<ProductFormData>(() =>
+  const [formData, setRawFormData] = useState<ProductFormData>(() =>
     buildInitialFormData(editingProduct)
   )
+  const [dirty, setDirty] = useState(false)
+  const setFormData: typeof setRawFormData = (value) => {
+    setDirty(true)
+    setRawFormData(value)
+  }
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [additionalFiles, setAdditionalFiles] = useState<(File | null)[]>(() =>
     new Array((editingProduct?.images ?? []).length).fill(null)
@@ -169,6 +174,7 @@ const useProductForm = (
     }
     setFieldErrors((prev) => ({ ...prev, image: undefined }))
     setImageFile(file)
+    setDirty(true)
   }
 
   const handleAdditionalImageChange = (
@@ -185,6 +191,7 @@ const useProductForm = (
     const newFiles = [...additionalFiles]
     newFiles[idx] = file
     setAdditionalFiles(newFiles)
+    setDirty(true)
   }
 
   const addImageSlot = () => {
@@ -308,6 +315,7 @@ const useProductForm = (
   return {
     formData,
     setFormData,
+    dirty,
     imageFile,
     additionalFiles,
     slotIds,
