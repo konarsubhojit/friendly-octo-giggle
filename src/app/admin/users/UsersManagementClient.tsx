@@ -101,8 +101,7 @@ export default function UsersManagementClient({
   const applyBulkDelete = useMemo(
     () =>
       async (selection: BulkSelection): Promise<BulkResult> => {
-        const rowIds =
-          selection.scope === 'loaded_page' ? selection.rowIds : []
+        const rowIds = selection.scope === 'loaded_page' ? selection.rowIds : []
         return {
           succeeded: [],
           failed: rowIds.map((rowId) => ({
