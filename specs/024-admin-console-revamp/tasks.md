@@ -255,7 +255,7 @@ each role may open.
 **Purpose**: Verification and hardening that spans all user stories.
 
 - [x] T089 [P] Run `npm run lint` and `npx tsc --noEmit -p tsconfig.check.json`, fixing any violations introduced by the above phases
-- [ ] T090 [P] Verify NFR-009 (no increase in database round trips for any existing admin screen) by comparing query counts before/after conversion for each converted screen
+- [x] T090 [P] Verify NFR-009 (no increase in database round trips for any existing admin screen) by comparing query counts before/after conversion for each converted screen
 - [ ] T091 [P] Verify NFR-004 (list responsiveness against 100k+ underlying rows) and NFR-007 (activity view first page within 1s p75 against a full 24-month window) against a representative seeded/staging dataset
 - [ ] T092 [P] Run the full Playwright suite (`npx playwright test playwright-tests/admin-views.spec.ts` and `playwright-tests/ux-audit.spec.ts`) and capture screenshots for every modified/converted page
 - [x] T093 Run `npm run test` (including the audit-coverage check from T032) and `npm run docs:check`; fix any regressions

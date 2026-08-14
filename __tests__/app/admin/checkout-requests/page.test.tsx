@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import AdminCheckoutRequestsPage from '@/app/admin/checkout-requests/page'
 
 const mockRequireAdminPermission = vi.hoisted(() => vi.fn())
+const mockCheckoutRequestsClient = vi.hoisted(() => vi.fn())
 
 vi.mock('@/features/admin/services/admin-page-auth', () => ({
   requireAdminPermission: (permission: string, callbackUrl?: string) =>
@@ -25,6 +26,7 @@ const mockRecords = [
     orderId: null,
     createdAt: '2026-03-24T08:00:00.000Z',
     updatedAt: '2026-03-24T08:01:00.000Z',
+    reservation: null,
   },
   {
     id: 'CHK1002',
@@ -38,6 +40,7 @@ const mockRecords = [
     orderId: 'ORD123ABC',
     createdAt: '2026-03-24T09:30:00.000Z',
     updatedAt: '2026-03-24T09:31:00.000Z',
+    reservation: null,
   },
 ] as const
 
@@ -49,6 +52,17 @@ vi.mock('next/link', () => ({
 
 vi.mock('@/features/cart/services/checkout-service', () => ({
   getRecentCheckoutRequests: mockGetRecentCheckoutRequests,
+}))
+
+vi.mock('@/features/admin/components/CheckoutRequestsClient', () => ({
+  default: (props: { records: Array<{ id: string }>; emptyMessage: string }) => {
+    mockCheckoutRequestsClient(props)
+    return (
+      <div>
+        Checkout requests client: {props.records.length} / {props.emptyMessage}
+      </div>
+    )
+  },
 }))
 
 describe('AdminCheckoutRequestsPage', () => {
@@ -66,7 +80,7 @@ describe('AdminCheckoutRequestsPage', () => {
     )
   })
 
-  it('renders queue metrics and request rows', async () => {
+  it('renders queue metrics and passes records into the client data view', async () => {
     render(await AdminCheckoutRequestsPage({}))
 
     expect(
@@ -76,15 +90,15 @@ describe('AdminCheckoutRequestsPage', () => {
     expect(screen.getByText('Processing')).toBeInTheDocument()
     expect(screen.getByText('Failed')).toBeInTheDocument()
     expect(screen.getByText('Completed')).toBeInTheDocument()
-    expect(screen.getAllByText('CHK1001')).toHaveLength(2)
-    expect(screen.getAllByText('Aisha Khan')).toHaveLength(2)
     expect(
-      screen.getAllByText('Insufficient stock for Rose Bouquet')[0]
+      screen.getByText(
+        'Checkout requests client: 2 / No checkout requests have been recorded yet.'
+      )
     ).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'ORD123ABC' })).toHaveAttribute(
-      'href',
-      '/admin/orders?search=ORD123ABC'
-    )
+    expect(mockCheckoutRequestsClient).toHaveBeenCalledWith({
+      records: mockRecords,
+      emptyMessage: 'No checkout requests have been recorded yet.',
+    })
     expect(mockGetRecentCheckoutRequests).toHaveBeenCalledWith({
       limit: 50,
       search: '',
@@ -114,5 +128,9 @@ describe('AdminCheckoutRequestsPage', () => {
         'Showing 2 checkout requests matching "maya" and status COMPLETED.'
       )
     ).toBeInTheDocument()
+    expect(mockCheckoutRequestsClient).toHaveBeenCalledWith({
+      records: mockRecords,
+      emptyMessage: 'No checkout requests matched the current filters.',
+    })
   })
 })

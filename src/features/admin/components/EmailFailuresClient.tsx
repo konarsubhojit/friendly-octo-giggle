@@ -1,11 +1,21 @@
 'use client'
 
-import { useState } from 'react'
+import {
+  useCallback,
+  useMemo,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from 'react'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { AlertBanner } from '@/components/ui/AlertBanner'
 import type { EmailAttemptRecord } from '@/lib/schema'
 import { Badge, type DataTableColumn } from 'zenput'
 import { AdminDataView } from '@/features/admin/components/AdminDataView'
+import {
+  createEmailFailuresDefinition,
+  type EmailFailureRow,
+} from '@/features/admin/resources/email-failures'
 
 interface FailedEmailRecord {
   readonly id: string
@@ -44,7 +54,11 @@ const STATUS_TONES = {
   sent: 'success',
 } as const
 
-type FailedEmailDataRow = FailedEmailRecord & { [key: string]: unknown }
+type FailedEmailDataRow = EmailFailureRow & {
+  readonly referenceId: string
+  readonly lastErrorDetail: string | null
+  readonly createdAtValue: Date
+}
 
 interface EmailFailuresTableProps {
   readonly records: FailedEmailRecord[]
@@ -52,14 +66,46 @@ interface EmailFailuresTableProps {
   readonly onRetry: (id: string) => void
 }
 
+const toEmailFailureRow = (record: FailedEmailRecord): FailedEmailDataRow => ({
+  id: record.id,
+  recipient: record.recipientEmail,
+  subject: record.subject,
+  emailType: record.emailType,
+  attempts: String(record.attemptCount),
+  status: record.status,
+  lastError: record.lastError ?? '—',
+  lastErrorDetail: record.lastError,
+  createdAt: formatDate(record.createdAt),
+  createdAtValue: record.createdAt,
+  referenceId: record.referenceId,
+})
+
 const EmailFailuresTable = ({
   records,
   retryingId,
   onRetry,
 }: EmailFailuresTableProps) => {
-  const rows: FailedEmailDataRow[] = records.map((record) => ({ ...record }))
-  const renderRetryButton = (record: FailedEmailDataRow) =>
-    record.status !== 'sent' ? (
+  const rows = useMemo<FailedEmailDataRow[]>(
+    () => records.map(toEmailFailureRow),
+    [records]
+  )
+
+  const definition = useMemo(
+    () =>
+      createEmailFailuresDefinition([], {
+        onRetry: (row) => {
+          onRetry(row.id)
+        },
+      }),
+    [onRetry]
+  )
+
+  const renderRetryButton = useCallback((record: FailedEmailDataRow) => {
+    if (definition.rowActions(record).length === 0) {
+      return null
+    }
+
+    return (
       <button
         type="button"
         onClick={() => onRetry(record.id)}
@@ -68,50 +114,74 @@ const EmailFailuresTable = ({
       >
         {retryingId === record.id ? 'Retrying…' : 'Retry'}
       </button>
-    ) : null
+    )
+  }, [definition, onRetry, retryingId])
 
-  const columns: DataTableColumn<FailedEmailDataRow>[] = [
-    { key: 'recipientEmail', header: 'Recipient' },
-    { key: 'emailType', header: 'Type' },
-    { key: 'referenceId', header: 'Order ID' },
-    { key: 'attemptCount', header: 'Attempts', align: 'right' },
-    {
-      key: 'status',
-      header: 'Status',
-      render: (_value, record) => (
-        <Badge
-          tone={
-            STATUS_TONES[record.status as keyof typeof STATUS_TONES] ??
-            'neutral'
-          }
-          size="sm"
-        >
-          {record.status}
-        </Badge>
-      ),
-    },
-    {
+  const columns = useMemo<DataTableColumn<FailedEmailDataRow>[]>(() => {
+    const mergedColumns: DataTableColumn<FailedEmailDataRow>[] =
+      definition.columns.map((rawColumn) => {
+        const column = rawColumn as unknown as DataTableColumn<FailedEmailDataRow>
+
+        switch (column.key) {
+          case 'status':
+            return {
+              ...column,
+              render: (_value: unknown, record: FailedEmailDataRow) => (
+                <Badge
+                  tone={
+                    STATUS_TONES[record.status as keyof typeof STATUS_TONES] ??
+                    'neutral'
+                  }
+                  size="sm"
+                >
+                  {record.status}
+                </Badge>
+              ),
+            }
+          case 'createdAt':
+            return {
+              ...column,
+              render: (_value: unknown, record: FailedEmailDataRow) =>
+                formatDate(record.createdAtValue),
+            }
+          default:
+            return column
+        }
+      })
+
+    const createdAtIndex = mergedColumns.findIndex(
+      (column) => column.key === 'createdAt'
+    )
+
+    const lastErrorColumn: DataTableColumn<FailedEmailDataRow> = {
       key: 'lastError',
       header: 'Last Error',
-      render: (_value, record) => record.lastError ?? '—',
-    },
-    {
-      key: 'createdAt',
-      header: 'Created',
-      render: (_value, record) => formatDate(record.createdAt),
-    },
-    {
-      key: 'action',
+      render: (_value, record) => record.lastErrorDetail ?? '—',
+    }
+
+    const actionColumn: DataTableColumn<FailedEmailDataRow> = {
+      key: 'actions',
       header: 'Action',
       sticky: 'right',
       render: (_value, record) => renderRetryButton(record),
-    },
-  ]
+    }
+
+    if (createdAtIndex === -1) {
+      return [...mergedColumns, lastErrorColumn, actionColumn]
+    }
+
+    return [
+      ...mergedColumns.slice(0, createdAtIndex),
+      lastErrorColumn,
+      ...mergedColumns.slice(createdAtIndex),
+      actionColumn,
+    ]
+  }, [definition, renderRetryButton])
 
   return (
     <AdminDataView
       ariaLabel="Failed emails"
-      columns={columns}
+      definition={{ ...definition, columns }}
       data={rows}
       rowKey={(record) => record.id}
       renderMobileCard={(record) => (
@@ -119,7 +189,7 @@ const EmailFailuresTable = ({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="break-all text-sm font-bold text-slate-950 dark:text-slate-50">
-                {record.recipientEmail}
+                {record.recipient}
               </p>
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 {record.emailType}
@@ -149,20 +219,20 @@ const EmailFailuresTable = ({
                 Attempts
               </dt>
               <dd className="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                {record.attemptCount}
+                {record.attempts}
               </dd>
             </div>
           </dl>
-          {record.lastError ? (
+          {record.lastErrorDetail ? (
             <p className="mt-3 break-words rounded-xl bg-rose-50 p-3 text-xs text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">
-              {record.lastError}
+              {record.lastErrorDetail}
             </p>
           ) : (
             <span className="sr-only">—</span>
           )}
           <div className="mt-3 flex items-center justify-between gap-3 border-t border-slate-200 pt-3 dark:border-slate-700">
             <time className="text-xs text-slate-500 dark:text-slate-400">
-              {formatDate(record.createdAt)}
+              {formatDate(record.createdAtValue)}
             </time>
             {renderRetryButton(record)}
           </div>
@@ -175,8 +245,8 @@ const EmailFailuresTable = ({
 const applyRetryOutcome = (
   result: { success?: boolean; error?: string } | undefined,
   id: string,
-  setRecords: React.Dispatch<React.SetStateAction<FailedEmailRecord[]>>,
-  setError: React.Dispatch<React.SetStateAction<string | null>>
+  setRecords: Dispatch<SetStateAction<FailedEmailRecord[]>>,
+  setError: Dispatch<SetStateAction<string | null>>
 ): void => {
   if (result?.success) {
     setRecords((prev) => prev.filter((r) => r.id !== id))
@@ -189,8 +259,8 @@ const handleRetryResponse = (
   res: Response,
   data: RetryApiResponse,
   id: string,
-  setRecords: React.Dispatch<React.SetStateAction<FailedEmailRecord[]>>,
-  setError: React.Dispatch<React.SetStateAction<string | null>>
+  setRecords: Dispatch<SetStateAction<FailedEmailRecord[]>>,
+  setError: Dispatch<SetStateAction<string | null>>
 ): void => {
   if (!res.ok || !data.success) {
     setError(data.error ?? 'Retry failed')
