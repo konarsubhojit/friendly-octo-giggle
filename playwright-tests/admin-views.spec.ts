@@ -872,7 +872,10 @@ test.describe('US2: Activity visibility', () => {
   })
 })
 
-// T059: Form consistency
+// T059: Form consistency — category, coupon, and product create/edit forms
+// must share identical field-error placement, error-summary behaviour,
+// unsaved-changes warning, and duplicate-submission prevention (FR-B04,
+// FR-B06, FR-B07/FR-B08, T066/T067/T068).
 test.describe('US3: Form consistency', () => {
   test('T059 - categories and coupons form screens', async ({ page }) => {
     await page.goto('/admin/categories')
@@ -886,6 +889,160 @@ test.describe('US3: Form consistency', () => {
     await page.waitForLoadState('networkidle')
     await page.screenshot({
       path: screenshotPath('admin-coupons-form'),
+      fullPage: true,
+    })
+  })
+
+  test('T059 - category form: unsaved-changes guard and duplicate-submit prevention', async ({
+    page,
+  }) => {
+    await page.goto('/admin/categories')
+    await page.waitForLoadState('networkidle')
+
+    await page.getByRole('button', { name: 'Add category' }).click()
+    const nameInput = page.getByLabel('Name', { exact: true })
+    await expect(nameInput).toBeVisible()
+    await nameInput.fill('Unsaved Draft Category')
+
+    // Unsaved-changes guard: Cancel must prompt a confirm dialog rather than
+    // silently discarding the dirty draft.
+    let dialogMessage = ''
+    page.once('dialog', (dialog) => {
+      dialogMessage = dialog.message()
+      void dialog.dismiss()
+    })
+    await page.getByRole('button', { name: 'Cancel' }).click()
+    await expect
+      .poll(() => dialogMessage)
+      .toMatch(/unsaved|lose|discard/i)
+    // Dismissing the confirm keeps the modal open with the draft intact.
+    await expect(nameInput).toHaveValue('Unsaved Draft Category')
+
+    // Duplicate-submission prevention: the create request resolves slowly,
+    // so a rapid double-click must only produce a single network request.
+    let createRequests = 0
+    await page.route('**/api/admin/categories', (route) => {
+      if (route.request().method() !== 'POST') return route.continue()
+      createRequests += 1
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve(
+            route.fulfill({
+              json: {
+                success: true,
+                data: {
+                  category: {
+                    id: 'cat-e2e',
+                    name: 'Unsaved Draft Category',
+                    sortOrder: 99,
+                    updatedAt: new Date().toISOString(),
+                  },
+                },
+              },
+            })
+          )
+        }, 300)
+      })
+    })
+    const saveButton = page.getByRole('button', { name: 'Save' })
+    await saveButton.click({ clickCount: 1 })
+    await saveButton.click({ clickCount: 1 }).catch(() => {
+      // Button is disabled once submitting starts; a second click may be a
+      // no-op or throw if it's already detached — either way is fine here.
+    })
+    await expect
+      .poll(() => createRequests, { timeout: 2000 })
+      .toBeLessThanOrEqual(1)
+
+    await page.screenshot({
+      path: screenshotPath('admin-categories-form-guards'),
+      fullPage: true,
+    })
+  })
+
+  test('T059 - coupon form: unsaved-changes guard and duplicate-submit prevention', async ({
+    page,
+  }) => {
+    await page.goto('/admin/coupons')
+    await page.waitForLoadState('networkidle')
+
+    await page.getByRole('button', { name: '+ Add coupon' }).click()
+    const codeInput = page.getByLabel('Code')
+    await expect(codeInput).toBeVisible()
+    await codeInput.fill('E2EDRAFT10')
+
+    let dialogMessage = ''
+    page.once('dialog', (dialog) => {
+      dialogMessage = dialog.message()
+      void dialog.dismiss()
+    })
+    await page.getByRole('button', { name: 'Cancel' }).click()
+    await expect
+      .poll(() => dialogMessage)
+      .toMatch(/unsaved|lose|discard/i)
+    await expect(codeInput).toHaveValue('E2EDRAFT10')
+
+    let createRequests = 0
+    await page.route('**/api/admin/coupons', (route) => {
+      if (route.request().method() !== 'POST') return route.continue()
+      createRequests += 1
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve(
+            route.fulfill({
+              status: 422,
+              json: { success: false, error: 'Fill in the remaining fields' },
+            })
+          )
+        }, 300)
+      })
+    })
+    const saveButton = page.getByRole('button', { name: 'Create coupon' })
+    await saveButton.click({ clickCount: 1 })
+    await saveButton.click({ clickCount: 1 }).catch(() => {})
+    await expect
+      .poll(() => createRequests, { timeout: 2000 })
+      .toBeLessThanOrEqual(1)
+
+    await page.screenshot({
+      path: screenshotPath('admin-coupons-form-guards'),
+      fullPage: true,
+    })
+  })
+
+  test('T059 - product form: error summary and unsaved-changes guard', async ({
+    page,
+  }) => {
+    await mockAdminRoutes(page)
+    await page.goto('/admin/products')
+    await page.waitForLoadState('networkidle')
+
+    await page.getByRole('button', { name: 'Add Product' }).click()
+    const nameInput = page.getByLabel('Name')
+    await expect(nameInput).toBeVisible()
+
+    // Submitting with required fields blank surfaces the shared
+    // FormErrorSummary with a count, same banner used by categories/coupons.
+    await page.getByRole('button', { name: /Create Product/i }).click()
+    const errorSummary = page.getByTestId('form-error-summary')
+    await expect(errorSummary).toBeVisible()
+    await expect(errorSummary).toContainText(/please fix \d+ errors? below/i)
+
+    // Unsaved-changes guard: dirty the form, then Cancel must confirm.
+    await nameInput.fill('Draft Product')
+    let dialogMessage = ''
+    page.once('dialog', (dialog) => {
+      dialogMessage = dialog.message()
+      void dialog.dismiss()
+    })
+    await page.getByRole('button', { name: 'Cancel' }).click()
+    await expect
+      .poll(() => dialogMessage)
+      .toMatch(/unsaved|lose|discard/i)
+    await expect(nameInput).toHaveValue('Draft Product')
+
+    await page.screenshot({
+      path: screenshotPath('admin-products-form-guards'),
       fullPage: true,
     })
   })

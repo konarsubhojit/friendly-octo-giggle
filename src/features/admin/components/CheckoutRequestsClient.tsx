@@ -78,9 +78,7 @@ export default function CheckoutRequestsClient({
   )
 
   const mergedColumns = useMemo<DataTableColumn<CheckoutRequestRow>[]>(() => {
-    const requestColumn = definition.columns.find(
-      (column) => column.key === 'id'
-    )
+    const requestColumn = definition.columns.find((column) => column.key === 'id')
     const customerColumn = definition.columns.find(
       (column) => column.key === 'customer'
     )

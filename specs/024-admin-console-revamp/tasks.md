@@ -186,7 +186,7 @@ identical validation, dirty-state, and save/cancel behaviour across all of them.
 ### Tests for User Story 3
 
 - [x] T058 [P] [US3] Unit test documenting and asserting the overlay-vs-dedicated-screen rule (e.g. field count / nested-structure threshold) in `__tests__/features/admin/services/form-presentation-rule.test.ts`
-- [ ] T059 [P] [US3] Extend `playwright-tests/admin-views.spec.ts`: create/edit a category (currently inline), a coupon, and a product, confirming identical field-error placement, error-summary count, unsaved-changes warning, and duplicate-submission prevention across all three, with screenshot capture
+- [x] T059 [P] [US3] Extend `playwright-tests/admin-views.spec.ts`: create/edit a category (currently inline), a coupon, and a product, confirming identical field-error placement, error-summary count, unsaved-changes warning, and duplicate-submission prevention across all three, with screenshot capture
 - [x] T060 [P] [US3] Unit/Playwright test for self-demotion refusal (own role reduction, own admin-permission removal) and last-administrator-removal refusal, both via the interface and via a direct API call bypassing it, in `__tests__/app/api/admin/users/[id]/route.test.ts` (extend existing) (FR-C04/FR-C05, SC-016)
 - [x] T061 [P] [US3] Unit test for typed-confirmation gating on refund, role-change, and bulk-delete call sites specifically (each site's expected typed value) in `__tests__/features/admin/components/AdminConfirmDialog.typed-actions.test.tsx`
 

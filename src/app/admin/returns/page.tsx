@@ -4,10 +4,11 @@ import { requireAdminPermission } from '@/features/admin/services/admin-page-aut
 import { AdminReturnsClient } from '@/features/admin/components/AdminReturnsClient'
 import type { AdminReturn } from '@/features/admin/components/AdminReturnCard'
 import { AdminPageShell } from '@/features/admin/components/AdminPageShell'
+import { withItemsAndEvidence } from '@/features/orders/services/return-queue'
+import { getRolePermissions } from '@/lib/constants/roles'
+import { withStoreName } from '@/lib/constants/store'
 import { primaryDrizzleDb } from '@/lib/db'
 import { orders, returnRequests } from '@/lib/schema'
-import { withItemsAndEvidence } from '@/features/orders/services/return-queue'
-import { withStoreName } from '@/lib/constants/store'
 
 export const metadata = {
   title: withStoreName('Returns'),
@@ -27,7 +28,7 @@ export default async function AdminReturnsPage() {
   // Components rather than letting the prerenderer attempt this page.
   await connection()
 
-  await requireAdminPermission('orders:returns')
+  const { role } = await requireAdminPermission('orders:returns')
 
   const rows = await primaryDrizzleDb
     .select({
@@ -58,7 +59,10 @@ export default async function AdminReturnsPage() {
       title="Returns"
       description="Damaged-item claims awaiting review. Approving authorises the customer to ship the item back; stock and money move only once it arrives."
     >
-      <AdminReturnsClient initialReturns={initialReturns} />
+      <AdminReturnsClient
+        initialReturns={initialReturns}
+        permissions={getRolePermissions(role)}
+      />
     </AdminPageShell>
   )
 }
