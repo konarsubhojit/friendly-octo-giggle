@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import CouponsClient from '@/features/admin/components/CouponsClient'
+import { ApiError } from '@/lib/api-client'
 import type {
   AdminCouponRecord,
   AdminCouponRedemptionSummary,
@@ -36,13 +37,20 @@ const post = vi.fn()
 const patch = vi.fn()
 const del = vi.fn()
 
-vi.mock('@/lib/api-client', () => ({
-  apiClient: {
-    post: (...args: unknown[]) => post(...args),
-    patch: (...args: unknown[]) => patch(...args),
-    delete: (...args: unknown[]) => del(...args),
-  },
-}))
+vi.mock('@/lib/api-client', async () => {
+  const actual =
+    await vi.importActual<typeof import('@/lib/api-client')>(
+      '@/lib/api-client'
+    )
+  return {
+    ...actual,
+    apiClient: {
+      post: (...args: unknown[]) => post(...args),
+      patch: (...args: unknown[]) => patch(...args),
+      delete: (...args: unknown[]) => del(...args),
+    },
+  }
+})
 
 const coupon = (overrides: Partial<AdminCouponRecord> = {}) =>
   ({
@@ -108,11 +116,13 @@ describe('CouponsClient', () => {
     expect(screen.getByText('96')).toBeInTheDocument()
   })
 
-  it('creates a coupon from the form and prepends it to the table', async () => {
+  it('creates a coupon from the overlay form and prepends it to the table', async () => {
     const created = coupon({ id: 'cpn2', code: 'SPRING20', discountValue: 20 })
     post.mockResolvedValue({ data: { coupon: created } })
 
     render(<CouponsClient initialCoupons={[]} initialRedemptions={[]} />)
+
+    fireEvent.click(screen.getByRole('button', { name: '+ Add coupon' }))
 
     fireEvent.change(screen.getByLabelText('Code'), {
       target: { value: 'SPRING20' },
@@ -132,8 +142,49 @@ describe('CouponsClient', () => {
       })
     )
     expect(await screen.findByText('SPRING20')).toBeInTheDocument()
-    // The form resets after a successful create.
-    expect(screen.getByLabelText('Code')).toHaveValue('')
+    // The overlay closes after a successful create.
+    expect(screen.queryByLabelText('Code')).not.toBeInTheDocument()
+  })
+
+  it('edits an existing coupon from the overlay form', async () => {
+    const updated = coupon({ code: 'WELCOME15', discountValue: 15 })
+    patch.mockResolvedValue({ data: { coupon: updated } })
+
+    render(
+      <CouponsClient initialCoupons={[coupon()]} initialRedemptions={[]} />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    expect(screen.getByLabelText('Code')).toHaveValue('WELCOME10')
+
+    fireEvent.change(screen.getByLabelText('Value (percent or amount)'), {
+      target: { value: '15' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() =>
+      expect(patch).toHaveBeenCalledWith(
+        '/api/admin/coupons/cpn1',
+        expect.objectContaining({ discountValue: 15 })
+      )
+    )
+    expect(await screen.findByText('WELCOME15')).toBeInTheDocument()
+  })
+
+  it('shows a stale-record message when the edit conflicts', async () => {
+    const conflictError = new ApiError('Conflict', 409)
+    patch.mockRejectedValue(conflictError)
+
+    render(
+      <CouponsClient initialCoupons={[coupon()]} initialRedemptions={[]} />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    expect(
+      await screen.findByText(/changed by someone else/i)
+    ).toBeInTheDocument()
   })
 
   it('toggles a coupon between active and inactive', async () => {
