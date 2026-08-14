@@ -43,3 +43,28 @@ export const RESOURCE_FORM_PRESENTATIONS: Record<string, FormPresentation> = {
   users: getFormPresentation({ fieldCount: 5, hasNestedStructure: false }),
   reviews: getFormPresentation({ fieldCount: 3, hasNestedStructure: false }),
 }
+
+/**
+ * Products are the one resource whose rule outcome depends on *mode*, not
+ * just the resource type (T065):
+ *
+ * - Creating a product has no variants/options yet — only the ~5 core
+ *   top-level fields (name, description, category, primary image, extra
+ *   images) exist, none of them nested — so the low-field-count branch of
+ *   the rule applies and `ProductFormModal` renders as an overlay
+ *   (`layout="modal"`, the component default).
+ * - Editing a product also curates its variants and options, which is the
+ *   nested structure the rule is designed to route to a dedicated screen —
+ *   so `/admin/products/[id]/edit` renders `ProductEditPageForm`
+ *   (`ProductFormModal` with `layout="page"`) alongside `VariantList` and
+ *   `OptionManager` on one page, matching `RESOURCE_FORM_PRESENTATIONS.products`
+ *   above (`dedicated-screen`).
+ * - A single variant's own fields (SKU, price, stock, attributes) are a
+ *   small, non-nested record, so `VariantFormModal` is correctly an overlay
+ *   regardless of whether the parent product is on a dedicated screen.
+ */
+export function getProductFormPresentation(
+  mode: 'create' | 'edit'
+): FormPresentation {
+  return mode === 'create' ? 'overlay' : 'dedicated-screen'
+}

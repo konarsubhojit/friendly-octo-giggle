@@ -486,6 +486,11 @@ export default function ProductsManagementClient({
             </div>
           }
         >
+          {/* T065: this call site only ever creates (editingProduct is
+              always null here — editing happens on the dedicated
+              /admin/products/[id]/edit screen), so the default
+              layout="modal" overlay matches
+              getProductFormPresentation('create'). */}
           <ProductFormModal
             editingProduct={editingProduct}
             onClose={handleCloseModal}
