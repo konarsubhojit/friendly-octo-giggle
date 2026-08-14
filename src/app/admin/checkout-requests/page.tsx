@@ -46,13 +46,16 @@ export default async function AdminCheckoutRequestsPage({
   const processingCount = records.filter(
     (record) => record.status === 'PROCESSING'
   ).length
-  const failedCount = records.filter((record) => record.status === 'FAILED').length
+  const failedCount = records.filter(
+    (record) => record.status === 'FAILED'
+  ).length
   const completedCount = records.filter(
     (record) => record.status === 'COMPLETED'
   ).length
-  const emptyMessage = search || status
-    ? 'No checkout requests matched the current filters.'
-    : 'No checkout requests have been recorded yet.'
+  const emptyMessage =
+    search || status
+      ? 'No checkout requests matched the current filters.'
+      : 'No checkout requests have been recorded yet.'
 
   return (
     <AdminPageShell
@@ -144,7 +147,9 @@ export default async function AdminCheckoutRequestsPage({
           <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
             {(() => {
               const statusConjunction = search ? ' and' : ' with'
-              const statusText = status ? `${statusConjunction} status ${status}` : ''
+              const statusText = status
+                ? `${statusConjunction} status ${status}`
+                : ''
               const searchText = search ? ` matching "${search}"` : ''
               return `Showing ${records.length} checkout request${records.length === 1 ? '' : 's'}${searchText}${statusText}.`
             })()}
