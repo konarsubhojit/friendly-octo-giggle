@@ -100,27 +100,31 @@ const EmailFailuresTable = ({
     [onRetry]
   )
 
-  const renderRetryButton = useCallback((record: FailedEmailDataRow) => {
-    if (definition.rowActions(record).length === 0) {
-      return null
-    }
+  const renderRetryButton = useCallback(
+    (record: FailedEmailDataRow) => {
+      if (definition.rowActions(record).length === 0) {
+        return null
+      }
 
-    return (
-      <button
-        type="button"
-        onClick={() => onRetry(record.id)}
-        disabled={retryingId === record.id}
-        className="min-tap rounded-full bg-slate-950 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {retryingId === record.id ? 'Retrying…' : 'Retry'}
-      </button>
-    )
-  }, [definition, onRetry, retryingId])
+      return (
+        <button
+          type="button"
+          onClick={() => onRetry(record.id)}
+          disabled={retryingId === record.id}
+          className="min-tap rounded-full bg-slate-950 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {retryingId === record.id ? 'Retrying…' : 'Retry'}
+        </button>
+      )
+    },
+    [definition, onRetry, retryingId]
+  )
 
   const columns = useMemo<DataTableColumn<FailedEmailDataRow>[]>(() => {
     const mergedColumns: DataTableColumn<FailedEmailDataRow>[] =
       definition.columns.map((rawColumn) => {
-        const column = rawColumn as unknown as DataTableColumn<FailedEmailDataRow>
+        const column =
+          rawColumn as unknown as DataTableColumn<FailedEmailDataRow>
 
         switch (column.key) {
           case 'status':

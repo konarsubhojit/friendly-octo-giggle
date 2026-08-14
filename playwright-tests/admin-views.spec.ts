@@ -912,9 +912,7 @@ test.describe('US3: Form consistency', () => {
       void dialog.dismiss()
     })
     await page.getByRole('button', { name: 'Cancel' }).click()
-    await expect
-      .poll(() => dialogMessage)
-      .toMatch(/unsaved|lose|discard/i)
+    await expect.poll(() => dialogMessage).toMatch(/unsaved|lose|discard/i)
     // Dismissing the confirm keeps the modal open with the draft intact.
     await expect(nameInput).toHaveValue('Unsaved Draft Category')
 
@@ -977,9 +975,7 @@ test.describe('US3: Form consistency', () => {
       void dialog.dismiss()
     })
     await page.getByRole('button', { name: 'Cancel' }).click()
-    await expect
-      .poll(() => dialogMessage)
-      .toMatch(/unsaved|lose|discard/i)
+    await expect.poll(() => dialogMessage).toMatch(/unsaved|lose|discard/i)
     await expect(codeInput).toHaveValue('E2EDRAFT10')
 
     let createRequests = 0
@@ -1036,9 +1032,7 @@ test.describe('US3: Form consistency', () => {
       void dialog.dismiss()
     })
     await page.getByRole('button', { name: 'Cancel' }).click()
-    await expect
-      .poll(() => dialogMessage)
-      .toMatch(/unsaved|lose|discard/i)
+    await expect.poll(() => dialogMessage).toMatch(/unsaved|lose|discard/i)
     await expect(nameInput).toHaveValue('Draft Product')
 
     await page.screenshot({

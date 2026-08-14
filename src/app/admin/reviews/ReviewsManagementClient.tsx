@@ -123,7 +123,9 @@ function ReviewMeta({ review }: Readonly<{ review: AdminReview }>) {
           {displayName}
         </strong>
       </span>
-      {!review.isAnonymous && review.user?.email ? <span>{review.user.email}</span> : null}
+      {!review.isAnonymous && review.user?.email ? (
+        <span>{review.user.email}</span>
+      ) : null}
       <span>
         {new Date(review.createdAt).toLocaleDateString('en-US', {
           year: 'numeric',
@@ -238,7 +240,8 @@ function ReviewCard({
             {review.comment}
           </p>
           <div className="mb-3 text-xs text-slate-500 dark:text-slate-400">
-            Helpful: {review.helpfulCount} · Not helpful: {review.notHelpfulCount}
+            Helpful: {review.helpfulCount} · Not helpful:{' '}
+            {review.notHelpfulCount}
           </div>
           <ReviewMeta review={review} />
 
@@ -559,7 +562,8 @@ export default function ReviewsManagementClient({
         // column and the rich mobile card buttons below.
         onFeature: (row) => {
           void moderateReview(row.id, {
-            isFeatured: !reviews.find((review) => review.id === row.id)?.isFeatured,
+            isFeatured: !reviews.find((review) => review.id === row.id)
+              ?.isFeatured,
           })
         },
         onHide: (row) => {
@@ -597,7 +601,9 @@ export default function ReviewsManagementClient({
         header: 'Actions',
         sticky: 'right',
         render: (_value, row) => {
-          const review = filteredReviews.find((candidate) => candidate.id === row.id)
+          const review = filteredReviews.find(
+            (candidate) => candidate.id === row.id
+          )
           if (!review || !canModerate) {
             return null
           }
@@ -707,7 +713,8 @@ export default function ReviewsManagementClient({
         },
         {
           label: 'Average rating',
-          value: averageRating > 0 ? `${averageRating.toFixed(1)} / 5` : 'No data',
+          value:
+            averageRating > 0 ? `${averageRating.toFixed(1)} / 5` : 'No data',
           hint: 'Average across visible results.',
           tone: 'amber',
         },
@@ -756,7 +763,9 @@ export default function ReviewsManagementClient({
           onRemoveFilter={handleRemoveFilter}
           onClearFilters={hasActiveFilters ? handleClearFilters : undefined}
           renderMobileCard={(row) => {
-            const review = filteredReviews.find((candidate) => candidate.id === row.id)
+            const review = filteredReviews.find(
+              (candidate) => candidate.id === row.id
+            )
             if (!review) {
               return null
             }

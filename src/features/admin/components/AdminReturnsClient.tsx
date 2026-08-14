@@ -102,7 +102,9 @@ export function AdminReturnsClient({
         onRefund: () => {},
         onMarkCompleted: () => {},
         onViewOrder: (row) => {
-          globalThis.location.assign(`/admin/orders?search=${encodeURIComponent(row.orderId)}`)
+          globalThis.location.assign(
+            `/admin/orders?search=${encodeURIComponent(row.orderId)}`
+          )
         },
       }),
     [permissions]
@@ -110,7 +112,8 @@ export function AdminReturnsClient({
 
   const returnRows = useMemo(() => items.map(toReturnRow), [items])
   const returnsById = useMemo(
-    () => new Map(items.map((returnRequest) => [returnRequest.id, returnRequest])),
+    () =>
+      new Map(items.map((returnRequest) => [returnRequest.id, returnRequest])),
     [items]
   )
   const message = error ?? decisionError
@@ -122,7 +125,10 @@ export function AdminReturnsClient({
       ? { status: 'loading' as const }
       : items.length === 0
         ? {
-            status: filter === 'ALL' ? ('empty' as const) : ('filtered-empty' as const),
+            status:
+              filter === 'ALL'
+                ? ('empty' as const)
+                : ('filtered-empty' as const),
             message:
               filter === 'ALL'
                 ? returnsDefinition.emptyMessage

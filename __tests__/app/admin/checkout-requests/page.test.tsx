@@ -55,7 +55,10 @@ vi.mock('@/features/cart/services/checkout-service', () => ({
 }))
 
 vi.mock('@/features/admin/components/CheckoutRequestsClient', () => ({
-  default: (props: { records: Array<{ id: string }>; emptyMessage: string }) => {
+  default: (props: {
+    records: Array<{ id: string }>
+    emptyMessage: string
+  }) => {
     mockCheckoutRequestsClient(props)
     return (
       <div>
