@@ -221,7 +221,9 @@ const CouponFormModal = ({
             id={`${formId}-heading`}
             className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-50"
           >
-            {isEditing ? `Edit coupon ${editingCoupon.code}` : 'Create a coupon'}
+            {isEditing
+              ? `Edit coupon ${editingCoupon.code}`
+              : 'Create a coupon'}
           </h2>
 
           {conflict && (
@@ -386,9 +388,7 @@ const CouponFormModal = ({
                 step="1"
                 value={form.usageLimit}
                 disabled={saving}
-                onChange={(event) =>
-                  setField('usageLimit', event.target.value)
-                }
+                onChange={(event) => setField('usageLimit', event.target.value)}
               />
             </div>
 
@@ -499,9 +499,9 @@ export default function CouponsClient({
   const [pendingDelete, setPendingDelete] = useState<AdminCouponRecord | null>(
     null
   )
-  const [formTarget, setFormTarget] = useState<AdminCouponRecord | 'new' | null>(
-    null
-  )
+  const [formTarget, setFormTarget] = useState<
+    AdminCouponRecord | 'new' | null
+  >(null)
   const formId = useId()
 
   const handleCreate = async (

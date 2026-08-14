@@ -39,9 +39,7 @@ const del = vi.fn()
 
 vi.mock('@/lib/api-client', async () => {
   const actual =
-    await vi.importActual<typeof import('@/lib/api-client')>(
-      '@/lib/api-client'
-    )
+    await vi.importActual<typeof import('@/lib/api-client')>('@/lib/api-client')
   return {
     ...actual,
     apiClient: {
