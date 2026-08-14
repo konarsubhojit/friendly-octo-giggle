@@ -170,7 +170,9 @@ describe('CouponsClient', () => {
   })
 
   it('shows a stale-record message when the edit conflicts', async () => {
-    const conflictError = new ApiError('Conflict', 409)
+    const conflictError = new ApiError('Conflict', 409, undefined, {
+      reason: 'stale',
+    })
     patch.mockRejectedValue(conflictError)
 
     render(

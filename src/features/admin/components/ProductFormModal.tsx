@@ -109,6 +109,7 @@ const ProductFormModal = ({
     formData,
     setFormData,
     dirty,
+    stale,
     imageFile,
     additionalFiles,
     slotIds,
@@ -151,6 +152,15 @@ const ProductFormModal = ({
       </h3>
 
       <form noValidate onSubmit={handleSubmit}>
+        {stale && (
+          <p
+            role="alert"
+            className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200"
+          >
+            This product was changed by someone else since this form opened.
+            Reload and try again.
+          </p>
+        )}
         <FormErrorSummary fieldErrors={fieldErrors} />
         <div className="space-y-4">
           <TextInput

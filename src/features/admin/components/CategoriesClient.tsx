@@ -153,7 +153,7 @@ interface CategoryFormModalProps {
   readonly onClose: () => void
   readonly onSubmit: (
     name: string
-  ) => Promise<{ success: boolean; error?: string }>
+  ) => Promise<{ success: boolean; error?: string; stale?: boolean }>
 }
 
 /**
@@ -170,6 +170,7 @@ const CategoryFormModal = ({
   const [submitting, setSubmitting] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [stale, setStale] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const { guardClose } = useUnsavedChangesGuard(dirty)
 
@@ -185,10 +186,13 @@ const CategoryFormModal = ({
     if (!trimmed || submitting) return
     setSubmitting(true)
     setFormError(null)
+    setStale(false)
     const result = await onSubmit(trimmed)
     setSubmitting(false)
     if (result.success) {
       onClose()
+    } else if (result.stale) {
+      setStale(true)
     } else if (result.error) {
       setFormError(result.error)
     }
@@ -209,6 +213,15 @@ const CategoryFormModal = ({
           >
             {isEditing ? 'Edit Category' : 'Add Category'}
           </h3>
+          {stale && (
+            <p
+              role="alert"
+              className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200"
+            >
+              This category was changed by someone else since this form
+              opened. Reload and try again.
+            </p>
+          )}
           <FormErrorSummary formError={formError} />
           <label
             htmlFor="category-form-name"
@@ -290,25 +303,34 @@ const CategoriesClient = ({ initialCategories }: CategoriesClientProps) => {
   }
 
   const handleRename = async (
-    id: string,
+    category: Category,
     name: string
-  ): Promise<{ success: boolean; error?: string }> => {
+  ): Promise<{ success: boolean; error?: string; stale?: boolean }> => {
     try {
-      const res = await fetch(`/api/admin/categories/${id}`, {
+      const res = await fetch(`/api/admin/categories/${category.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({
+          name,
+          expectedUpdatedAt: category.updatedAt,
+        }),
       })
       const data = await res.json()
       if (res.status === 409) {
         const message =
-          'This category was changed by someone else. Reload and try again.'
+          data.details?.reason === 'stale'
+            ? 'This category was changed by someone else. Reload and try again.'
+            : (data.error ?? 'A category with this name already exists')
         toast.error(message)
-        return { success: false, error: message }
+        return {
+          success: false,
+          error: message,
+          stale: data.details?.reason === 'stale',
+        }
       }
       if (!res.ok) throw new Error(data.error ?? 'Failed to rename category')
       const updated = data.data?.category ?? data.category
-      setCats((prev) => prev.map((c) => (c.id === id ? updated : c)))
+      setCats((prev) => prev.map((c) => (c.id === category.id ? updated : c)))
       toast.success(`Renamed to "${updated.name}"`)
       return { success: true }
     } catch (err) {
@@ -321,9 +343,9 @@ const CategoriesClient = ({ initialCategories }: CategoriesClientProps) => {
 
   const handleFormSubmit = async (
     name: string
-  ): Promise<{ success: boolean; error?: string }> => {
+  ): Promise<{ success: boolean; error?: string; stale?: boolean }> => {
     if (formTarget === 'new') return handleCreate(name)
-    if (formTarget) return handleRename(formTarget.id, name)
+    if (formTarget) return handleRename(formTarget, name)
     return { success: false }
   }
 

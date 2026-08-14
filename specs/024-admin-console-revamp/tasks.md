@@ -199,7 +199,7 @@ identical validation, dirty-state, and save/cancel behaviour across all of them.
 - [x] T066 [US3] Add a shared field-error/error-summary rendering pattern used by every converted form (categories, coupons, products) — adjacent field errors plus a count summary (FR-B04) — depends on T063, T064, T065
 - [x] T067 [US3] Add a shared unsaved-changes guard (navigation/close interception) used by every converted form (FR-B05) — depends on T063, T064, T065
 - [x] T068 [US3] Add consistent save/cancel affordance positioning and duplicate-submission prevention while a save is in flight, across all converted forms (FR-B06) — depends on T066, T067
-- [ ] T069 [US3] Add stale-record detection (modified/deleted by another user since the form opened) surfaced distinctly from validation failure, across all converted forms (FR-B07/FR-B08) — depends on T066
+- [x] T069 [US3] Add stale-record detection (modified/deleted by another user since the form opened) surfaced distinctly from validation failure, across all converted forms (FR-B07/FR-B08) — depends on T066
 - [x] T070 [P] [US3] Migrate the role-change call site (`RoleAction.tsx`) to `AdminConfirmDialog` with `typedConfirmationValue` set to a documented per-action string (FR-C03) — depends on T023
 - [x] T071 [P] [US3] Migrate the refund call site (order refund action) to `AdminConfirmDialog` with `typedConfirmationValue` (FR-C03) — depends on T023
 - [x] T072 [P] [US3] Migrate every bulk-delete call site to `AdminConfirmDialog` with `typedConfirmationValue` (FR-C03) — depends on T023, T011

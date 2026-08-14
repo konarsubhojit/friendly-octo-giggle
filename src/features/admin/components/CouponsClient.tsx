@@ -535,7 +535,10 @@ export default function CouponsClient({
     try {
       const result = await apiClient.patch<{
         data: { coupon: AdminCouponRecord }
-      }>(`/api/admin/coupons/${coupon.id}`, buildPayload(form))
+      }>(`/api/admin/coupons/${coupon.id}`, {
+        ...buildPayload(form),
+        expectedUpdatedAt: coupon.updatedAt,
+      })
       setCoupons((current) =>
         current.map((entry) =>
           entry.id === coupon.id ? result.data.coupon : entry
@@ -544,7 +547,11 @@ export default function CouponsClient({
       toast.success(`Coupon ${result.data.coupon.code} updated`)
       return { success: true }
     } catch (error) {
-      if (error instanceof ApiError && error.status === 409) {
+      if (
+        error instanceof ApiError &&
+        error.status === 409 &&
+        error.details?.reason === 'stale'
+      ) {
         toast.error(
           'This coupon was changed by someone else. Reload and try again.'
         )

@@ -215,7 +215,7 @@ describe('CategoriesClient', () => {
       vi.fn().mockResolvedValue({
         status: 409,
         ok: false,
-        json: async () => ({ error: 'Conflict' }),
+        json: async () => ({ error: 'Conflict', details: { reason: 'stale' } }),
       })
     )
 

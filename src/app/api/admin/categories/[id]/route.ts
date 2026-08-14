@@ -15,6 +15,10 @@ import { categoriesTag, revalidateCacheTags } from '@/lib/cache-tags'
 const UpdateCategorySchema = z.object({
   name: z.string().min(1, 'Name is required').max(100).optional(),
   sortOrder: z.number().int().min(0).optional(),
+  // FR-B07/FR-B08 (T069): when supplied, must match the record's current
+  // `updatedAt` or the request is rejected as stale — distinct from the
+  // duplicate-name validation conflict below.
+  expectedUpdatedAt: z.string().datetime().optional(),
 })
 
 interface RouteParams {
@@ -42,7 +46,18 @@ export async function PUT(request: Request, { params }: RouteParams) {
       return apiError('Category not found', 404)
     }
 
-    const { name, sortOrder } = validated
+    const { name, sortOrder, expectedUpdatedAt } = validated
+
+    if (
+      expectedUpdatedAt !== undefined &&
+      expectedUpdatedAt !== existing[0].updatedAt.toISOString()
+    ) {
+      return apiError(
+        'This category was changed by someone else. Reload and try again.',
+        409,
+        { reason: 'stale' }
+      )
+    }
 
     if (name && name.trim() !== existing[0].name) {
       const duplicate = await drizzleDb
@@ -58,7 +73,9 @@ export async function PUT(request: Request, { params }: RouteParams) {
         .limit(1)
 
       if (duplicate.length > 0) {
-        return apiError('A category with this name already exists', 409)
+        return apiError('A category with this name already exists', 409, {
+          reason: 'duplicate',
+        })
       }
     }
 
