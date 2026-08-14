@@ -3,13 +3,10 @@ import {
   AdminPageShell,
   AdminPanel,
 } from '@/features/admin/components/AdminPageShell'
-import {
-  getRecentCheckoutRequests,
-  type AdminCheckoutRequestRecord,
-} from '@/features/cart/services/checkout-service'
+import CheckoutRequestsClient from '@/features/admin/components/CheckoutRequestsClient'
+import { getRecentCheckoutRequests } from '@/features/cart/services/checkout-service'
 import { CheckoutRequestStatusEnum } from '@/features/orders/validations'
 import { requireAdminPermission } from '@/features/admin/services/admin-page-auth'
-import ReleaseReservationButton from '@/features/admin/components/ReleaseReservationButton'
 
 interface AdminCheckoutRequestsPageProps {
   readonly searchParams?: Promise<{
@@ -18,41 +15,12 @@ interface AdminCheckoutRequestsPageProps {
   }>
 }
 
-const STATUS_STYLES: Record<AdminCheckoutRequestRecord['status'], string> = {
-  PENDING:
-    'bg-amber-100 text-amber-900 ring-1 ring-inset ring-amber-300 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-400/30',
-  PROCESSING:
-    'bg-sky-100 text-sky-900 ring-1 ring-inset ring-sky-300 dark:bg-sky-500/10 dark:text-sky-200 dark:ring-sky-400/30',
-  COMPLETED:
-    'bg-emerald-100 text-emerald-900 ring-1 ring-inset ring-emerald-300 dark:bg-emerald-500/10 dark:text-emerald-200 dark:ring-emerald-400/30',
-  FAILED:
-    'bg-rose-100 text-rose-900 ring-1 ring-inset ring-rose-300 dark:bg-rose-500/10 dark:text-rose-200 dark:ring-rose-400/30',
-}
-
-const dateFormatter = new Intl.DateTimeFormat('en-IN', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-})
-
-const formatTimestamp = (value: string) => dateFormatter.format(new Date(value))
-
-const describeReservation = (
-  reservation: AdminCheckoutRequestRecord['reservation']
-): string => {
-  if (!reservation) return 'None'
-  if (reservation.heldQuantity === 0) return reservation.status
-  return `${reservation.heldQuantity} held`
-}
-
-const truncate = (value: string, maxLength: number) =>
-  value.length > maxLength ? `${value.slice(0, maxLength - 1)}…` : value
-
 const normalizeSearchParam = (value: string | string[] | undefined): string =>
   typeof value === 'string' ? value.trim() : ''
 
 const normalizeStatusParam = (
   value: string | string[] | undefined
-): AdminCheckoutRequestRecord['status'] | undefined => {
+): (typeof CheckoutRequestStatusEnum.options)[number] | undefined => {
   const candidate = typeof value === 'string' ? value : undefined
   const parsed = CheckoutRequestStatusEnum.safeParse(candidate)
   return parsed.success ? parsed.data : undefined
@@ -84,6 +52,10 @@ export default async function AdminCheckoutRequestsPage({
   const completedCount = records.filter(
     (record) => record.status === 'COMPLETED'
   ).length
+  const emptyMessage =
+    search || status
+      ? 'No checkout requests matched the current filters.'
+      : 'No checkout requests have been recorded yet.'
 
   return (
     <AdminPageShell
@@ -93,7 +65,7 @@ export default async function AdminCheckoutRequestsPage({
       ]}
       eyebrow="Order processing"
       title="Checkout Requests"
-      description="Monitor queued, processing, failed, and completed checkout requests."
+      description="Triage queue for stalled or failed checkouts: monitor queued, processing, failed, and completed checkout requests and release stock reservations that no longer need to hold inventory."
       metrics={[
         {
           label: 'Queued',
@@ -184,189 +156,7 @@ export default async function AdminCheckoutRequestsPage({
           </p>
         ) : null}
 
-        {records.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-300">
-            {search || status
-              ? 'No checkout requests matched the current filters.'
-              : 'No checkout requests have been recorded yet.'}
-          </div>
-        ) : (
-          <>
-            <div
-              className="grid gap-3 md:hidden"
-              role="list"
-              aria-label="Checkout requests"
-            >
-              {records.map((record) => (
-                <article
-                  key={record.id}
-                  className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/70"
-                  role="listitem"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="break-all font-mono text-xs font-semibold text-slate-950 dark:text-slate-50">
-                        {record.id}
-                      </p>
-                      <p className="mt-1 break-words text-sm font-medium text-slate-700 dark:text-slate-200">
-                        {record.customerName}
-                      </p>
-                      <p className="mt-1 break-all text-xs text-slate-500 dark:text-slate-400">
-                        {record.customerEmail}
-                      </p>
-                    </div>
-                    <span
-                      className={`inline-flex shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[record.status]}`}
-                    >
-                      {record.status}
-                    </span>
-                  </div>
-                  <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-200 pt-3 text-sm dark:border-slate-700">
-                    <div>
-                      <dt className="text-xs text-slate-500 dark:text-slate-400">
-                        Order
-                      </dt>
-                      <dd className="mt-1 break-all text-slate-700 dark:text-slate-200">
-                        {record.orderId ?? 'Not created yet'}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-slate-500 dark:text-slate-400">
-                        Reservation
-                      </dt>
-                      <dd className="mt-1 text-slate-700 dark:text-slate-200">
-                        {describeReservation(record.reservation)}
-                      </dd>
-                    </div>
-                    <div className="text-right">
-                      <dt className="text-xs text-slate-500 dark:text-slate-400">
-                        Items
-                      </dt>
-                      <dd className="mt-1 font-semibold text-slate-950 dark:text-slate-50">
-                        {record.itemCount}
-                      </dd>
-                    </div>
-                  </dl>
-                  {record.errorMessage ? (
-                    <p className="mt-3 break-words rounded-xl bg-rose-50 p-3 text-xs text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">
-                      {truncate(record.errorMessage, 160)}
-                    </p>
-                  ) : null}
-                  <time
-                    dateTime={record.createdAt}
-                    className="mt-3 block text-xs text-slate-500 dark:text-slate-400"
-                  >
-                    {formatTimestamp(record.createdAt)}
-                  </time>
-                </article>
-              ))}
-            </div>
-            <div className="hidden overflow-x-auto md:block">
-              <table className="min-w-[64rem] divide-y divide-slate-200 text-sm dark:divide-slate-800">
-                <thead>
-                  <tr className="text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
-                    <th className="px-3 py-3">Request</th>
-                    <th className="px-3 py-3">Customer</th>
-                    <th className="px-3 py-3">State</th>
-                    <th className="px-3 py-3">Reservation</th>
-                    <th className="px-3 py-3">Order</th>
-                    <th className="px-3 py-3">Last Error</th>
-                    <th className="px-3 py-3">Created</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                  {records.map((record) => (
-                    <tr
-                      key={record.id}
-                      className="align-top text-slate-700 dark:text-slate-200"
-                    >
-                      <td className="px-3 py-4">
-                        <div className="font-semibold text-slate-950 dark:text-slate-50">
-                          {record.id}
-                        </div>
-                        <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                          User {record.userId}
-                        </div>
-                        <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                          {record.itemCount} item
-                          {record.itemCount === 1 ? '' : 's'}
-                        </div>
-                      </td>
-                      <td className="px-3 py-4">
-                        <div className="font-medium text-slate-950 dark:text-slate-50">
-                          {record.customerName}
-                        </div>
-                        <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                          {record.customerEmail}
-                        </div>
-                        <div className="mt-1 max-w-xs text-xs text-slate-500 dark:text-slate-400">
-                          {truncate(record.customerAddress, 72)}
-                        </div>
-                      </td>
-                      <td className="px-3 py-4">
-                        <span
-                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[record.status]}`}
-                        >
-                          {record.status}
-                        </span>
-                      </td>
-                      <td className="px-3 py-4">
-                        <div className="text-xs font-semibold text-slate-950 dark:text-slate-50">
-                          {describeReservation(record.reservation)}
-                        </div>
-                        {record.reservation?.expiresAt ? (
-                          <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                            Expires{' '}
-                            <time dateTime={record.reservation.expiresAt}>
-                              {formatTimestamp(record.reservation.expiresAt)}
-                            </time>
-                          </div>
-                        ) : null}
-                        {record.reservation &&
-                        record.reservation.heldQuantity > 0 ? (
-                          <ReleaseReservationButton
-                            checkoutRequestId={record.id}
-                            heldQuantity={record.reservation.heldQuantity}
-                          />
-                        ) : null}
-                      </td>
-                      <td className="px-3 py-4">
-                        {record.orderId ? (
-                          <Link
-                            href={`/admin/orders?search=${record.orderId}`}
-                            className="font-medium text-sky-700 underline decoration-sky-300 underline-offset-4 transition hover:text-sky-600 dark:text-sky-300 dark:decoration-sky-600 dark:hover:text-sky-200"
-                          >
-                            {record.orderId}
-                          </Link>
-                        ) : (
-                          <span className="text-xs text-slate-500 dark:text-slate-400">
-                            Not created yet
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-3 py-4">
-                        {record.errorMessage ? (
-                          <span className="max-w-xs text-xs text-rose-700 dark:text-rose-300">
-                            {truncate(record.errorMessage, 88)}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-slate-500 dark:text-slate-400">
-                            None
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-3 py-4 text-xs text-slate-500 dark:text-slate-400">
-                        <time dateTime={record.createdAt}>
-                          {formatTimestamp(record.createdAt)}
-                        </time>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
+        <CheckoutRequestsClient records={records} emptyMessage={emptyMessage} />
       </AdminPanel>
     </AdminPageShell>
   )

@@ -16,6 +16,15 @@ import { PRODUCT_ERRORS, API_ERRORS } from '@/lib/constants/error-messages'
 
 export const MAX_IMAGES = 10
 
+/**
+ * Thrown by `saveProductToApi` for a stale-record conflict (FR-B07/FR-B08,
+ * T069) so `handleSubmit` can surface it distinctly from other save
+ * failures and from field validation errors.
+ */
+class StaleProductError extends Error {
+  readonly stale = true
+}
+
 export interface ProductFormData {
   name: string
   description: string
@@ -107,9 +116,14 @@ const useProductForm = (
   onClose: () => void,
   onSuccess: (product: Product) => void
 ) => {
-  const [formData, setFormData] = useState<ProductFormData>(() =>
+  const [formData, setRawFormData] = useState<ProductFormData>(() =>
     buildInitialFormData(editingProduct)
   )
+  const [dirty, setDirty] = useState(false)
+  const setFormData: typeof setRawFormData = (value) => {
+    setDirty(true)
+    setRawFormData(value)
+  }
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [additionalFiles, setAdditionalFiles] = useState<(File | null)[]>(() =>
     new Array((editingProduct?.images ?? []).length).fill(null)
@@ -119,6 +133,7 @@ const useProductForm = (
   )
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [stale, setStale] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<
     Partial<Record<keyof ProductFormData, string>>
   >({})
@@ -169,6 +184,7 @@ const useProductForm = (
     }
     setFieldErrors((prev) => ({ ...prev, image: undefined }))
     setImageFile(file)
+    setDirty(true)
   }
 
   const handleAdditionalImageChange = (
@@ -185,6 +201,7 @@ const useProductForm = (
     const newFiles = [...additionalFiles]
     newFiles[idx] = file
     setAdditionalFiles(newFiles)
+    setDirty(true)
   }
 
   const addImageSlot = () => {
@@ -259,6 +276,9 @@ const useProductForm = (
       ...formData,
       image: imageUrl,
       images: additionalImages,
+      ...(editingProduct
+        ? { expectedUpdatedAt: editingProduct.updatedAt }
+        : {}),
     }
     const { url, method } = getApiEndpoint(editingProduct)
     const res = await fetch(url, {
@@ -268,9 +288,16 @@ const useProductForm = (
     })
     if (!res.ok) {
       const errorBody = await res.json()
-      throw new Error(
+      const message =
         (errorBody as { error?: string }).error ?? 'Failed to save product'
-      )
+      if (
+        res.status === 409 &&
+        (errorBody as { details?: { reason?: string } }).details?.reason ===
+          'stale'
+      ) {
+        throw new StaleProductError(message)
+      }
+      throw new Error(message)
     }
     const saved = (await res.json()) as {
       data?: { product?: Product }
@@ -281,8 +308,10 @@ const useProductForm = (
 
   const handleSubmit = async (e: BaseSyntheticEvent) => {
     e.preventDefault()
+    if (saving || uploading) return
     if (!validate()) return
     setSaving(true)
+    setStale(false)
     try {
       const primaryUrl = await resolveImageUrl()
       if (!primaryUrl) {
@@ -299,7 +328,12 @@ const useProductForm = (
       onClose()
     } catch (err) {
       logError({ error: err, context: 'handleSubmit' })
-      toast.error(API_ERRORS.PRODUCT_SAVE)
+      if (err instanceof StaleProductError) {
+        setStale(true)
+        toast.error(err.message)
+      } else {
+        toast.error(API_ERRORS.PRODUCT_SAVE)
+      }
     } finally {
       setSaving(false)
     }
@@ -308,6 +342,8 @@ const useProductForm = (
   return {
     formData,
     setFormData,
+    dirty,
+    stale,
     imageFile,
     additionalFiles,
     slotIds,

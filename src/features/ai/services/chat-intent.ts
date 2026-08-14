@@ -74,6 +74,8 @@ const normalizePolicyText = (
 }
 
 export const detectIntentSignals = (text: string): IntentSignals => ({
+  // These signals now gate quota classification only. Retrieval/tool selection
+  // is model-directed via chat-engine.ts and chat-tools*.ts.
   wantsComparison: COMPARISON_PATTERNS.some((pattern) => pattern.test(text)),
   wantsRecommendation: RECOMMENDATION_PATTERNS.some((pattern) =>
     pattern.test(text)

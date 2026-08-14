@@ -56,8 +56,16 @@ describe('CategoriesClient', () => {
     vi.unstubAllGlobals()
   })
 
-  it('renders the add category form', () => {
+  it('renders the add category button', () => {
     render(<CategoriesClient initialCategories={[]} />)
+    expect(
+      screen.getByRole('button', { name: 'Add category' })
+    ).toBeInTheDocument()
+  })
+
+  it('opens the add category overlay when the button is clicked', () => {
+    render(<CategoriesClient initialCategories={[]} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add category' }))
     expect(
       screen.getByRole('heading', { name: /add category/i })
     ).toBeInTheDocument()
@@ -100,13 +108,12 @@ describe('CategoriesClient', () => {
     )
 
     render(<CategoriesClient initialCategories={mockCategories} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add category' }))
 
     fireEvent.change(screen.getByPlaceholderText('e.g. Handbag'), {
       target: { value: 'Hats' },
     })
-    fireEvent.submit(
-      screen.getByPlaceholderText('e.g. Handbag').closest('form')!
-    )
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Hats' })).toBeInTheDocument()
@@ -125,30 +132,31 @@ describe('CategoriesClient', () => {
     )
 
     render(<CategoriesClient initialCategories={mockCategories} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add category' }))
 
     fireEvent.change(screen.getByPlaceholderText('e.g. Handbag'), {
       target: { value: 'Bags' },
     })
-    fireEvent.submit(
-      screen.getByPlaceholderText('e.g. Handbag').closest('form')!
-    )
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => {
       expect(toast.default.error).toHaveBeenCalledWith('Duplicate name')
     })
   })
 
-  it('enters edit mode when Edit is clicked', () => {
+  it('opens edit overlay when a category name is clicked', () => {
     render(<CategoriesClient initialCategories={mockCategories} />)
     fireEvent.click(screen.getByRole('button', { name: 'Bags' }))
+    expect(
+      screen.getByRole('heading', { name: /edit category/i })
+    ).toBeInTheDocument()
     expect(screen.getByDisplayValue('Bags')).toBeInTheDocument()
   })
 
-  it('cancels edit mode', () => {
+  it('cancels edit overlay', () => {
     render(<CategoriesClient initialCategories={mockCategories} />)
     fireEvent.click(screen.getByRole('button', { name: 'Bags' }))
-    const input = screen.getByDisplayValue('Bags')
-    fireEvent.keyDown(input, { key: 'Escape' })
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(screen.queryByDisplayValue('Bags')).not.toBeInTheDocument()
   })
 
@@ -168,7 +176,7 @@ describe('CategoriesClient', () => {
 
     const input = screen.getByDisplayValue('Bags')
     fireEvent.change(input, { target: { value: 'Backpacks' } })
-    fireEvent.keyDown(input, { key: 'Enter' })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => {
       expect(
@@ -192,10 +200,35 @@ describe('CategoriesClient', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Bags' }))
     const input = screen.getByDisplayValue('Bags')
     fireEvent.change(input, { target: { value: 'Changed' } })
-    fireEvent.keyDown(input, { key: 'Enter' })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => {
       expect(toast.default.error).toHaveBeenCalledWith('Update failed')
+    })
+  })
+
+  it('shows a stale-record message when update returns a conflict', async () => {
+    const toast = await import('react-hot-toast')
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        status: 409,
+        ok: false,
+        json: async () => ({ error: 'Conflict', details: { reason: 'stale' } }),
+      })
+    )
+
+    render(<CategoriesClient initialCategories={mockCategories} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Bags' }))
+    const input = screen.getByDisplayValue('Bags')
+    fireEvent.change(input, { target: { value: 'Changed' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(toast.default.error).toHaveBeenCalledWith(
+        expect.stringMatching(/changed by someone else/i)
+      )
     })
   })
 
@@ -251,8 +284,12 @@ describe('CategoriesClient', () => {
     expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
   })
 
-  it('disables Add Category button when name is empty', () => {
+  it('disables the Save button when name is empty', () => {
     render(<CategoriesClient initialCategories={[]} />)
-    expect(screen.getByRole('button', { name: /add category/i })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Add category' }))
+    fireEvent.change(screen.getByPlaceholderText('e.g. Handbag'), {
+      target: { value: '' },
+    })
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
   })
 })

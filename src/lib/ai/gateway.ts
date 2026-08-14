@@ -1,5 +1,9 @@
 import { GoogleGenAI, ThinkingLevel } from '@google/genai'
-import type { GenerateContentConfig } from '@google/genai'
+import type {
+  FunctionDeclaration,
+  FunctionCallingConfigMode,
+  GenerateContentConfig,
+} from '@google/genai'
 import { env } from '@/lib/env'
 import { getAiConfig, type AiConfig } from '@/lib/edge-config'
 
@@ -48,11 +52,27 @@ const THINKING_LEVEL_MAP: Record<'low' | 'medium' | 'high', ThinkingLevel> = {
 
 export const buildGenerateConfig = (
   aiConfig: AiConfig,
-  systemInstruction: string
+  systemInstruction: string,
+  options?: {
+    readonly tools?: readonly FunctionDeclaration[]
+    readonly functionCallingMode?: FunctionCallingConfigMode
+  }
 ): GenerateContentConfig => {
   const config: GenerateContentConfig = {
     systemInstruction,
     maxOutputTokens: aiConfig.maxResponseTokens,
+  }
+
+  if (options?.tools?.length) {
+    config.tools = [{ functionDeclarations: [...options.tools] }]
+  }
+
+  if (options?.functionCallingMode) {
+    config.toolConfig = {
+      functionCallingConfig: {
+        mode: options.functionCallingMode,
+      },
+    }
   }
 
   if (aiConfig.thinkingLevel && aiConfig.thinkingLevel !== 'none') {

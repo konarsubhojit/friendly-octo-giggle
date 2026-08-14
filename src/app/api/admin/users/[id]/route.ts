@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { drizzleDb, primaryDrizzleDb } from '@/lib/db'
 import { users } from '@/lib/schema'
-import { eq } from 'drizzle-orm'
+import { eq, count } from 'drizzle-orm'
 import {
   apiSuccess,
   apiError,
@@ -31,8 +31,30 @@ export async function PATCH(
     const { id } = await params
     const validated = await parseJsonBody(request, UpdateUserRoleSchema)
 
+    // FR-C04: refuse self-demotion
     if (id === authCheck.userId) {
       return apiError('Cannot modify your own role', 403)
+    }
+
+    // FR-C05: refuse removing the last administrator
+    if (validated.role !== 'ADMIN') {
+      // Check if the target user is currently an ADMIN
+      const [targetUser] = await drizzleDb
+        .select({ role: users.role })
+        .from(users)
+        .where(eq(users.id, id))
+      if (targetUser?.role === 'ADMIN') {
+        const [{ value: adminCount }] = await drizzleDb
+          .select({ value: count() })
+          .from(users)
+          .where(eq(users.role, 'ADMIN'))
+        if (adminCount <= 1) {
+          return apiError(
+            'Cannot remove the last administrator. At least one user must hold the ADMIN role.',
+            403
+          )
+        }
+      }
     }
 
     const [user] = await primaryDrizzleDb

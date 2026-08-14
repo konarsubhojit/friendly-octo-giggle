@@ -9,6 +9,7 @@ import {
   parseJsonBody,
 } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
+import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 import { ModerateReviewSchema } from '@/features/product/validations'
 import { withLogging } from '@/lib/api-middleware'
 
@@ -50,6 +51,15 @@ const handlePatch = async (
       return apiError('Review not found', 404)
     }
 
+    await recordAdminAuditLog({
+      userId: authCheck.userId,
+      role: authCheck.role,
+      entity: 'review',
+      entityId: id,
+      action: 'moderate',
+      diff: payload,
+    })
+
     return apiSuccess(
       {
         review: {
@@ -85,6 +95,14 @@ const handleDelete = async (
     if (!deleted) {
       return apiError('Review not found', 404)
     }
+
+    await recordAdminAuditLog({
+      userId: authCheck.userId,
+      role: authCheck.role,
+      entity: 'review',
+      entityId: id,
+      action: 'delete',
+    })
 
     return apiSuccess({ deleted: true, id }, 200)
   } catch (error) {

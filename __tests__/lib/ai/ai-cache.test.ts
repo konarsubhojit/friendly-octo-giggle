@@ -26,21 +26,29 @@ describe('ai-cache', () => {
 
   describe('buildAiCacheKey', () => {
     it('normalizes casing and whitespace', () => {
-      expect(buildAiCacheKey('p1', '  Is  This   Mug   Big? ', 'USD')).toBe(
-        'ai:response:p1:USD:is this mug big?'
+      expect(
+        buildAiCacheKey('product:p1', '  Is  This   Mug   Big? ', 'USD')
+      ).toBe('ai:response:product:p1:USD:is this mug big?')
+    })
+
+    it('separates product and catalog surfaces', () => {
+      expect(buildAiCacheKey('product:p1', 'q', 'INR')).not.toBe(
+        buildAiCacheKey('catalog', 'q', 'INR')
       )
     })
 
     it('defaults the currency to INR', () => {
-      expect(buildAiCacheKey('p1', 'size?')).toBe('ai:response:p1:INR:size?')
+      expect(buildAiCacheKey('catalog', 'size?')).toBe(
+        'ai:response:catalog:INR:size?'
+      )
     })
 
-    it('separates keys by product and currency', () => {
-      expect(buildAiCacheKey('p1', 'q', 'INR')).not.toBe(
-        buildAiCacheKey('p2', 'q', 'INR')
+    it('separates keys by surface and currency', () => {
+      expect(buildAiCacheKey('product:p1', 'q', 'INR')).not.toBe(
+        buildAiCacheKey('product:p2', 'q', 'INR')
       )
-      expect(buildAiCacheKey('p1', 'q', 'INR')).not.toBe(
-        buildAiCacheKey('p1', 'q', 'USD')
+      expect(buildAiCacheKey('catalog', 'q', 'INR')).not.toBe(
+        buildAiCacheKey('catalog', 'q', 'USD')
       )
     })
   })
@@ -48,7 +56,7 @@ describe('ai-cache', () => {
   describe('getCachedAiResponse', () => {
     it('returns null when Redis is unavailable', async () => {
       getRedisClientMock.mockReturnValue(null)
-      await expect(getCachedAiResponse('p1', 'q')).resolves.toBeNull()
+      await expect(getCachedAiResponse('product:p1', 'q')).resolves.toBeNull()
       expect(logCacheOperationMock).not.toHaveBeenCalled()
     })
 
@@ -56,10 +64,10 @@ describe('ai-cache', () => {
       const get = vi.fn().mockResolvedValue('cached answer')
       getRedisClientMock.mockReturnValue({ get })
 
-      await expect(getCachedAiResponse('p1', 'q', 'USD')).resolves.toBe(
+      await expect(getCachedAiResponse('catalog', 'q', 'USD')).resolves.toBe(
         'cached answer'
       )
-      expect(get).toHaveBeenCalledWith('ai:response:p1:USD:q')
+      expect(get).toHaveBeenCalledWith('ai:response:catalog:USD:q')
       expect(logCacheOperationMock).toHaveBeenCalledWith(
         expect.objectContaining({ operation: 'hit', success: true })
       )
@@ -70,7 +78,7 @@ describe('ai-cache', () => {
         get: vi.fn().mockResolvedValue(null),
       })
 
-      await expect(getCachedAiResponse('p1', 'q')).resolves.toBeNull()
+      await expect(getCachedAiResponse('product:p1', 'q')).resolves.toBeNull()
       expect(logCacheOperationMock).toHaveBeenCalledWith(
         expect.objectContaining({ operation: 'miss', success: true })
       )
@@ -81,7 +89,7 @@ describe('ai-cache', () => {
         get: vi.fn().mockRejectedValue(new Error('redis down')),
       })
 
-      await expect(getCachedAiResponse('p1', 'q')).resolves.toBeNull()
+      await expect(getCachedAiResponse('product:p1', 'q')).resolves.toBeNull()
       expect(logErrorMock).toHaveBeenCalledWith(
         expect.objectContaining({ context: 'ai_cache_get' })
       )
@@ -91,7 +99,7 @@ describe('ai-cache', () => {
   describe('setCachedAiResponse', () => {
     it('does nothing when Redis is unavailable', async () => {
       getRedisClientMock.mockReturnValue(null)
-      await setCachedAiResponse('p1', 'q', 'INR', 'answer')
+      await setCachedAiResponse('catalog', 'q', 'INR', 'answer')
       expect(logCacheOperationMock).not.toHaveBeenCalled()
     })
 
@@ -99,9 +107,13 @@ describe('ai-cache', () => {
       const setex = vi.fn().mockResolvedValue('OK')
       getRedisClientMock.mockReturnValue({ setex })
 
-      await setCachedAiResponse('p1', 'q', 'INR', 'answer')
+      await setCachedAiResponse('product:p1', 'q', 'INR', 'answer')
 
-      expect(setex).toHaveBeenCalledWith('ai:response:p1:INR:q', 3600, 'answer')
+      expect(setex).toHaveBeenCalledWith(
+        'ai:response:product:p1:INR:q',
+        3600,
+        'answer'
+      )
       expect(logCacheOperationMock).toHaveBeenCalledWith(
         expect.objectContaining({ operation: 'set', ttl: 3600, success: true })
       )
@@ -113,7 +125,7 @@ describe('ai-cache', () => {
       })
 
       await expect(
-        setCachedAiResponse('p1', 'q', 'INR', 'answer')
+        setCachedAiResponse('product:p1', 'q', 'INR', 'answer')
       ).resolves.toBeUndefined()
       expect(logErrorMock).toHaveBeenCalledWith(
         expect.objectContaining({ context: 'ai_cache_set' })

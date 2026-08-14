@@ -1,11 +1,16 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
+import { AdminDataView } from '@/features/admin/components/AdminDataView'
 import {
   AdminReturnCard,
   type AdminReturn,
 } from '@/features/admin/components/AdminReturnCard'
+import {
+  createReturnsDefinition,
+  type ReturnRow,
+} from '@/features/admin/resources/returns'
 import {
   decideAdminReturn,
   fetchAdminReturns,
@@ -13,8 +18,13 @@ import {
   setReturnsFilter,
   type ReturnQueueFilter,
 } from '@/features/orders/store/returnsSlice'
+import {
+  RETURN_REASON_LABELS,
+  RETURN_STATUSES,
+  type ReturnAction,
+} from '@/lib/constants/returns'
+import type { AdminPermission } from '@/lib/constants/roles'
 import type { AdminDispatch, AdminRootState } from '@/lib/store'
-import { RETURN_STATUSES, type ReturnAction } from '@/lib/constants/returns'
 
 const TRIAGE_DEFAULT: ReturnQueueFilter = 'REQUESTED'
 
@@ -24,7 +34,20 @@ interface AdminReturnsClientProps {
    * the client never has to fetch-then-setState during its initial effect.
    */
   readonly initialReturns: readonly AdminReturn[]
+  readonly permissions: readonly AdminPermission[]
 }
+
+const formatCreatedAt = (createdAt: string): string =>
+  new Date(createdAt).toLocaleDateString('en-GB')
+
+const toReturnRow = (returnRequest: AdminReturn): ReturnRow => ({
+  id: returnRequest.id,
+  orderId: returnRequest.orderId,
+  customer: `${returnRequest.customerName} (${returnRequest.customerEmail})`,
+  status: returnRequest.status,
+  reason: RETURN_REASON_LABELS[returnRequest.reason],
+  createdAt: formatCreatedAt(returnRequest.createdAt),
+})
 
 /**
  * The returns triage queue.
@@ -34,6 +57,7 @@ interface AdminReturnsClientProps {
  */
 export function AdminReturnsClient({
   initialReturns,
+  permissions,
 }: AdminReturnsClientProps) {
   const dispatch = useDispatch<AdminDispatch>()
   const { filter, items, loading, error, decisionError } = useSelector(
@@ -69,7 +93,48 @@ export function AdminReturnsClient({
     return decideAdminReturn.fulfilled.match(result)
   }
 
+  const returnsDefinition = useMemo(
+    () =>
+      createReturnsDefinition(permissions, {
+        onApprove: () => {},
+        onReject: () => {},
+        onMarkReceived: () => {},
+        onRefund: () => {},
+        onMarkCompleted: () => {},
+        onViewOrder: (row) => {
+          globalThis.location.assign(
+            `/admin/orders?search=${encodeURIComponent(row.orderId)}`
+          )
+        },
+      }),
+    [permissions]
+  )
+
+  const returnRows = useMemo(() => items.map(toReturnRow), [items])
+  const returnsById = useMemo(
+    () =>
+      new Map(items.map((returnRequest) => [returnRequest.id, returnRequest])),
+    [items]
+  )
   const message = error ?? decisionError
+  const emptyMessage =
+    filter === 'ALL' ? 'No returns found.' : 'No returns in this state.'
+
+  const listState =
+    loading && items.length === 0
+      ? { status: 'loading' as const }
+      : items.length === 0
+        ? {
+            status:
+              filter === 'ALL'
+                ? ('empty' as const)
+                : ('filtered-empty' as const),
+            message:
+              filter === 'ALL'
+                ? returnsDefinition.emptyMessage
+                : 'No returns in this state.',
+          }
+        : { status: 'ready' as const }
 
   return (
     <div className="space-y-4">
@@ -91,36 +156,53 @@ export function AdminReturnsClient({
         ))}
       </div>
 
-      {message && (
+      {message ? (
         <p
           className="rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700"
           role="alert"
         >
           {message}
         </p>
-      )}
+      ) : null}
 
-      {loading && (
+      {loading ? (
         <output className="block text-sm text-slate-600">Loading…</output>
-      )}
+      ) : null}
 
-      {!loading && items.length === 0 && (
-        <p className="rounded-lg bg-slate-50 px-4 py-8 text-center text-sm text-slate-600">
-          No returns in this state.
-        </p>
-      )}
-
-      <div className="space-y-4">
-        {items.map((returnRequest) => (
-          <AdminReturnCard
-            key={returnRequest.id}
-            returnRequest={returnRequest}
-            onDecide={(action, decisionReason) =>
-              decide(returnRequest.id, action, decisionReason)
-            }
-          />
-        ))}
-      </div>
+      <AdminDataView
+        ariaLabel="Returns"
+        definition={returnsDefinition}
+        data={returnRows}
+        rowKey={(row) => row.id}
+        loading={loading && items.length === 0}
+        skeletonRowCount={5}
+        emptyMessage={emptyMessage}
+        listState={listState}
+        expandedRowRender={(row) => {
+          const returnRequest = returnsById.get(row.id)
+          return returnRequest ? (
+            <div className="px-4 pb-4">
+              <AdminReturnCard
+                returnRequest={returnRequest}
+                onDecide={(action, decisionReason) =>
+                  decide(returnRequest.id, action, decisionReason)
+                }
+              />
+            </div>
+          ) : null
+        }}
+        renderMobileCard={(row) => {
+          const returnRequest = returnsById.get(row.id)
+          return returnRequest ? (
+            <AdminReturnCard
+              returnRequest={returnRequest}
+              onDecide={(action, decisionReason) =>
+                decide(returnRequest.id, action, decisionReason)
+              }
+            />
+          ) : null
+        }}
+      />
     </div>
   )
 }

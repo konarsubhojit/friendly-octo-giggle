@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
+import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 import { invalidateProductCaches } from '@/lib/cache'
 
 const RouteParamsSchema = z.object({
@@ -42,6 +43,15 @@ export async function DELETE(
       .where(eq(productOptions.id, optionId))
 
     await invalidateProductCaches(id)
+
+    await recordAdminAuditLog({
+      userId: authCheck.userId,
+      role: authCheck.role,
+      entity: 'product_option',
+      entityId: optionId,
+      action: 'delete',
+      diff: { productId: id },
+    })
 
     return apiSuccess({ deleted: true })
   } catch (error) {

@@ -12,6 +12,8 @@ import { formatStructuredAddress } from '@/lib/address-utils'
 import { formatPriceForCurrency } from '@/lib/currency'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import { AdminConfirmDialog } from '@/features/admin/components/AdminConfirmDialog'
+import { EntityActivitySection } from '@/features/admin/components/EntityActivitySection'
 import {
   countOrderUnits,
   summarizeOrderProducts,
@@ -120,31 +122,33 @@ function RefundSection({ order, refunding, onRefund }: RefundSectionProps) {
     setConfirming(true)
   }
 
-  const handleConfirm = () => {
-    setConfirming(false)
+  const handleConfirm = async () => {
     onRefund(order.id, {
       amount: parsedAmount,
       reason: reason.trim() || undefined,
     })
+    setConfirming(false)
     setAmount('')
     setReason('')
+    return { status: 'success' } as const
   }
 
   return (
     <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-700">
-      <ConfirmDialog
-        isOpen={confirming}
+      <AdminConfirmDialog
+        open={confirming}
+        onClose={() => setConfirming(false)}
         title="Refund order"
-        message={
+        description={
           parsedAmount === undefined
             ? 'Refund the full remaining balance of this order to the customer?'
             : `Refund ${formatPriceForCurrency(parsedAmount, BASE_CURRENCY)} to the customer?`
         }
+        reversible={false}
+        typedConfirmationValue={order.id.toUpperCase()}
         confirmLabel="Yes, refund"
         variant="danger"
-        loading={refunding}
         onConfirm={handleConfirm}
-        onCancel={() => setConfirming(false)}
       />
       <h4 className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
         Refund
@@ -535,6 +539,8 @@ export function AdminOrderCard({
               ))}
             </div>
           </div>
+
+          <EntityActivitySection entity="order" entityId={order.id} />
         </div>
       ) : (
         <p className="text-sm text-gray-500 dark:text-gray-400">

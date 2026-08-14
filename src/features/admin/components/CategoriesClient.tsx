@@ -1,8 +1,15 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import { RESOURCE_FORM_PRESENTATIONS } from '@/features/admin/services/form-presentation-rule'
+import FormErrorSummary from '@/features/admin/components/FormErrorSummary'
+import { useUnsavedChangesGuard } from '@/features/admin/hooks/useUnsavedChangesGuard'
+
+// FR-B02/FR-B03: categories are a low-field-count record, so the canonical
+// rule places create/edit in an overlay rather than a dedicated screen.
+const CATEGORY_FORM_PRESENTATION = RESOURCE_FORM_PRESENTATIONS.categories
 
 interface Category {
   id: string
@@ -51,7 +58,7 @@ interface CategoryRowProps {
   readonly onDragOver: (e: React.DragEvent, index: number) => void
   readonly onDrop: (index: number) => void
   readonly onDragEnd: () => void
-  readonly onRename: (id: string, name: string) => Promise<void>
+  readonly onEditClick: (cat: Category) => void
   readonly onDeleteClick: (cat: Category) => void
 }
 
@@ -65,42 +72,9 @@ const CategoryRow = ({
   onDragOver,
   onDrop,
   onDragEnd,
-  onRename,
+  onEditClick,
   onDeleteClick,
 }: CategoryRowProps) => {
-  const [editing, setEditing] = useState(false)
-  const [draftName, setDraftName] = useState(cat.name)
-  const [renameSaving, setRenameSaving] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  const startEdit = () => {
-    setDraftName(cat.name)
-    setEditing(true)
-    setTimeout(() => inputRef.current?.select(), 0)
-  }
-
-  const cancelEdit = () => {
-    setEditing(false)
-    setDraftName(cat.name)
-  }
-
-  const commitEdit = async () => {
-    const trimmed = draftName.trim()
-    if (!trimmed || trimmed === cat.name) {
-      cancelEdit()
-      return
-    }
-    setRenameSaving(true)
-    await onRename(cat.id, trimmed)
-    setEditing(false)
-    setRenameSaving(false)
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') commitEdit()
-    if (e.key === 'Escape') cancelEdit()
-  }
-
   let dragStateClass: string
   if (isDragging) {
     dragStateClass =
@@ -138,100 +112,179 @@ const CategoryRow = ({
       </span>
 
       <div className="flex-1 min-w-0">
-        {editing ? (
-          <input
-            ref={inputRef}
-            type="text"
-            value={draftName}
-            onChange={(e) => setDraftName(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onBlur={commitEdit}
-            maxLength={100}
-            disabled={renameSaving}
-            autoFocus
-            className="w-full px-2 py-0.5 rounded border border-sky-400 bg-white dark:bg-slate-800 text-sm font-medium text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-            aria-label="Edit category name"
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={startEdit}
-            title="Click to rename"
-            className="w-full text-left text-sm font-medium text-slate-900 dark:text-slate-100 truncate hover:text-sky-600 dark:hover:text-sky-400 transition-colors focus:outline-none focus-visible:underline"
-          >
-            {cat.name}
-          </button>
-        )}
-      </div>
-
-      {editing && (
-        <div className="flex items-center gap-1.5 flex-shrink-0 text-xs text-slate-400">
-          {renameSaving ? (
-            <span>Saving…</span>
-          ) : (
-            <>
-              <kbd className="px-1 rounded bg-slate-100 dark:bg-slate-800 font-mono">
-                ↵
-              </kbd>
-              <span>save</span>
-              <kbd className="ml-1 px-1 rounded bg-slate-100 dark:bg-slate-800 font-mono">
-                Esc
-              </kbd>
-              <span>cancel</span>
-            </>
-          )}
-        </div>
-      )}
-
-      {!editing && (
         <button
           type="button"
-          onClick={() => onDeleteClick(cat)}
-          disabled={saving}
-          className="flex-shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition disabled:opacity-30"
-          aria-label={`Delete ${cat.name}`}
+          onClick={() => onEditClick(cat)}
+          title="Click to edit"
+          className="w-full text-left text-sm font-medium text-slate-900 dark:text-slate-100 truncate hover:text-sky-600 dark:hover:text-sky-400 transition-colors focus:outline-none focus-visible:underline"
         >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.8}
-              d="M6 7h12m-9 0V5.5A1.5 1.5 0 0110.5 4h3A1.5 1.5 0 0115 5.5V7m-7.5 0l.75 11.25A1.5 1.5 0 009.75 19.5h4.5a1.5 1.5 0 001.5-1.25L16.5 7m-6 3v5m3-5v5"
-            />
-          </svg>
+          {cat.name}
         </button>
-      )}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onDeleteClick(cat)}
+        disabled={saving}
+        className="flex-shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition disabled:opacity-30"
+        aria-label={`Delete ${cat.name}`}
+      >
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.8}
+            d="M6 7h12m-9 0V5.5A1.5 1.5 0 0110.5 4h3A1.5 1.5 0 0115 5.5V7m-7.5 0l.75 11.25A1.5 1.5 0 009.75 19.5h4.5a1.5 1.5 0 001.5-1.25L16.5 7m-6 3v5m3-5v5"
+          />
+        </svg>
+      </button>
     </li>
+  )
+}
+
+interface CategoryFormModalProps {
+  readonly editingCategory: Category | null
+  readonly onClose: () => void
+  readonly onSubmit: (
+    name: string
+  ) => Promise<{ success: boolean; error?: string; stale?: boolean }>
+}
+
+/**
+ * Overlay create/edit form for categories (FR-B02/FR-B03). Rendered for both
+ * "add" (editingCategory === null) and "edit" (editingCategory set) flows.
+ */
+const CategoryFormModal = ({
+  editingCategory,
+  onClose,
+  onSubmit,
+}: CategoryFormModalProps) => {
+  const isEditing = editingCategory !== null
+  const [name, setName] = useState(editingCategory?.name ?? '')
+  const [submitting, setSubmitting] = useState(false)
+  const [dirty, setDirty] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [stale, setStale] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const { guardClose } = useUnsavedChangesGuard(dirty)
+
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
+
+  const handleClose = () => guardClose(onClose)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const trimmed = name.trim()
+    if (!trimmed || submitting) return
+    setSubmitting(true)
+    setFormError(null)
+    setStale(false)
+    const result = await onSubmit(trimmed)
+    setSubmitting(false)
+    if (result.success) {
+      onClose()
+    } else if (result.stale) {
+      setStale(true)
+    } else if (result.error) {
+      setFormError(result.error)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="category-form-title"
+    >
+      <div className="bg-white dark:bg-slate-900 rounded-xl max-w-md w-full">
+        <form onSubmit={handleSubmit} className="p-6">
+          <h3
+            id="category-form-title"
+            className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4"
+          >
+            {isEditing ? 'Edit Category' : 'Add Category'}
+          </h3>
+          {stale && (
+            <p
+              role="alert"
+              className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200"
+            >
+              This category was changed by someone else since this form opened.
+              Reload and try again.
+            </p>
+          )}
+          <FormErrorSummary formError={formError} />
+          <label
+            htmlFor="category-form-name"
+            className="block text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400 mb-1"
+          >
+            Name
+          </label>
+          <input
+            id="category-form-name"
+            ref={inputRef}
+            type="text"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value)
+              setDirty(true)
+            }}
+            placeholder="e.g. Handbag"
+            maxLength={100}
+            required
+            disabled={submitting}
+            className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+          />
+          <div className="mt-6 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={submitting}
+              className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || !name.trim()}
+              className="px-4 py-2 text-sm font-semibold text-white bg-slate-950 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition"
+            >
+              {submitting ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }
 
 const CategoriesClient = ({ initialCategories }: CategoriesClientProps) => {
   const [cats, setCats] = useState<Category[]>(initialCategories)
   const [saving, setSaving] = useState(false)
-  const [newName, setNewName] = useState('')
-  const [addLoading, setAddLoading] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [formTarget, setFormTarget] = useState<Category | 'new' | null>(null)
 
   const [dragSourceIndex, setDragSourceIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
 
-  const handleAdd = async (e: React.BaseSyntheticEvent) => {
-    e.preventDefault()
-    const trimmed = newName.trim()
-    if (!trimmed) return
-    setAddLoading(true)
+  const handleCreate = async (
+    name: string
+  ): Promise<{ success: boolean; error?: string }> => {
     try {
       const res = await fetch('/api/admin/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: trimmed }),
+        body: JSON.stringify({ name }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Failed to create category')
@@ -239,34 +292,61 @@ const CategoriesClient = ({ initialCategories }: CategoriesClientProps) => {
       setCats((prev) =>
         [...prev, created].sort((a, b) => a.sortOrder - b.sortOrder)
       )
-      setNewName('')
       toast.success(`"${created.name}" added`)
+      return { success: true }
     } catch (err) {
-      toast.error(
+      const message =
         err instanceof Error ? err.message : 'Failed to create category'
-      )
-    } finally {
-      setAddLoading(false)
+      toast.error(message)
+      return { success: false, error: message }
     }
   }
 
-  const handleRename = async (id: string, name: string) => {
+  const handleRename = async (
+    category: Category,
+    name: string
+  ): Promise<{ success: boolean; error?: string; stale?: boolean }> => {
     try {
-      const res = await fetch(`/api/admin/categories/${id}`, {
+      const res = await fetch(`/api/admin/categories/${category.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({
+          name,
+          expectedUpdatedAt: category.updatedAt,
+        }),
       })
       const data = await res.json()
+      if (res.status === 409) {
+        const message =
+          data.details?.reason === 'stale'
+            ? 'This category was changed by someone else. Reload and try again.'
+            : (data.error ?? 'A category with this name already exists')
+        toast.error(message)
+        return {
+          success: false,
+          error: message,
+          stale: data.details?.reason === 'stale',
+        }
+      }
       if (!res.ok) throw new Error(data.error ?? 'Failed to rename category')
       const updated = data.data?.category ?? data.category
-      setCats((prev) => prev.map((c) => (c.id === id ? updated : c)))
+      setCats((prev) => prev.map((c) => (c.id === category.id ? updated : c)))
       toast.success(`Renamed to "${updated.name}"`)
+      return { success: true }
     } catch (err) {
-      toast.error(
+      const message =
         err instanceof Error ? err.message : 'Failed to rename category'
-      )
+      toast.error(message)
+      return { success: false, error: message }
     }
+  }
+
+  const handleFormSubmit = async (
+    name: string
+  ): Promise<{ success: boolean; error?: string; stale?: boolean }> => {
+    if (formTarget === 'new') return handleCreate(name)
+    if (formTarget) return handleRename(formTarget, name)
+    return { success: false }
   }
 
   const handleDelete = async () => {
@@ -344,39 +424,25 @@ const CategoriesClient = ({ initialCategories }: CategoriesClientProps) => {
 
   return (
     <>
-      <form
-        onSubmit={handleAdd}
-        className="mb-6 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5"
-      >
-        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
-          Add Category
-        </h3>
-        <div className="flex gap-3">
-          <input
-            id="new-cat-name"
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="e.g. Handbag"
-            maxLength={100}
-            required
-            className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-            aria-label="New category name"
-          />
-          <button
-            type="submit"
-            disabled={addLoading || !newName.trim()}
-            aria-label="Add category"
-            className="px-4 py-2 text-sm font-semibold text-white bg-slate-950 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition whitespace-nowrap"
-          >
-            {addLoading ? 'Adding…' : '+ Add'}
-          </button>
+      <div className="mb-6 flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-5">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+            Categories
+          </h3>
+          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+            New categories are automatically placed at the end. Drag rows to
+            reorder.
+          </p>
         </div>
-        <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
-          New categories are automatically placed at the end. Drag rows to
-          reorder.
-        </p>
-      </form>
+        <button
+          type="button"
+          onClick={() => setFormTarget('new')}
+          aria-label="Add category"
+          className="px-4 py-2 text-sm font-semibold text-white bg-slate-950 hover:bg-slate-800 rounded-lg transition whitespace-nowrap"
+        >
+          + Add Category
+        </button>
+      </div>
 
       {cats.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-950/50 p-10 text-center">
@@ -419,7 +485,7 @@ const CategoriesClient = ({ initialCategories }: CategoriesClientProps) => {
             <span aria-hidden="true" className="font-mono">
               ⠿
             </span>{' '}
-            to reorder · click a name to rename
+            to reorder · click a name to edit
           </p>
           <ul
             className="space-y-2 list-none p-0"
@@ -437,12 +503,20 @@ const CategoriesClient = ({ initialCategories }: CategoriesClientProps) => {
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
                 onDragEnd={handleDragEnd}
-                onRename={handleRename}
+                onEditClick={setFormTarget}
                 onDeleteClick={setDeleteTarget}
               />
             ))}
           </ul>
         </>
+      )}
+
+      {formTarget !== null && CATEGORY_FORM_PRESENTATION === 'overlay' && (
+        <CategoryFormModal
+          editingCategory={formTarget === 'new' ? null : formTarget}
+          onClose={() => setFormTarget(null)}
+          onSubmit={handleFormSubmit}
+        />
       )}
 
       <ConfirmDialog

@@ -27,13 +27,41 @@ interface AdminNavLinksClientProps {
   readonly permissions: readonly AdminPermission[]
 }
 
+/**
+ * Navigation groups per FR-E01/FR-E05: commerce operations, catalogue,
+ * people, operations. Activity and checkout-requests/recommendations/
+ * email-failures/search move under the operations grouping.
+ */
 const NAV_GROUPS: readonly NavGroup[] = [
   {
     label: 'Dashboard',
     href: '/admin',
   },
   {
-    label: 'Catalog',
+    label: 'Commerce',
+    items: [
+      {
+        href: '/admin/orders',
+        label: 'Orders',
+        keywords: ['purchases', 'transactions', 'sales', 'fulfilment'],
+        permission: 'orders:read',
+      },
+      {
+        href: '/admin/returns',
+        label: 'Returns',
+        keywords: ['refunds', 'rma', 'claims'],
+        permission: 'orders:returns',
+      },
+      {
+        href: '/admin/coupons',
+        label: 'Coupons',
+        keywords: ['discount', 'promotion', 'promo', 'voucher'],
+        permission: 'coupons:manage',
+      },
+    ],
+  },
+  {
+    label: 'Catalogue',
     items: [
       {
         href: '/admin/products',
@@ -50,18 +78,12 @@ const NAV_GROUPS: readonly NavGroup[] = [
     ],
   },
   {
-    label: 'Management',
+    label: 'People',
     items: [
-      {
-        href: '/admin/orders',
-        label: 'Orders',
-        keywords: ['purchases', 'transactions', 'sales'],
-        permission: 'orders:read',
-      },
       {
         href: '/admin/users',
         label: 'Users',
-        keywords: ['customers', 'accounts', 'people'],
+        keywords: ['customers', 'accounts', 'people', 'staff'],
         permission: 'users:read',
       },
       {
@@ -70,22 +92,22 @@ const NAV_GROUPS: readonly NavGroup[] = [
         keywords: ['ratings', 'feedback'],
         permission: 'reviews:moderate',
       },
-      {
-        href: '/admin/coupons',
-        label: 'Coupons',
-        keywords: ['discount', 'promotion', 'promo', 'voucher'],
-        permission: 'coupons:manage',
-      },
     ],
   },
   {
-    label: 'System',
+    label: 'Operations',
     items: [
       {
-        href: '/admin/search',
-        label: 'Search',
-        keywords: ['reindex', 'indexing'],
+        href: '/admin/activity',
+        label: 'Activity',
+        keywords: ['audit', 'log', 'history', 'changes', 'trackability'],
         permission: 'system:manage',
+      },
+      {
+        href: '/admin/checkout-requests',
+        label: 'Checkout Queue',
+        keywords: ['checkout', 'queue', 'reservations', 'triage'],
+        permission: 'orders:read',
       },
       {
         href: '/admin/email-failures',
@@ -100,10 +122,10 @@ const NAV_GROUPS: readonly NavGroup[] = [
         permission: 'system:manage',
       },
       {
-        href: '/admin/checkout-requests',
-        label: 'Checkout Queue',
-        keywords: ['checkout', 'queue', 'orders', 'worker'],
-        permission: 'orders:read',
+        href: '/admin/search',
+        label: 'Search',
+        keywords: ['reindex', 'indexing'],
+        permission: 'system:manage',
       },
     ],
   },
@@ -113,7 +135,7 @@ const NAV_GROUPS: readonly NavGroup[] = [
  * Drop nav entries the current role cannot use, and any group left empty, so
  * staff never see a link that would bounce them back to the dashboard.
  */
-function getVisibleNavGroups(
+export function getVisibleNavGroups(
   permissions: readonly AdminPermission[]
 ): NavGroup[] {
   return NAV_GROUPS.map((group) => ({
@@ -124,7 +146,7 @@ function getVisibleNavGroups(
   })).filter((group) => Boolean(group.href) || (group.items?.length ?? 0) > 0)
 }
 
-function getAllNavItems(
+export function getAllNavItems(
   groups: readonly NavGroup[],
   failedEmailCount: number
 ): NavItem[] {

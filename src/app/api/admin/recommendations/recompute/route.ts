@@ -6,6 +6,7 @@ import { invalidateCache } from '@/lib/redis'
 import { CACHE_KEYS } from '@/lib/cache'
 import { AFFINITY_RECOMPUTE_EVENT } from '@/features/recommendations/inngest/affinity'
 import { RecomputeRequestSchema } from '@/features/recommendations/validations'
+import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 
 /**
  * Trigger an out-of-schedule scoring run.
@@ -42,6 +43,15 @@ export async function POST(request: NextRequest) {
     // The status figures are about to change; drop the cached snapshot so the
     // admin sees the new timestamp rather than a minute-old one.
     await invalidateCache(CACHE_KEYS.RECOMMENDATIONS_STATUS)
+
+    await recordAdminAuditLog({
+      userId: authCheck.userId,
+      role: authCheck.role,
+      entity: 'recommendation',
+      entityId: 'affinity',
+      action: 'recompute',
+      diff: { windowDays: parsed.data.windowDays },
+    })
 
     return apiSuccess({ accepted: dispatch !== 'dropped', dispatch }, 202)
   } catch (error) {

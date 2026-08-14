@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import type { NextRequest } from 'next/server'
 import { auth } from '@/lib/auth'
+import { parseJsonBody } from '@/lib/api-utils'
 import { drizzleDb } from '@/lib/db'
 import { users } from '@/lib/schema'
 import { eq } from 'drizzle-orm'
@@ -8,6 +9,7 @@ import { isValidCurrencyCode } from '@/lib/currency'
 import type { CurrencyCode } from '@/lib/currency'
 import {
   ChatRequestSchema,
+  type AssistantSurface,
   type ChatMessage,
   type RequestIdentity,
 } from './chat-types'
@@ -17,6 +19,7 @@ import { resolveThreadId } from './chat-history'
 
 export type PreparedRequest = {
   identity: RequestIdentity
+  surface: AssistantSurface
   persistHistory: boolean
   threadId: string
   sanitizedMessages: ChatMessage[]
@@ -70,16 +73,17 @@ export const resolveCurrencyForUser = async (
 
 export const parseAndValidateRequest = async (
   request: NextRequest,
-  productId: string
+  productId?: string
 ): Promise<PrepareRequestResult> => {
-  const body = await request.json()
-  const parsed = ChatRequestSchema.safeParse(body)
-  if (!parsed.success) return { ok: false, error: 'Invalid request body' }
+  const body = await parseJsonBody(request, ChatRequestSchema)
 
   const identity = await resolveRequestIdentity(request)
+  const surface: AssistantSurface = productId
+    ? `product:${productId}`
+    : 'catalog'
 
   if (
-    parsed.data.messages.some(
+    body.messages.some(
       (message) =>
         message.text.trim().length === 0 ||
         message.text.length > MAX_INPUT_MESSAGE_CHARS
@@ -91,7 +95,7 @@ export const parseAndValidateRequest = async (
     }
   }
 
-  const sanitizedMessages = parsed.data.messages.map((message) => ({
+  const sanitizedMessages = body.messages.map((message) => ({
     ...message,
     text: sanitizePromptText(message.text),
   }))
@@ -103,9 +107,10 @@ export const parseAndValidateRequest = async (
     ok: true,
     prepared: {
       identity,
+      surface,
       persistHistory:
-        identity.isAuthenticated && (parsed.data.persistHistory ?? false),
-      threadId: resolveThreadId(parsed.data.threadId, productId),
+        identity.isAuthenticated && (body.persistHistory ?? false),
+      threadId: resolveThreadId(body.threadId, surface, identity),
       sanitizedMessages,
     },
   }

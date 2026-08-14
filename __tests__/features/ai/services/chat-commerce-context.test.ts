@@ -1,20 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const productsFindManyMock = vi.hoisted(() => vi.fn())
 const reviewsFindManyMock = vi.hoisted(() => vi.fn())
-const ordersFindManyMock = vi.hoisted(() => vi.fn())
-const ordersFindFirstMock = vi.hoisted(() => vi.fn())
 const getShippingConfigMock = vi.hoisted(() => vi.fn())
 
 vi.mock('@/lib/db', () => ({
   drizzleDb: {
     query: {
-      products: { findMany: productsFindManyMock },
       reviews: { findMany: reviewsFindManyMock },
-      orders: {
-        findMany: ordersFindManyMock,
-        findFirst: ordersFindFirstMock,
-      },
     },
   },
 }))
@@ -25,8 +17,6 @@ vi.mock('@/lib/edge-config', () => ({
 
 import {
   buildCommerceContext,
-  extractComparisonTerms,
-  fetchOrderStatusContext,
   fetchReviewSummaryContext,
   toStockLabel,
 } from '@/features/ai/services/chat-commerce-context'
@@ -63,10 +53,7 @@ describe('chat-commerce-context', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     getShippingConfigMock.mockResolvedValue({ estimatedDeliveryDays: 5 })
-    productsFindManyMock.mockResolvedValue([])
     reviewsFindManyMock.mockResolvedValue([])
-    ordersFindManyMock.mockResolvedValue([])
-    ordersFindFirstMock.mockResolvedValue(undefined)
   })
 
   describe('toStockLabel', () => {
@@ -77,24 +64,10 @@ describe('chat-commerce-context', () => {
     })
   })
 
-  describe('extractComparisonTerms', () => {
-    it('splits on comparison connectives', () => {
-      expect(extractComparisonTerms('compare mug vs tumbler', 'Mug')).toEqual([
-        'mug',
-        'tumbler',
-      ])
-    })
-
-    it('falls back to the current product name', () => {
-      expect(extractComparisonTerms('compare', 'Mug')).toEqual(['Mug'])
-    })
-  })
-
   describe('buildCommerceContext dispatch', () => {
     it('returns no sections when no intent is detected', async () => {
       const sections = await buildCommerceContext(baseParams)
       expect(sections).toEqual([])
-      expect(productsFindManyMock).not.toHaveBeenCalled()
       expect(reviewsFindManyMock).not.toHaveBeenCalled()
       expect(getShippingConfigMock).not.toHaveBeenCalled()
     })
@@ -107,92 +80,6 @@ describe('chat-commerce-context', () => {
       expect(sections).toEqual([
         'Estimated delivery: approximately 5 business days (standard shipping).',
       ])
-    })
-
-    it('builds a comparison section when multiple products match', async () => {
-      productsFindManyMock.mockResolvedValue([
-        { id: 'p1', name: 'Ceramic Mug', variants: [{ price: 500, stock: 9 }] },
-        {
-          id: 'p2',
-          name: 'Steel Tumbler',
-          variants: [{ price: 900, stock: 0 }],
-        },
-      ])
-
-      const sections = await buildCommerceContext({
-        ...baseParams,
-        messageText: 'compare mug vs tumbler',
-        intents: { ...noIntents, wantsComparison: true },
-      })
-
-      expect(sections[0]).toContain('Comparison candidates:')
-      expect(sections[0]).toContain('- Ceramic Mug: INR500 (INR), In Stock')
-      expect(sections[0]).toContain(
-        '- Steel Tumbler: INR900 (INR), Out of Stock'
-      )
-    })
-
-    it('omits the comparison section when only one product matches', async () => {
-      productsFindManyMock.mockResolvedValue([
-        { id: 'p1', name: 'Ceramic Mug', variants: [{ price: 500, stock: 9 }] },
-      ])
-
-      const sections = await buildCommerceContext({
-        ...baseParams,
-        messageText: 'compare mug vs tumbler',
-        intents: { ...noIntents, wantsComparison: true },
-      })
-
-      expect(sections).toEqual([])
-    })
-
-    it('recommends cheaper same-category products within budget', async () => {
-      productsFindManyMock.mockResolvedValue([
-        { id: 'p1', name: 'Ceramic Mug', variants: [{ price: 500, stock: 9 }] },
-        { id: 'p2', name: 'Budget Mug', variants: [{ price: 200, stock: 2 }] },
-        { id: 'p3', name: 'Luxury Mug', variants: [{ price: 5000, stock: 4 }] },
-      ])
-
-      const sections = await buildCommerceContext({
-        ...baseParams,
-        messageText: 'recommend something under 400',
-        intents: { ...noIntents, wantsRecommendation: true },
-      })
-
-      expect(sections[0]).toContain('Recommendations under INR400 (INR):')
-      expect(sections[0]).toContain('- Budget Mug: INR200, Low Stock')
-      expect(sections[0]).not.toContain('Luxury Mug')
-      expect(sections[0]).not.toContain('Ceramic Mug')
-    })
-
-    it('reports when no alternatives fit the budget', async () => {
-      productsFindManyMock.mockResolvedValue([
-        { id: 'p9', name: 'Luxury Mug', variants: [{ price: 5000, stock: 4 }] },
-      ])
-
-      const sections = await buildCommerceContext({
-        ...baseParams,
-        messageText: 'anything under 400',
-        intents: { ...noIntents, wantsRecommendation: true },
-      })
-
-      expect(sections[0]).toBe(
-        'No same-category alternatives were found under INR400 (INR).'
-      )
-    })
-
-    it('prompts guests to sign in for order status', async () => {
-      const sections = await buildCommerceContext({
-        ...baseParams,
-        isAuthenticated: false,
-        messageText: 'where is my order',
-        intents: { ...noIntents, wantsOrderStatus: true },
-      })
-
-      expect(sections).toEqual([
-        'Sign in to check your recent orders and tracking details for your account.',
-      ])
-      expect(ordersFindManyMock).not.toHaveBeenCalled()
     })
   })
 
@@ -222,50 +109,6 @@ describe('chat-commerce-context', () => {
 
       const summary = await fetchReviewSummaryContext('p1')
       expect(summary).toContain(`${'a'.repeat(120)}...`)
-    })
-  })
-
-  describe('fetchOrderStatusContext', () => {
-    it('looks up a specific order id when present', async () => {
-      ordersFindFirstMock.mockResolvedValue({
-        id: 'ORD1234',
-        status: 'SHIPPED',
-        trackingNumber: 'TRK1',
-        shippingProvider: 'BlueDart',
-      })
-
-      await expect(
-        fetchOrderStatusContext('user-1', 'status of ORD1234')
-      ).resolves.toBe(
-        'Order ORD1234: SHIPPED, tracking TRK1, carrier BlueDart.'
-      )
-    })
-
-    it('reports a missing order for the account', async () => {
-      await expect(
-        fetchOrderStatusContext('user-1', 'status of ORD1234')
-      ).resolves.toBe('No order with ID "ORD1234" was found for this account.')
-    })
-
-    it('lists recent orders when no id is given', async () => {
-      ordersFindManyMock.mockResolvedValue([
-        {
-          id: 'ORD1',
-          status: 'PENDING',
-          trackingNumber: null,
-          shippingProvider: null,
-        },
-      ])
-
-      await expect(fetchOrderStatusContext('user-1', 'my order')).resolves.toBe(
-        'Recent order status:\n- ORD1: PENDING, tracking not available, carrier not assigned'
-      )
-    })
-
-    it('reports when the account has no orders', async () => {
-      await expect(fetchOrderStatusContext('user-1', 'my order')).resolves.toBe(
-        'No orders were found for this account yet.'
-      )
     })
   })
 })

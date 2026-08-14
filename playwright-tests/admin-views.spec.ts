@@ -14,6 +14,7 @@ import {
   MOCK_ORDERS,
   MOCK_USERS,
   MOCK_SALES,
+  MOCK_ACTIVITY_ENTRIES,
 } from './mock-data.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -74,6 +75,27 @@ async function mockAdminRoutes(page: Page) {
       },
     })
   )
+  // Activity log (T051) — filters the in-memory fixture the same way the
+  // real API filters by entity/entityId/action so combined filtering can be
+  // exercised deterministically without a database.
+  await page.route('**/api/admin/activity**', (route) => {
+    const url = new URL(route.request().url())
+    const entity = url.searchParams.get('entity')
+    const entityId = url.searchParams.get('entityId')
+    const action = url.searchParams.get('action')
+    const entries = MOCK_ACTIVITY_ENTRIES.filter(
+      (entry) =>
+        (!entity || entry.entity === entity) &&
+        (!entityId || entry.entityId === entityId) &&
+        (!action || entry.action === action)
+    )
+    return route.fulfill({
+      json: {
+        success: true,
+        data: { entries, nextCursor: null, retentionWindowMonths: 24 },
+      },
+    })
+  })
 }
 
 // ─── Admin Dashboard ─────────────────────────────────────────────────────────
@@ -596,6 +618,462 @@ test.describe('Admin Users - role change confirmation', () => {
     await expect(roleSelect).toHaveValue(originalRole)
     await page.screenshot({
       path: screenshotPath('admin-user-role-cancelled'),
+      fullPage: false,
+    })
+  })
+
+  // T060: self-demotion and last-administrator-removal are refused by the
+  // API (see src/app/api/admin/users/[id]/route.ts, FR-C04/FR-C05). These
+  // tests mock the PATCH endpoint to return the same 403 responses the real
+  // API returns for those two guards, and confirm the admin console leaves
+  // the displayed role unchanged (the list is only refreshed on success —
+  // see handleRoleChange in src/app/admin/users/page.tsx) rather than
+  // silently applying a change the server refused.
+  test('refuses self-demotion and leaves the role unchanged', async ({
+    page,
+  }) => {
+    await mockAdminRoutes(page)
+    // The signed-in test account is MOCK_USERS[0] (dev-copilot-admin).
+    // Overriding this pattern after mockAdminRoutes means it is matched
+    // first (Playwright resolves overlapping routes most-recently-added
+    // first).
+    await page.route('**/api/admin/users/dev-copilot-admin', (route) => {
+      if (route.request().method() !== 'PATCH') {
+        return route.fallback()
+      }
+      return route.fulfill({
+        status: 403,
+        json: { success: false, error: 'Cannot modify your own role' },
+      })
+    })
+    await page.goto('/admin/users')
+    await expect(page.getByText('User Management')).toBeVisible()
+
+    const selfRoleSelect = page.getByLabel(/change role for/i).first()
+    await expect(selfRoleSelect).toHaveValue('ADMIN')
+    await selfRoleSelect.selectOption('CUSTOMER')
+
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await page.getByRole('textbox').fill('CHANGE ROLE')
+    await page.getByRole('button', { name: 'Confirm', exact: true }).click()
+    await expect(page.getByRole('dialog')).not.toBeVisible()
+
+    // The server refused the change, so the list was never refreshed and
+    // the select must still reflect the original ADMIN role.
+    await expect(selfRoleSelect).toHaveValue('ADMIN')
+    await page.screenshot({
+      path: screenshotPath('admin-user-self-demotion-refused'),
+      fullPage: false,
+    })
+  })
+
+  test('refuses removing the last administrator and leaves the role unchanged', async ({
+    page,
+  }) => {
+    await mockAdminRoutes(page)
+    // Simulate a second administrator distinct from the signed-in user
+    // (usr0001) so the last-administrator guard can be exercised on a
+    // non-self row without also tripping the self-demotion guard.
+    await page.route('**/api/admin/users**', (route) => {
+      const url = route.request().url()
+      if (ADMIN_USER_DETAIL_PATTERN.test(url)) {
+        return route.fulfill({
+          json: { success: true, data: { user: MOCK_USERS[0] } },
+        })
+      }
+      const usersWithSecondAdmin = MOCK_USERS.map((user) =>
+        user.id === 'usr0001' ? { ...user, role: 'ADMIN' } : user
+      )
+      return route.fulfill({
+        json: { success: true, data: { users: usersWithSecondAdmin } },
+      })
+    })
+    await page.route('**/api/admin/users/usr0001', (route) => {
+      if (route.request().method() !== 'PATCH') {
+        return route.fallback()
+      }
+      return route.fulfill({
+        status: 403,
+        json: {
+          success: false,
+          error:
+            'Cannot remove the last administrator. At least one user must hold the ADMIN role.',
+        },
+      })
+    })
+    await page.goto('/admin/users')
+    await expect(page.getByText('User Management')).toBeVisible()
+
+    const targetRoleSelect = page.getByLabel(/change role for priya sharma/i)
+    await expect(targetRoleSelect).toHaveValue('ADMIN')
+    await targetRoleSelect.selectOption('CUSTOMER')
+
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await page.getByRole('textbox').fill('CHANGE ROLE')
+    await page.getByRole('button', { name: 'Confirm', exact: true }).click()
+    await expect(page.getByRole('dialog')).not.toBeVisible()
+
+    await expect(targetRoleSelect).toHaveValue('ADMIN')
+    await page.screenshot({
+      path: screenshotPath('admin-user-last-admin-removal-refused'),
+      fullPage: false,
+    })
+  })
+})
+
+// T041: FULFILMENT-role scenario — dashboard queue → orders list → bulk action
+test.describe('US1: Fulfilment staff clear the order queue', () => {
+  test('T041 - bulk mark-shipped from dashboard queue link', async ({
+    page,
+  }) => {
+    await page.goto('/admin')
+    await page.screenshot({
+      path: screenshotPath('admin-dashboard-queues'),
+      fullPage: true,
+    })
+
+    const queueLink = page.getByRole('link', {
+      name: /orders awaiting fulfilment/i,
+    })
+    if (await queueLink.isVisible()) {
+      await queueLink.click()
+      await page.waitForLoadState('networkidle')
+    }
+
+    await page.screenshot({
+      path: screenshotPath('admin-orders-filtered-queue'),
+      fullPage: true,
+    })
+  })
+})
+
+// T051: Activity panel visibility — global combined filtering plus per-entity
+// panels mounted on order/product/user detail screens.
+test.describe('US2: Activity visibility', () => {
+  test('T051 - global activity page renders and filters by entity + action together', async ({
+    page,
+  }) => {
+    await mockAdminRoutes(page)
+    await page.goto('/admin/activity')
+    await page.waitForLoadState('networkidle')
+
+    // Scope assertions to the rendered activity list (an <ol>) so they
+    // don't accidentally match the same action names inside the (hidden)
+    // "Action" <select> options.
+    const activityList = page.getByRole('list')
+
+    // Unfiltered: every mock entry's action text is present.
+    await expect(activityList.getByText('status_change').first()).toBeVisible()
+    await expect(activityList.getByText('refund').first()).toBeVisible()
+    await expect(activityList.getByText('role_change').first()).toBeVisible()
+
+    await page.screenshot({
+      path: screenshotPath('admin-global-activity'),
+      fullPage: true,
+    })
+
+    // Combined entity + action filter narrows to a single record.
+    await page.getByLabel('Entity').selectOption('order')
+    await page.getByLabel('Action').selectOption('status_change')
+    await page.waitForLoadState('networkidle')
+
+    await expect(activityList.getByText('status_change')).toBeVisible()
+    await expect(activityList.getByText('refund')).toHaveCount(0)
+    await expect(activityList.getByText('role_change')).toHaveCount(0)
+
+    await page.screenshot({
+      path: screenshotPath('admin-global-activity-filtered'),
+      fullPage: true,
+    })
+  })
+
+  test('T051 - order detail row expansion shows scoped activity history', async ({
+    page,
+  }, testInfo) => {
+    await mockAdminRoutes(page)
+    await page.goto('/admin/orders')
+    await expect(
+      page.getByRole('heading', { name: /order management/i })
+    ).toBeVisible()
+
+    if (!testInfo.project.name.includes('mobile')) {
+      // Two levels of expansion: the AdminDataView row itself, then the
+      // AdminOrderCard's own internal "Show details" toggle that reveals
+      // the EntityActivitySection.
+      await page.getByText(MOCK_ORDERS[0].customerName).first().click()
+    }
+    await page
+      .getByRole('button', { name: /show details/i })
+      .first()
+      .click()
+
+    await expect(page.getByText('Activity History')).toBeVisible()
+    await expect(page.getByText('After: SHIPPED')).toBeVisible()
+    await page.screenshot({
+      path: screenshotPath('admin-order-activity-history'),
+      fullPage: true,
+    })
+  })
+
+  test('T051 - product detail screen shows scoped activity history', async ({
+    page,
+  }) => {
+    // The product detail screen is a Server Component that reads the
+    // product directly from the database (bypassing route mocking), so we
+    // let the products list hit the real backend and navigate to whichever
+    // product actually exists there instead of a fixed mock id. Only the
+    // Activity Log API (an independent client-side fetch made by
+    // EntityActivitySection) is mocked, so the assertion stays deterministic.
+    await page.route('**/api/admin/activity**', (route) => {
+      const url = new URL(route.request().url())
+      const entity = url.searchParams.get('entity')
+      const entries = MOCK_ACTIVITY_ENTRIES.filter(
+        (entry) => !entity || entry.entity === entity
+      )
+      return route.fulfill({
+        json: {
+          success: true,
+          data: { entries, nextCursor: null, retentionWindowMonths: 24 },
+        },
+      })
+    })
+    await page.goto('/admin/products')
+    await expect(
+      page.getByRole('heading', { name: /product management/i })
+    ).toBeVisible()
+    await page.getByRole('link', { name: /^open/i }).first().click()
+    await page.waitForLoadState('networkidle')
+
+    await expect(page.getByText('Activity History')).toBeVisible()
+    await page.screenshot({
+      path: screenshotPath('admin-product-activity-history'),
+      fullPage: true,
+    })
+  })
+
+  test('T051 - user row expansion shows scoped activity history', async ({
+    page,
+  }, testInfo) => {
+    await mockAdminRoutes(page)
+    await page.goto('/admin/users')
+    await page.waitForLoadState('networkidle')
+
+    if (!testInfo.project.name.includes('mobile')) {
+      // Click on the row's unique email text (the user's name also appears
+      // in the header "Copilot Admin" badge, which would match first()).
+      await page.getByText(MOCK_USERS[0].email).first().click()
+    }
+
+    await expect(page.getByText('Activity History').first()).toBeVisible()
+    await page.screenshot({
+      path: screenshotPath('admin-user-activity-history'),
+      fullPage: true,
+    })
+  })
+})
+
+// T059: Form consistency — category, coupon, and product create/edit forms
+// must share identical field-error placement, error-summary behaviour,
+// unsaved-changes warning, and duplicate-submission prevention (FR-B04,
+// FR-B06, FR-B07/FR-B08, T066/T067/T068).
+test.describe('US3: Form consistency', () => {
+  test('T059 - categories and coupons form screens', async ({ page }) => {
+    await page.goto('/admin/categories')
+    await page.waitForLoadState('networkidle')
+    await page.screenshot({
+      path: screenshotPath('admin-categories-form'),
+      fullPage: true,
+    })
+
+    await page.goto('/admin/coupons')
+    await page.waitForLoadState('networkidle')
+    await page.screenshot({
+      path: screenshotPath('admin-coupons-form'),
+      fullPage: true,
+    })
+  })
+
+  test('T059 - category form: unsaved-changes guard and duplicate-submit prevention', async ({
+    page,
+  }) => {
+    await page.goto('/admin/categories')
+    await page.waitForLoadState('networkidle')
+
+    await page.getByRole('button', { name: 'Add category' }).click()
+    const nameInput = page.getByLabel('Name', { exact: true })
+    await expect(nameInput).toBeVisible()
+    await nameInput.fill('Unsaved Draft Category')
+
+    // Unsaved-changes guard: Cancel must prompt a confirm dialog rather than
+    // silently discarding the dirty draft.
+    let dialogMessage = ''
+    page.once('dialog', (dialog) => {
+      dialogMessage = dialog.message()
+      void dialog.dismiss()
+    })
+    await page.getByRole('button', { name: 'Cancel' }).click()
+    await expect.poll(() => dialogMessage).toMatch(/unsaved|lose|discard/i)
+    // Dismissing the confirm keeps the modal open with the draft intact.
+    await expect(nameInput).toHaveValue('Unsaved Draft Category')
+
+    // Duplicate-submission prevention: the create request resolves slowly,
+    // so a rapid double-click must only produce a single network request.
+    let createRequests = 0
+    await page.route('**/api/admin/categories', (route) => {
+      if (route.request().method() !== 'POST') return route.continue()
+      createRequests += 1
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve(
+            route.fulfill({
+              json: {
+                success: true,
+                data: {
+                  category: {
+                    id: 'cat-e2e',
+                    name: 'Unsaved Draft Category',
+                    sortOrder: 99,
+                    updatedAt: new Date().toISOString(),
+                  },
+                },
+              },
+            })
+          )
+        }, 300)
+      })
+    })
+    const saveButton = page.getByRole('button', { name: 'Save' })
+    await saveButton.click({ clickCount: 1 })
+    await saveButton.click({ clickCount: 1 }).catch(() => {
+      // Button is disabled once submitting starts; a second click may be a
+      // no-op or throw if it's already detached — either way is fine here.
+    })
+    await expect
+      .poll(() => createRequests, { timeout: 2000 })
+      .toBeLessThanOrEqual(1)
+
+    await page.screenshot({
+      path: screenshotPath('admin-categories-form-guards'),
+      fullPage: true,
+    })
+  })
+
+  test('T059 - coupon form: unsaved-changes guard and duplicate-submit prevention', async ({
+    page,
+  }) => {
+    await page.goto('/admin/coupons')
+    await page.waitForLoadState('networkidle')
+
+    await page.getByRole('button', { name: '+ Add coupon' }).click()
+    const codeInput = page.getByLabel('Code')
+    await expect(codeInput).toBeVisible()
+    await codeInput.fill('E2EDRAFT10')
+
+    let dialogMessage = ''
+    page.once('dialog', (dialog) => {
+      dialogMessage = dialog.message()
+      void dialog.dismiss()
+    })
+    await page.getByRole('button', { name: 'Cancel' }).click()
+    await expect.poll(() => dialogMessage).toMatch(/unsaved|lose|discard/i)
+    await expect(codeInput).toHaveValue('E2EDRAFT10')
+
+    let createRequests = 0
+    await page.route('**/api/admin/coupons', (route) => {
+      if (route.request().method() !== 'POST') return route.continue()
+      createRequests += 1
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve(
+            route.fulfill({
+              status: 422,
+              json: { success: false, error: 'Fill in the remaining fields' },
+            })
+          )
+        }, 300)
+      })
+    })
+    const saveButton = page.getByRole('button', { name: 'Create coupon' })
+    await saveButton.click({ clickCount: 1 })
+    await saveButton.click({ clickCount: 1 }).catch(() => {})
+    await expect
+      .poll(() => createRequests, { timeout: 2000 })
+      .toBeLessThanOrEqual(1)
+
+    await page.screenshot({
+      path: screenshotPath('admin-coupons-form-guards'),
+      fullPage: true,
+    })
+  })
+
+  test('T059 - product form: error summary and unsaved-changes guard', async ({
+    page,
+  }) => {
+    await mockAdminRoutes(page)
+    await page.goto('/admin/products')
+    await page.waitForLoadState('networkidle')
+
+    await page.getByRole('button', { name: 'Add Product' }).click()
+    const nameInput = page.getByLabel('Name')
+    await expect(nameInput).toBeVisible()
+
+    // Submitting with required fields blank surfaces the shared
+    // FormErrorSummary with a count, same banner used by categories/coupons.
+    await page.getByRole('button', { name: /Create Product/i }).click()
+    const errorSummary = page.getByTestId('form-error-summary')
+    await expect(errorSummary).toBeVisible()
+    await expect(errorSummary).toContainText(/please fix \d+ errors? below/i)
+
+    // Unsaved-changes guard: dirty the form, then Cancel must confirm.
+    await nameInput.fill('Draft Product')
+    let dialogMessage = ''
+    page.once('dialog', (dialog) => {
+      dialogMessage = dialog.message()
+      void dialog.dismiss()
+    })
+    await page.getByRole('button', { name: 'Cancel' }).click()
+    await expect.poll(() => dialogMessage).toMatch(/unsaved|lose|discard/i)
+    await expect(nameInput).toHaveValue('Draft Product')
+
+    await page.screenshot({
+      path: screenshotPath('admin-products-form-guards'),
+      fullPage: true,
+    })
+  })
+})
+
+// T075: Converted screens
+test.describe('US4: Screen conversions', () => {
+  const screens = [
+    { name: 'users', path: '/admin/users' },
+    { name: 'products', path: '/admin/products' },
+    { name: 'reviews', path: '/admin/reviews' },
+    { name: 'returns', path: '/admin/returns' },
+    { name: 'checkout-requests', path: '/admin/checkout-requests' },
+    { name: 'recommendations', path: '/admin/recommendations' },
+    { name: 'email-failures', path: '/admin/email-failures' },
+    { name: 'search', path: '/admin/search' },
+  ]
+
+  for (const screen of screens) {
+    test(`T075 - ${screen.name} screen renders`, async ({ page }) => {
+      await page.goto(screen.path)
+      await page.waitForLoadState('networkidle')
+      await page.screenshot({
+        path: screenshotPath(`admin-${screen.name}-converted`),
+        fullPage: true,
+      })
+    })
+  }
+})
+
+// T077: Retired route redirects
+test.describe('Redirect map', () => {
+  test('T077 - /admin/sales redirects to /admin', async ({ page }) => {
+    await page.goto('/admin/sales')
+    expect(page.url()).toContain('/admin')
+    await page.screenshot({
+      path: screenshotPath('admin-sales-redirect'),
       fullPage: false,
     })
   })

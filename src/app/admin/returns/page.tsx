@@ -3,10 +3,12 @@ import { desc, eq } from 'drizzle-orm'
 import { requireAdminPermission } from '@/features/admin/services/admin-page-auth'
 import { AdminReturnsClient } from '@/features/admin/components/AdminReturnsClient'
 import type { AdminReturn } from '@/features/admin/components/AdminReturnCard'
+import { AdminPageShell } from '@/features/admin/components/AdminPageShell'
+import { withItemsAndEvidence } from '@/features/orders/services/return-queue'
+import { getRolePermissions } from '@/lib/constants/roles'
+import { withStoreName } from '@/lib/constants/store'
 import { primaryDrizzleDb } from '@/lib/db'
 import { orders, returnRequests } from '@/lib/schema'
-import { withItemsAndEvidence } from '@/features/orders/services/return-queue'
-import { withStoreName } from '@/lib/constants/store'
 
 export const metadata = {
   title: withStoreName('Returns'),
@@ -26,7 +28,7 @@ export default async function AdminReturnsPage() {
   // Components rather than letting the prerenderer attempt this page.
   await connection()
 
-  await requireAdminPermission('orders:returns')
+  const { role } = await requireAdminPermission('orders:returns')
 
   const rows = await primaryDrizzleDb
     .select({
@@ -52,16 +54,15 @@ export default async function AdminReturnsPage() {
   const initialReturns: AdminReturn[] = await withItemsAndEvidence(rows)
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-      <header className="mb-6">
-        <h1 className="text-3xl font-bold text-slate-900">Returns</h1>
-        <p className="mt-1 text-slate-600">
-          Damaged-item claims awaiting review. Approving authorises the customer
-          to ship the item back; stock and money move only once it arrives.
-        </p>
-      </header>
-
-      <AdminReturnsClient initialReturns={initialReturns} />
-    </main>
+    <AdminPageShell
+      breadcrumbs={[{ label: 'Admin', href: '/admin' }, { label: 'Returns' }]}
+      title="Returns"
+      description="Damaged-item claims awaiting review. Approving authorises the customer to ship the item back; stock and money move only once it arrives."
+    >
+      <AdminReturnsClient
+        initialReturns={initialReturns}
+        permissions={getRolePermissions(role)}
+      />
+    </AdminPageShell>
   )
 }

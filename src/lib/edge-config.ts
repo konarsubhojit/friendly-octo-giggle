@@ -1,5 +1,6 @@
 import { get, getAll } from '@vercel/edge-config'
 import { logError, logBusinessEvent } from '@/lib/logger'
+import { MAX_TOOL_CALLS_PER_TURN } from '@/features/ai/services/chat-constants'
 
 export interface FeatureFlags {
   readonly maintenanceMode: boolean
@@ -53,6 +54,7 @@ export interface AiConfig {
   readonly dailyTokenQuota?: number
   /** Per-user daily request ceiling specifically for advanced commerce intents. */
   readonly advancedFeatureDailyRequestQuota?: number
+  readonly maxToolCallsPerTurn?: number
   readonly thinkingLevel?: 'none' | 'low' | 'medium' | 'high'
   readonly includeThoughts?: boolean
 }
@@ -97,6 +99,7 @@ const DEFAULT_AI_CONFIG: AiConfig = {
   dailyRequestQuota: 40,
   dailyTokenQuota: 12000,
   advancedFeatureDailyRequestQuota: 15,
+  maxToolCallsPerTurn: MAX_TOOL_CALLS_PER_TURN,
   thinkingLevel: 'none',
   includeThoughts: false,
 }

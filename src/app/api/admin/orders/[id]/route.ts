@@ -9,6 +9,7 @@ import {
   parseJsonBody,
 } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
+import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 import { cacheAdminOrderById, invalidateAdminOrderCaches } from '@/lib/cache'
 import { serializeOrder } from '@/lib/serializers'
 import { UpdateOrderStatusSchema } from '@/features/orders/validations'
@@ -227,6 +228,15 @@ export const PATCH = async (
     if (NOTIFY_STATUSES.has(validatedBody.status)) {
       await dispatchStatusNotification(order, validatedBody)
     }
+
+    await recordAdminAuditLog({
+      userId: authCheck.userId,
+      role: authCheck.role,
+      entity: 'order',
+      entityId: id,
+      action: 'status_update',
+      diff: validatedBody,
+    })
 
     return apiSuccess({ order: serializeOrder(order) })
   } catch (error) {

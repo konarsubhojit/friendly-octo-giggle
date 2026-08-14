@@ -11,8 +11,8 @@ import { availableUnits } from '@/lib/stock-availability'
 const VariantFormModal = lazy(
   () => import('@/features/admin/components/VariantFormModal')
 )
-const DeleteConfirmModal = lazy(
-  () => import('@/features/admin/components/DeleteConfirmModal')
+const AdminConfirmDialog = lazy(
+  () => import('@/features/admin/components/AdminConfirmDialog')
 )
 
 interface VariantListProps {
@@ -607,7 +607,9 @@ const VariantList = ({ productId, initialVariants }: VariantListProps) => {
   }
 
   const confirmDelete = async () => {
-    if (!deleteTarget || deleting) return
+    if (!deleteTarget || deleting) {
+      return { status: 'failure', reason: 'No variant selected.' } as const
+    }
     setDeleting(true)
     try {
       const res = await fetch(`/api/admin/variants/${deleteTarget.id}`, {
@@ -618,11 +620,12 @@ const VariantList = ({ productId, initialVariants }: VariantListProps) => {
         throw new Error(data.error || 'Failed to delete variant')
       }
       setVariants((prev) => prev.filter((v) => v.id !== deleteTarget.id))
-      setDeleteTarget(null)
+      return { status: 'success' } as const
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Failed to delete variant'
       toast.error(message)
+      return { status: 'failure', reason: message } as const
     } finally {
       setDeleting(false)
     }
@@ -830,10 +833,14 @@ const VariantList = ({ productId, initialVariants }: VariantListProps) => {
 
       {deleteTarget && (
         <Suspense fallback={modalFallback}>
-          <DeleteConfirmModal
+          <AdminConfirmDialog
+            open={deleteTarget !== null}
+            onClose={() => setDeleteTarget(null)}
+            title="Delete variant"
+            description={`Delete variant ${deleteTarget.sku ?? deleteTarget.id} from this product.`}
+            reversible={false}
+            confirmLabel="Delete variant"
             onConfirm={confirmDelete}
-            onCancel={() => setDeleteTarget(null)}
-            loading={deleting}
           />
         </Suspense>
       )}

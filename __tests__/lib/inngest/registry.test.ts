@@ -19,6 +19,7 @@ const EXPECTED_FUNCTION_IDS = [
   'expire-stock-reservations',
   'compute-product-affinity',
   'cart-recovery-scorer',
+  'activity-retention',
 ]
 
 const functionIds = () =>

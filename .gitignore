@@ -67,3 +67,7 @@ vitest-report.json
 # Sentry Config File
 .env.sentry-build-plugin
 scripts/sql/catalog-data.sql
+
+# Local dev/debug logs and captured cookies (never commit — may contain
+# session tokens); scratch space for local Playwright/dev-server iteration.
+.devlogs/
