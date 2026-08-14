@@ -239,8 +239,8 @@ capabilities; measure success rate and time without assistance.
 - [x] T083 [P] [US4] Convert `src/app/admin/recommendations/page.tsx` onto the extended `AdminDataView` where applicable, retaining recompute/status reporting (FR-E07b) — depends on T010
 - [x] T084 [P] [US4] Define the `ResourceListDefinition` for email-failures in `src/features/admin/resources/email-failures.ts` and convert `EmailFailuresClient.tsx`/`src/app/admin/email-failures/page.tsx` onto the extended `AdminDataView` (FR-A15) — depends on T010
 - [x] T085 [US4] Reorganise `src/features/admin/components/AdminNavLinks.tsx` and `AdminNavLinksClient.tsx` into coherent groups (commerce operations, catalogue, people, operations) per FR-E01/FR-E05, moving checkout-requests/recommendations/email-failures/search into the operations grouping — depends on T040
-- [ ] T086 [US4] Add/update `src/features/admin/components/AdminBreadcrumbs.tsx` usage on every screen to reflect the new grouping consistently (FR-E09) — depends on T085
-- [ ] T087 [US4] Add a stated-purpose string/heading to every admin screen (FR-E06), including checkout-requests' triage purpose (FR-E07a) and recommendations' scoring-job-reporting purpose (FR-E07b)
+- [x] T086 [US4] Add/update `src/features/admin/components/AdminBreadcrumbs.tsx` usage on every screen to reflect the new grouping consistently (FR-E09) — depends on T085
+- [x] T087 [US4] Add a stated-purpose string/heading to every admin screen (FR-E06), including checkout-requests' triage purpose (FR-E07a) and recommendations' scoring-job-reporting purpose (FR-E07b)
 - [x] T088 [US4] Build the `retired → survivor` redirect map in `src/features/admin/services/admin-redirects.ts` and add a minimal permanent-redirect route for every retired admin address beyond `/admin/sales` identified during navigation regrouping (FR-E03/FR-E10) — depends on T085
 
 **Checkpoint**: All four user stories are independently functional. Every list

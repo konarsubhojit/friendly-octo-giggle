@@ -93,7 +93,7 @@ export default async function AdminCheckoutRequestsPage({
       ]}
       eyebrow="Order processing"
       title="Checkout Requests"
-      description="Monitor queued, processing, failed, and completed checkout requests."
+      description="Triage queue for stalled or failed checkouts: monitor queued, processing, failed, and completed checkout requests and release stock reservations that no longer need to hold inventory."
       metrics={[
         {
           label: 'Queued',
