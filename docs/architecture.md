@@ -65,7 +65,8 @@ The architecture is a serverless-first e-commerce system built around a small nu
 │  • Optional Upstash Search index                             │
 │  • Inngest durable workflows for all background work         │
 │  • Optional Vercel Edge Config for feature/shipping config   │
-│  • Vercel Blob for product images                            │
+│  • Vercel Blob or Cloudflare R2 for product images           │
+│    (STORAGE_PROVIDER, dual-read fallback)                    │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -102,15 +103,17 @@ The dominant design principles in the current code are:
 
 ### Edge and Supporting Services
 
-| Service                           | Purpose                                                 |
-| --------------------------------- | ------------------------------------------------------- |
-| Upstash Redis                     | Cache, stale-while-revalidate, lightweight shared state |
-| Upstash Search                    | Product search index with DB fallback                   |
-| Inngest                           | Durable, step-checkpointed background workflows         |
-| Vercel Blob                       | Hosted media storage                                    |
-| Vercel Edge Config                | Feature flags and shipping configuration                |
-| Vercel Analytics / Speed Insights | Runtime telemetry                                       |
-| MailerSend / Google SMTP          | Email delivery backends                                 |
+| Service                           | Purpose                                                                                              |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Upstash Redis                     | Cache, stale-while-revalidate, lightweight shared state                                              |
+| Upstash Search                    | Product search index with DB fallback                                                                |
+| Inngest                           | Durable, step-checkpointed background workflows                                                      |
+| Vercel Blob                       | Hosted media storage (default provider)                                                              |
+| Cloudflare R2                     | S3-compatible media storage (via `@aws-sdk/client-s3`), selected with `STORAGE_PROVIDER=r2`          |
+| Cloudflare Workers                | `workers/images` — edge image resizing via `cf.image`, served through the custom `next/image` loader |
+| Vercel Edge Config                | Feature flags and shipping configuration                                                             |
+| Vercel Analytics / Speed Insights | Runtime telemetry                                                                                    |
+| MailerSend / Google SMTP          | Email delivery backends                                                                              |
 
 ---
 

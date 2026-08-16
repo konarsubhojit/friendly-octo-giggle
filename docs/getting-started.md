@@ -44,7 +44,7 @@ NEXTAUTH_URL=http://localhost:3000
 GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your-client-secret
 
-# Vercel Blob (for image uploads)
+# Image storage (default: Vercel Blob; set STORAGE_PROVIDER=r2 for Cloudflare R2)
 BLOB_READ_WRITE_TOKEN=your-vercel-blob-token
 
 # Web Push (optional — enables browser order notifications)
@@ -209,7 +209,7 @@ friendly-octo-giggle/
 │   │   │   ├── wishlist/      # Wishlist APIs
 │   │   │   ├── share/         # Short-link sharing API
 │   │   │   ├── exchange-rates/ # Currency exchange rates
-│   │   │   ├── upload/        # Image upload to Vercel Blob
+│   │   │   ├── upload/        # Image upload (Vercel Blob or Cloudflare R2)
 │   │   │   └── health/        # Health check
 │   │   ├── auth/              # Sign-in, register pages
 │   │   ├── cart/              # Shopping cart page

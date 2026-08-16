@@ -24,11 +24,12 @@ Specifications 012, 014-024 are proposed work, grouped into three epics. Each is
 
 Framework capability the project pays for but does not use, plus the documentation gaps that make every later change riskier than it needs to be.
 
-| Spec | Capability                                   | Problem it addresses                                                                                                                                                                                                                                                                              |
-| ---- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 012  | Cache Components and PPR                     | 60 `force-dynamic` route segments, no `generateStaticParams`, zero use of `"use cache"` on Next.js 16.2                                                                                                                                                                                           |
-| 014  | Documentation and instruction reconciliation | README, docs, and the constitution reference commands, files, and services that do not exist                                                                                                                                                                                                      |
-| 015  | Build and DX modernization                   | React Compiler, typed routes, Turbopack filesystem cache, and package-import optimization all unadopted — **implemented**; typed routes and the React Compiler are on, the Turbopack cache was already on by default, and package-import optimization measured as a null result and was not added |
+| Spec | Capability                                    | Problem it addresses                                                                                                                                                                                                                                                                              |
+| ---- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 012  | Cache Components and PPR                      | 60 `force-dynamic` route segments, no `generateStaticParams`, zero use of `"use cache"` on Next.js 16.2                                                                                                                                                                                           |
+| 014  | Documentation and instruction reconciliation  | README, docs, and the constitution reference commands, files, and services that do not exist                                                                                                                                                                                                      |
+| 015  | Build and DX modernization                    | React Compiler, typed routes, Turbopack filesystem cache, and package-import optimization all unadopted — **implemented**; typed routes and the React Compiler are on, the Turbopack cache was already on by default, and package-import optimization measured as a null result and was not added |
+| 025  | Provider-neutral image storage (R2 migration) | Azure Blob Storage was a second, unexercised upload provider requiring its own SDK — **implemented**; replaced with Cloudflare R2 behind the same `StorageAdapter` interface as Vercel Blob, with dual-read fallback, a resumable migration script, and an edge-resizing Cloudflare Worker        |
 
 Specification 013, "E2E in continuous integration", was withdrawn on 2026-08-07 and its directory removed. Running the Playwright suite in CI and repairing its drifted assertions is currently unowned; any specification that needs browser-level verification must arrange it itself.
 
@@ -64,6 +65,7 @@ Every specification directory carries a `spec.md`. Directories 001-012 and 014-0
 | 022     | `022-loyalty-and-store-credit`                     | spec              | Proposed; baseline re-verified 2026-08-10; ready to plan      |
 | 023     | `023-payment-methods-expansion`                    | spec              | Proposed; scope revised 2026-08-10; ready to plan             |
 | 024     | `024-admin-console-revamp`                         | spec, checklists  | Proposed; baseline added 2026-08-10; ready to plan            |
+| 025     | `025-provider-neutral-image-storage`               | spec              | Implemented                                                   |
 
 ### Review of 2026-08-10 — what changed in the proposed specifications
 
