@@ -43,9 +43,7 @@ describe('StorefrontAssistant', () => {
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({
-          messages: [
-            { role: 'user', text: 'I need a gift under ₹2,000' },
-          ],
+          messages: [{ role: 'user', text: 'I need a gift under ₹2,000' }],
         }),
       })
     )
