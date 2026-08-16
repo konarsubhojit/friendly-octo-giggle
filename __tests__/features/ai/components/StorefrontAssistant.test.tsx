@@ -15,12 +15,16 @@ const jsonResponse = (text: string, ok = true) =>
     json: vi.fn().mockResolvedValue({ text }),
   }) as unknown as Response
 
+let uuidSequence = 0
+
 describe('StorefrontAssistant', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn())
-    vi.spyOn(globalThis.crypto, 'randomUUID')
-      .mockReturnValueOnce('user-id')
-      .mockReturnValueOnce('assistant-id')
+    uuidSequence = 0
+    vi.spyOn(globalThis.crypto, 'randomUUID').mockImplementation(
+      () =>
+        `00000000-0000-4000-8000-${String(++uuidSequence).padStart(12, '0')}`
+    )
   })
 
   afterEach(() => {

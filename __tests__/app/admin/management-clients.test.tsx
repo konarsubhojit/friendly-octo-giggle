@@ -44,6 +44,18 @@ const mocks = vi.hoisted(() => {
     { rejected: { match: vi.fn(() => false) } }
   )
   return {
+    product: {
+      id: 'product-1',
+      name: 'Canvas Tote',
+      description: 'A useful tote',
+      price: 100,
+      category: 'Bags',
+      image: '/tote.jpg',
+      stock: 4,
+      variants: [{ id: 'variant-1', name: 'Blue', price: 100, stock: 4 }],
+      createdAt: new Date('2026-01-01'),
+      updatedAt: new Date('2026-01-01'),
+    },
     views: {} as Record<string, DataViewProps>,
     dispatch: vi.fn(async (action: unknown) => ({
       ...((action as { payload?: object }).payload ?? {}),
@@ -195,10 +207,10 @@ vi.mock('@/features/admin/components/ProductFormModal', () => ({
     onSuccess,
   }: {
     onClose: () => void
-    onSuccess: (product: typeof product) => void
+    onSuccess: (savedProduct: object) => void
   }) => (
     <div>
-      <button onClick={() => onSuccess(product)}>Save product</button>
+      <button onClick={() => onSuccess(mocks.product)}>Save product</button>
       <button onClick={onClose}>Close product form</button>
     </div>
   ),
@@ -239,19 +251,6 @@ vi.mock('@/features/admin/components/AdminDataView', () => ({
     )
   },
 }))
-
-const product = {
-  id: 'product-1',
-  name: 'Canvas Tote',
-  description: 'A useful tote',
-  price: 100,
-  category: 'Bags',
-  image: '/tote.jpg',
-  stock: 4,
-  variants: [{ id: 'variant-1', name: 'Blue', price: 100, stock: 4 }],
-  createdAt: new Date('2026-01-01'),
-  updatedAt: new Date('2026-01-01'),
-}
 
 const order = {
   id: 'order-1',
@@ -340,10 +339,14 @@ describe('admin management clients', () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(
         response({
-          data: { products: [product], totalCount: 45, nextCursor: 'next' },
+          data: {
+            products: [mocks.product],
+            totalCount: 45,
+            nextCursor: 'next',
+          },
         })
       )
-      .mockResolvedValue(response({ data: { products: [product] } }))
+      .mockResolvedValue(response({ data: { products: [mocks.product] } }))
 
     render(<ProductsManagementClient permissions={['products:write']} />)
     await screen.findByText('Canvas Tote')
@@ -373,8 +376,8 @@ describe('admin management clients', () => {
       }
     )
     fireEvent.click(screen.getByRole('button', { name: 'Search' }))
-    act(() => view.pagination?.onPageChange(3))
-    act(() => view.pagination?.onPageChange(1))
+    await apply(() => view.pagination?.onPageChange(3))
+    await apply(() => view.pagination?.onPageChange(1))
 
     await apply(() =>
       view.definition.bulkActions[0].onApply({
@@ -392,7 +395,7 @@ describe('admin management clients', () => {
     )
 
     expect(fetch).toHaveBeenCalled()
-    expect(mocks.upsert).toHaveBeenCalledWith(product)
+    expect(mocks.upsert).toHaveBeenCalledWith(mocks.product)
   })
 
   it('manages order filters, row mutations, pagination, and bulk statuses', async () => {
@@ -431,8 +434,8 @@ describe('admin management clients', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
 
-    act(() => view.pagination?.onPageChange(3))
-    act(() => view.pagination?.onPageChange(1))
+    await apply(() => view.pagination?.onPageChange(3))
+    await apply(() => view.pagination?.onPageChange(1))
     for (const action of view.definition.bulkActions) {
       await apply(() =>
         action.onApply({
@@ -499,7 +502,7 @@ describe('admin management clients', () => {
       })
     )
 
-    act(() => {
+    await apply(() => {
       view.onRemoveFilter?.('search')
       view.onRemoveFilter?.('rating')
       view.onRemoveFilter?.('hidden')
