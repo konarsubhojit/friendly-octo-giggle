@@ -2,11 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const {
   mockSendWithRetry,
+  mockDeliverEmail,
   mockMailerSendSend,
   mockCreateTransport,
   mockSmtpSendMail,
 } = vi.hoisted(() => ({
   mockSendWithRetry: vi.fn(),
+  mockDeliverEmail: vi.fn(),
   mockMailerSendSend: vi.fn(),
   mockCreateTransport: vi.fn(),
   mockSmtpSendMail: vi.fn(),
@@ -14,6 +16,10 @@ const {
 
 vi.mock('@/lib/email/retry', () => ({
   sendWithRetry: mockSendWithRetry,
+}))
+
+vi.mock('@/lib/email/providers', () => ({
+  deliverEmail: mockDeliverEmail,
 }))
 
 vi.mock('mailersend', () => ({
@@ -239,5 +245,88 @@ describe('lib/email', () => {
 
       expect(result).toBeUndefined()
     })
+  })
+
+  it('delivers each durable email template through the provider', async () => {
+    mockDeliverEmail.mockResolvedValue({ provider: 'smtp', messageId: 'sent' })
+    vi.resetModules()
+    const email = await import('@/lib/email')
+
+    await email.deliverOrderConfirmationEmail({
+      to: 'user@test.com',
+      customerName: 'Jane',
+      orderId: 'abc1234',
+      totalAmount: '₹42.00',
+      items: [{ name: 'Widget', quantity: 1, price: '₹42.00' }],
+      shippingAddress: '123 Main St',
+    })
+    await email.deliverOrderStatusUpdateEmail({
+      to: 'user@test.com',
+      customerName: 'Jane',
+      orderId: 'abc1234',
+      status: 'SHIPPED',
+    })
+    await email.deliverOrderRefundUpdateEmail({
+      to: 'user@test.com',
+      customerName: 'Jane',
+      orderId: 'abc1234',
+      status: 'PROCESSED',
+      refundAmount: '₹42.00',
+      isPartial: false,
+    })
+    await email.deliverReturnStatusUpdateEmail({
+      to: 'user@test.com',
+      customerName: 'Jane',
+      orderId: 'abc1234',
+      returnId: 'return1',
+      status: 'APPROVED',
+    })
+    await email.deliverAbandonedCartReminderEmail({
+      to: 'user@test.com',
+      customerName: 'Jane',
+      cartUrl: 'https://example.test/cart',
+      items: [{ name: 'Widget', quantity: 1, price: '₹42.00' }],
+      reminderNumber: 1,
+    })
+
+    expect(mockDeliverEmail).toHaveBeenCalledTimes(5)
+    expect(mockDeliverEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'user@test.com',
+        subject: expect.any(String),
+      })
+    )
+  })
+
+  it('queues refund and abandoned-cart email templates with retry metadata', async () => {
+    vi.resetModules()
+    const { sendAbandonedCartReminderEmail, sendOrderRefundUpdateEmail } =
+      await import('@/lib/email')
+
+    sendOrderRefundUpdateEmail({
+      to: 'user@test.com',
+      customerName: 'Jane',
+      orderId: 'abc1234',
+      status: 'PENDING',
+      refundAmount: '₹21.00',
+      isPartial: true,
+    })
+    sendAbandonedCartReminderEmail({
+      to: 'user@test.com',
+      customerName: 'Jane',
+      cartId: 'cart123',
+      cartUrl: 'https://example.test/cart',
+      items: [{ name: 'Widget', quantity: 1, price: '₹42.00' }],
+      reminderNumber: 2,
+    })
+
+    expect(mockSendWithRetry).toHaveBeenCalledWith(
+      expect.objectContaining({ to: 'user@test.com' }),
+      { emailType: 'order_refund_update', referenceId: 'abc1234' }
+    )
+    expect(mockSendWithRetry).toHaveBeenCalledWith(
+      expect.objectContaining({ to: 'user@test.com' }),
+      { emailType: 'abandoned_cart_reminder', referenceId: 'cart123' }
+    )
   })
 })
