@@ -38,6 +38,9 @@ yarn-error.log*
 
 /lib/generated/prisma
 
+# Storage migration script resumability checkpoint (local run state, not source)
+.storage-migration-checkpoint.json
+
 # Documentation - only keep README.md and CONTRIBUTING.md in root, all other docs in /docs folder
 /*.md
 !README.md

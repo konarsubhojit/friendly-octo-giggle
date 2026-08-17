@@ -32,7 +32,7 @@ The core storefront requires PostgreSQL and NextAuth configuration. Enable newer
 - AI provider credentials: product assistant generation; guest requests use a hashed network identity and authenticated users receive persisted history.
 - Inngest: durable checkout processing, transactional email, order side-effects, and scheduled jobs.
 - An email provider: transactional email delivery.
-- Vercel Blob: admin image upload.
+- Vercel Blob or Cloudflare R2: admin image upload. See [Image storage](#image-storage).
 - Web Push (VAPID) credentials: browser push notifications for order-status changes. See [Web push setup](#web-push-setup).
 - Sentry: server, edge, and browser tracing/error capture.
 - Edge Config: maintenance, sale, and shipping feature settings.
@@ -78,6 +78,63 @@ Operational notes:
   service returns `404`/`410`.
 - Subscriptions are per browser/device, so a customer opting in on a phone does
   not receive push on their laptop until they opt in there too.
+
+### Image storage
+
+Uploaded images (product photos, return evidence) are written through the
+provider-neutral adapters in `src/lib/storage/`, selected by
+`STORAGE_PROVIDER`:
+
+- **`vercel`** (default when unset): uses Vercel Blob. Requires
+  `BLOB_READ_WRITE_TOKEN`.
+- **`r2`**: uses Cloudflare R2 through its S3-compatible API
+  (`@aws-sdk/client-s3`). Requires `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
+  `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, and `R2_PUBLIC_BASE_URL` (see
+  `.env.example`).
+
+Reads always fall back from the active provider to the other one
+(`resolveStorageUrl` in `src/lib/storage/index.ts`), with structured
+`storage_dual_read_fallback` / `storage_dual_read_miss` log events — so
+switching `STORAGE_PROVIDER` to `r2` is safe before every historical object
+has been copied over. To backfill existing Vercel-stored objects into R2,
+run the idempotent, resumable migration script:
+
+```bash
+# Report what would be copied, without writing anything
+npm run migrate:storage
+
+# Perform the copy (verifies each object after writing; never deletes
+# the Vercel source)
+npm run migrate:storage -- --apply
+```
+
+The script writes a resumable checkpoint to
+`.storage-migration-checkpoint.json` (git-ignored) so an interrupted run
+picks back up instead of restarting; pass `--checkpoint=<path>` to override
+its location, `--limit=<n>` to cap objects per run, or `--prefix=<prefix>`
+to scope it to a subset of keys.
+
+#### Image resizing Worker
+
+Product images are served through a Cloudflare Worker
+(`workers/images/`) that validates the request, resizes via Cloudflare's
+Image Resizing (`cf.image`), and serves the result with an immutable
+`Cache-Control`. `next/image` is pointed at it through the custom loader in
+`src/lib/image-loader.ts` and the `NEXT_PUBLIC_IMAGE_WORKER_URL` environment
+variable — when that variable is unset, the loader falls back to the
+original (unoptimized) source URL, so image rendering never depends on the
+Worker being deployed.
+
+Deployment is automated by
+[`.github/workflows/deploy-images-worker.yml`](../.github/workflows/deploy-images-worker.yml)
+on pushes to `develop` touching `workers/images/**`, using the
+`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repository secrets. The
+destination Cloudflare zone must have Image Resizing enabled. See
+[`workers/images/README.md`](../workers/images/README.md) for the request
+contract, local development (`npx wrangler dev`), and the hostname
+allow-list (`ALLOWED_HOSTNAMES` in `workers/images/wrangler.toml`) that
+replaces `next.config.ts`'s `images.remotePatterns` (which cannot coexist
+with a custom `images.loader`).
 
 ## Platform-Specific Instructions
 

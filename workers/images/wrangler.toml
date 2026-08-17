@@ -1,0 +1,51 @@
+# Cloudflare Worker: on-the-fly image resizing via cf.image.
+#
+# Deployed by .github/workflows/deploy-images-worker.yml on pushes to
+# `develop` that touch this directory, using
+# `npx wrangler@4 deploy --env production` with
+# CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID repository secrets — see
+# docs/deployment.md for the full setup (zone requirements, Image Resizing
+# entitlement, DNS).
+#
+# Local development: `npx wrangler dev` from this directory.
+
+name = "kiyon-images"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+# Every request to this Worker is a resize of an already-stored image
+# (product photos, return evidence, etc.) — there is no state to persist
+# and nothing here needs a KV namespace, D1 database, or Durable Object.
+
+# Comma-separated hostname allow-list for the `url` query parameter (see
+# `src/validation.ts`'s `isAllowedHostname`). A leading `.` matches any
+# subdomain. Keep this in sync with the remote hosts product images and
+# review-evidence photos can actually live on.
+#
+# Replace `<your-account>` with the Cloudflare account hash Vercel Blob
+# serves from (visible in any existing blob URL,
+# `https://<hash>.public.blob.vercel-storage.com/...`) and add the R2
+# public bucket / custom domain hostname once it is provisioned.
+#
+# IMPORTANT: `[vars]` at the top level is *not* inherited by named
+# environments in wrangler — `wrangler deploy --env production` (what the
+# deploy workflow actually runs) would otherwise ship with
+# `ALLOWED_HOSTNAMES` undefined and reject every request. Every named
+# environment below therefore repeats its own `[env.<name>.vars]` block
+# rather than relying on inheritance from a top-level default.
+[env.production]
+name = "kiyon-images-production"
+
+[env.production.vars]
+ALLOWED_HOSTNAMES = "images.unsplash.com,lh3.googleusercontent.com,.public.blob.vercel-storage.com,.r2.dev"
+
+[env.staging]
+name = "kiyon-images-staging"
+
+[env.staging.vars]
+ALLOWED_HOSTNAMES = "images.unsplash.com,lh3.googleusercontent.com,.public.blob.vercel-storage.com,.r2.dev"
+
+# Top-level default, used only by `wrangler dev`/`wrangler deploy` run
+# without `--env` (local development against the un-named environment).
+[vars]
+ALLOWED_HOSTNAMES = "images.unsplash.com,lh3.googleusercontent.com,.public.blob.vercel-storage.com,.r2.dev"

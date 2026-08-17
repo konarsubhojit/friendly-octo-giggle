@@ -2,6 +2,37 @@
   Sync Impact Report
   ==================
 
+  Amendment (3.0.1 → 3.1.0)
+  -------------------------------
+  Bump rationale: MINOR — Azure Blob Storage is removed as a supported
+    image-storage provider and replaced with Cloudflare R2, introducing
+    a new provider-neutral storage abstraction
+    (`src/lib/storage/{types,vercel,r2,index}.ts`) and a new
+    `workers/images` Cloudflare Worker for edge resizing. This adds
+    new architecture rather than redefining an existing principle, so
+    it is MINOR rather than MAJOR.
+  Modified sections:
+    - Technology & Architecture Constraints — Image Storage bullet
+      rewritten: Azure Blob Storage removed; Cloudflare R2 (via
+      `@aws-sdk/client-s3`'s S3-compatible API) added alongside Vercel
+      Blob, selected by `STORAGE_PROVIDER`, with dual-read fallback in
+      `resolveStorageUrl` and edge resizing via the `workers/images`
+      Worker (`cf.image`) fronted by the custom `next/image` loader in
+      `src/lib/image-loader.ts`.
+  Added sections: None
+  Removed sections: None
+  Templates requiring updates:
+    - .specify/templates/plan-template.md — ✅ aligned
+    - .specify/templates/spec-template.md — ✅ aligned
+    - .specify/templates/tasks-template.md — ✅ aligned
+    - .specify/templates/checklist-template.md — ✅ aligned
+  Follow-up TODOs:
+    - None. `@azure/storage-blob` has been removed from `package.json`
+      and every Azure-specific code path, env var, and test has been
+      replaced. Existing Vercel-stored objects remain reachable
+      through the dual-read fallback until migrated via
+      `scripts/migrate-storage-to-r2.ts`.
+
   Amendment (2.0.0 → 3.0.0)
   -------------------------------
   Bump rationale: MAJOR — Principle IV's background-jobs mandate is
@@ -250,9 +281,16 @@ files to isolate dependency graphs.
   MUST NOT appear in UI code.
 - **Styling**: Tailwind CSS v4 utility classes. Custom CSS MUST be
   limited to `src/app/globals.css` and CSS variables.
-- **Image Storage**: Vercel Blob or Azure Blob Storage for
-  uploaded product images, selected through
-  `src/lib/image-storage.ts`.
+- **Image Storage**: Vercel Blob or Cloudflare R2 (via
+  `@aws-sdk/client-s3`'s S3-compatible API) for uploaded product
+  images, selected through the provider-neutral adapters in
+  `src/lib/storage/` and `STORAGE_PROVIDER`, wrapped for callers by
+  `src/lib/image-storage.ts`. Reads fall back from the active
+  provider to the other one (`resolveStorageUrl`) so a cutover does
+  not require every object to be migrated first. Edge resizing is
+  performed by the `workers/images` Cloudflare Worker (`cf.image`),
+  fronted by the custom `next/image` loader in
+  `src/lib/image-loader.ts`.
 - **Authentication**: NextAuth.js v5 with Google OAuth +
   email/password + phone/password, DrizzleAdapter, and JWT
   sessions (`session.strategy: 'jwt'` in
@@ -333,4 +371,4 @@ project documentation. Amendments require:
 Runtime development guidance is maintained in
 `.github/copilot-instructions.md` and `docs/development.md`.
 
-**Version**: 3.0.1 | **Ratified**: 2026-03-19 | **Last Amended**: 2026-08-08
+**Version**: 3.1.0 | **Ratified**: 2026-03-19 | **Last Amended**: 2026-08-16
