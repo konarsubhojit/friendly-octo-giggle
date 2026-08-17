@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Suspense } from 'react'
-import { Nunito, Playfair_Display } from 'next/font/google'
+import localFont from 'next/font/local'
 import './globals.css'
 import { SessionProvider } from '@/components/providers/SessionProvider'
 import StoreProvider from '@/components/providers/StoreProvider'
@@ -31,16 +31,33 @@ function AppProviders({ children }: { readonly children: React.ReactNode }) {
   )
 }
 
-const nunito = Nunito({
-  subsets: ['latin'],
-  weight: ['400', '600', '700', '800'],
+// Self-hosted (rather than `next/font/google`) so the production build never
+// depends on fetching Google Fonts at build time. Turbopack's Google Fonts
+// loader has a known intermittent failure mode
+// (Module not found: Can't resolve '@vercel/turbopack-next/internal/font/google/font',
+// see https://github.com/vercel/next.js/issues/97344) that has aborted Vercel
+// builds for this app. Both files are the latin-subset variable fonts served
+// by Google Fonts, so weight/style coverage is unchanged.
+const nunito = localFont({
+  src: './fonts/nunito-latin.woff2',
+  weight: '400 800',
+  style: 'normal',
   display: 'swap',
 })
 
-const playfairDisplay = Playfair_Display({
-  subsets: ['latin'],
-  weight: ['400', '700'],
-  style: ['normal', 'italic'],
+const playfairDisplay = localFont({
+  src: [
+    {
+      path: './fonts/playfair-display-latin.woff2',
+      weight: '400 700',
+      style: 'normal',
+    },
+    {
+      path: './fonts/playfair-display-latin-italic.woff2',
+      weight: '400 700',
+      style: 'italic',
+    },
+  ],
   display: 'swap',
   variable: '--font-display',
 })
