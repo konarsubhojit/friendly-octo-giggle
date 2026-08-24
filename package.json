@@ -120,7 +120,7 @@
     "typescript": "6.0.3",
     "vercel": "^58.7.1",
     "vite-tsconfig-paths": "^6.1.1",
-    "vitest": "^4.1.7",
+    "vitest": "^4.1.11",
     "ws": "^8.21.3"
   }
 }
