@@ -40,6 +40,48 @@ The core storefront requires PostgreSQL and NextAuth configuration. Enable newer
 
 Unset optional integrations must be treated as disabled capabilities, not as reasons for the core application to fail startup.
 
+### Provider selection
+
+Every capability names its backend with one selector variable, and all of them
+resolve through a single path (`src/lib/providers/resolution.ts`). Nothing else
+in the application reads a provider variable or infers a backend from a
+hostname, so the table below is the whole contract:
+
+| Capability | Selector              | Values                           | Inference when unset (credentials present) | Default       |
+| ---------- | --------------------- | -------------------------------- | ------------------------------------------ | ------------- |
+| Database   | `DATABASE_DRIVER`     | `postgres`, `neon`               | —                                          | `neon`        |
+| Cache      | `CACHE_PROVIDER`      | `redis`, `upstash`, `none`       | Upstash → Redis                            | `none`        |
+| Search     | `SEARCH_PROVIDER`     | `postgres`, `algolia`, `upstash` | Upstash → Algolia                          | `postgres`    |
+| Storage    | `STORAGE_PROVIDER`    | `s3`, `vercel`, `r2`             | —                                          | `vercel`      |
+| Rate limit | `RATE_LIMIT_PROVIDER` | `redis`, `upstash`, `memory`     | Upstash → Redis                            | `memory`      |
+| Config     | `CONFIG_PROVIDER`     | `environment`, `edge-config`     | Edge Config                                | `environment` |
+| Jobs       | `JOBS_PROVIDER`       | `inngest`, `inline`              | Inngest                                    | `inline`      |
+
+Precedence is: explicit selector, then inference from _which credentials are
+present_, then the default. Inference is what keeps a deployment that predates
+the selectors on the backend it already uses — existing `DATABASE_URL`,
+`READ_DATABASE_URL`, Upstash, R2, and Vercel Blob variables all remain accepted
+unchanged, and setting no selector never switches a provider.
+
+An **explicit** selection must be complete: `SEARCH_PROVIDER=algolia` without
+`ALGOLIA_API_KEY`, or `CACHE_PROVIDER=redis` without `REDIS_URL`, is rejected at
+startup with an error naming the missing variable. An inferred or defaulted
+provider is never rejected, because it is by construction one the deployment can
+already reach. Like the production-key checks, these are deferred during
+`next build`, where a build machine legitimately holds no runtime credentials.
+
+For self-hosted deployments, the generic protocols — `postgres`, `redis`, and
+`s3` — are the recommended selections; the managed values (`neon`, `upstash`,
+`vercel`, `edge-config`) remain the defaults so existing deployments are
+unaffected.
+
+`summarizeProviders()` renders the resolved selection, how each was chosen, and
+whether its credentials are complete, for startup or health diagnostics. It
+carries no URLs, tokens, or other credential-bearing values, and it lists any
+deprecated variable alias in use by name only. Provider availability changes are
+reported as the structured `provider_unavailable`, `provider_fallback`,
+`provider_degraded`, and `provider_recovered` log events.
+
 ### Web push setup
 
 Web push uses the service worker already registered for the PWA, so no extra

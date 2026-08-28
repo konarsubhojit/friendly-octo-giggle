@@ -45,6 +45,12 @@ describe('getActiveProvider', () => {
     const { getActiveProvider } = await import('@/lib/storage')
     expect(getActiveProvider()).toBe('r2')
   })
+
+  it('fails loudly for STORAGE_PROVIDER=s3 rather than writing to vercel', async () => {
+    mockEnv.STORAGE_PROVIDER = 's3'
+    const { getActiveProvider } = await import('@/lib/storage')
+    expect(() => getActiveProvider()).toThrow(/not implemented yet/)
+  })
 })
 
 describe('getStorageAdapterFor', () => {

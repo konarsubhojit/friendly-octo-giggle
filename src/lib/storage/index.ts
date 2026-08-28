@@ -1,5 +1,6 @@
 import { env } from '@/lib/env'
 import { logger } from '@/lib/logger'
+import { resolveProviders } from '@/lib/providers/resolution'
 import { createR2StorageAdapter } from './r2'
 import { createVercelStorageAdapter } from './vercel'
 import type { StorageAdapter, StorageProviderName } from './types'
@@ -8,9 +9,24 @@ export * from './types'
 export { createR2StorageAdapter } from './r2'
 export { createVercelStorageAdapter } from './vercel'
 
-/** The provider new writes go to. Reads may still fall back to the other. */
-export const getActiveProvider = (): StorageProviderName =>
-  env.STORAGE_PROVIDER === 'r2' ? 'r2' : 'vercel'
+/**
+ * The provider new writes go to. Reads may still fall back to the other.
+ *
+ * The decision comes from the centralized resolution path rather than from a
+ * local `env.STORAGE_PROVIDER` test, so storage follows the same precedence
+ * table as every other capability. `s3` — the generic S3 protocol selector —
+ * is a declared part of the contract but has no adapter yet, so it fails loudly
+ * instead of silently writing objects to Vercel Blob.
+ */
+export const getActiveProvider = (): StorageProviderName => {
+  const provider = resolveProviders(env).selections.storage.provider
+  if (provider === 's3') {
+    throw new Error(
+      "STORAGE_PROVIDER='s3' selects the generic S3 protocol adapter, which is not implemented yet. Use 'r2' or 'vercel'."
+    )
+  }
+  return provider
+}
 
 let vercelAdapter: StorageAdapter | null = null
 let r2Adapter: StorageAdapter | null = null
