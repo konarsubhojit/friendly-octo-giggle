@@ -107,6 +107,8 @@ export const createDatabaseConnections = <
       schema
     )
   } catch (error) {
+    // Pool constructors are lazy about network connections; this cleanup only
+    // covers constructor-level failures before the caller receives the handles.
     void primary.pool.end().catch((cleanupError: unknown) => {
       logError({
         error: cleanupError,

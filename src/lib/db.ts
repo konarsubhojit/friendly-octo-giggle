@@ -189,7 +189,9 @@ const registerShutdownHandler = () => {
   process.once('SIGINT', closeAndExit)
   process.once('SIGTERM', closeAndExit)
   process.once('beforeExit', () => {
-    void closeDatabaseConnections()
+    void closeDatabaseConnections().catch((error: unknown) => {
+      logError({ error, context: 'database_shutdown_failure' })
+    })
   })
 }
 
