@@ -203,7 +203,7 @@ describe('resolveProviders — backward compatibility', () => {
         ])
       )
     ).toEqual({
-      database: 'neon',
+      database: 'postgres',
       cache: 'none',
       search: 'postgres',
       storage: 'vercel',

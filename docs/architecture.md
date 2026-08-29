@@ -93,13 +93,14 @@ The dominant design principles in the current code are:
 
 ### Backend and Domain Services
 
-| Technology      | Version       | Purpose                                               |
-| --------------- | ------------- | ----------------------------------------------------- |
-| NextAuth        | 5.0.0-beta.30 | Authentication and session management                 |
-| Drizzle ORM     | 0.45.1        | Type-safe PostgreSQL access                           |
-| Neon Serverless | 0.10.0        | PostgreSQL connection pools for Vercel-style runtimes |
-| Zod             | 4.3.6         | Runtime validation for inputs and env                 |
-| Pino            | 10.3.1        | Structured logging and event tracing                  |
+| Technology      | Version       | Purpose                                                    |
+| --------------- | ------------- | ---------------------------------------------------------- |
+| NextAuth        | 5.0.0-beta.30 | Authentication and session management                      |
+| Drizzle ORM     | 0.45.1        | Type-safe PostgreSQL access                                |
+| pg              | 8.23.0        | Default PostgreSQL connection pools for standard URLs      |
+| Neon Serverless | 1.1.0         | Optional Neon-optimized adapter for Vercel-style runtimes  |
+| Zod             | 4.3.6         | Runtime validation for inputs and env                      |
+| Pino            | 10.3.1        | Structured logging and event tracing                       |
 
 ### Edge and Supporting Services
 
@@ -125,7 +126,7 @@ The codebase uses three Drizzle exports from `lib/db.ts`:
 
 | Export             | Backing connection                 | Current role                                  |
 | ------------------ | ---------------------------------- | --------------------------------------------- |
-| `primaryDrizzleDb` | Primary Neon connection            | Writes, auth, and consistency-sensitive reads |
+| `primaryDrizzleDb` | Primary selected-driver connection | Writes, auth, and consistency-sensitive reads |
 | `readDrizzleDb`    | Optional read replica              | Replica-only reads                            |
 | `drizzleDb`        | `withReplicas(primary, [replica])` | Default read path for most queries            |
 
