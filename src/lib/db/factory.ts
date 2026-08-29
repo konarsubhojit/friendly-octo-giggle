@@ -1,6 +1,7 @@
 import { getProvider } from '@/lib/providers/resolution'
 import type { DatabaseDriver } from '@/lib/providers/types'
 import type { Env } from '@/lib/validations/env'
+import { logError } from '@/lib/logger'
 import { createNeonConnection } from './neon'
 import { createPostgresConnection } from './postgres'
 import type { DatabaseConnection, DatabasePoolConfig } from './types'
@@ -102,7 +103,12 @@ export const createDatabaseConnections = <
       schema
     )
   } catch (error) {
-    void primary.pool.end()
+    void primary.pool.end().catch((cleanupError: unknown) => {
+      logError({
+        error: cleanupError,
+        context: 'database_startup_cleanup_failure',
+      })
+    })
     throw error
   }
 

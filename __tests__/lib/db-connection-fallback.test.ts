@@ -8,6 +8,7 @@ import {
 const {
   nodeDrizzleMock,
   neonDrizzleMock,
+  mockLogError,
   pgPoolEndMock,
   pgPoolMock,
   neonPoolMock,
@@ -18,6 +19,7 @@ const {
   return {
     nodeDrizzleMock: vi.fn((pool: unknown) => ({ driver: 'postgres', pool })),
     neonDrizzleMock: vi.fn((pool: unknown) => ({ driver: 'neon', pool })),
+    mockLogError: vi.fn(),
     pgPoolEndMock,
     pgPoolMock: vi.fn(function PgPoolMock() {
       return { end: pgPoolEndMock }
@@ -42,6 +44,10 @@ vi.mock('drizzle-orm/node-postgres', () => ({
 
 vi.mock('drizzle-orm/neon-serverless', () => ({
   drizzle: neonDrizzleMock,
+}))
+
+vi.mock('@/lib/logger', () => ({
+  logError: mockLogError,
 }))
 
 const schema = {
@@ -208,5 +214,35 @@ describe('database connection factory', () => {
     ).toThrow('read pool unavailable')
 
     expect(pgPoolEndMock).toHaveBeenCalledOnce()
+  })
+
+  it('logs primary pool cleanup failure without masking startup failure', async () => {
+    const cleanupError = new Error('cleanup failed')
+    pgPoolEndMock.mockRejectedValueOnce(cleanupError)
+    pgPoolMock
+      .mockImplementationOnce(function PgPoolMock() {
+        return { end: pgPoolEndMock }
+      })
+      .mockImplementationOnce(function PgPoolMock() {
+        throw new Error('read pool unavailable')
+      })
+
+    expect(() =>
+      createDatabaseConnections(
+        {
+          DATABASE_URL: 'postgresql://primary.example.com:5432/app',
+          READ_DATABASE_URL: 'postgresql://replica.example.com:5432/app',
+        },
+        schema,
+        'postgres'
+      )
+    ).toThrow('read pool unavailable')
+
+    await vi.waitFor(() => {
+      expect(mockLogError).toHaveBeenCalledWith({
+        error: cleanupError,
+        context: 'database_startup_cleanup_failure',
+      })
+    })
   })
 })
