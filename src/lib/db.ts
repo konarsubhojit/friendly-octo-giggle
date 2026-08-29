@@ -74,6 +74,7 @@ import { withReplicas } from 'drizzle-orm/pg-core'
 import { env } from './env'
 import { createDatabaseConnections } from './db/factory'
 import type { DatabaseConnections } from './db/factory'
+import { logError } from './logger'
 
 // All schema tables and relations collected into one object for Drizzle relational queries
 const schema = {
@@ -172,9 +173,17 @@ const registerShutdownHandler = () => {
   globalForDb.databaseShutdownRegistered = true
 
   const closeAndExit = (signal: NodeJS.Signals) => {
-    void closeDatabaseConnections().finally(() => {
-      process.kill(process.pid, signal)
-    })
+    void closeDatabaseConnections()
+      .catch((error: unknown) => {
+        logError({ error, context: 'database_shutdown_failure' })
+      })
+      .finally(() => {
+        try {
+          process.kill(process.pid, signal)
+        } catch {
+          process.exit(1)
+        }
+      })
   }
 
   process.once('SIGINT', closeAndExit)

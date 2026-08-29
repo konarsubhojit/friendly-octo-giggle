@@ -42,6 +42,10 @@ const parsePositiveInteger = (
   return parsed
 }
 
+const isRejected = (
+  result: PromiseSettledResult<void>
+): result is PromiseRejectedResult => result.status === 'rejected'
+
 export const createDatabasePoolConfig = (
   source: Partial<Record<PoolEnvKey, string | undefined>>
 ): DatabasePoolConfig => ({
@@ -121,9 +125,7 @@ export const createDatabaseConnections = <
         primary.pool.end(),
         read.pool.end(),
       ])
-      const failures = results
-        .filter((result) => result.status === 'rejected')
-        .map((result) => result.reason)
+      const failures = results.filter(isRejected).map((result) => result.reason)
 
       if (failures.length > 0) {
         throw new AggregateError(failures, 'Failed to close database pools')
