@@ -12,7 +12,7 @@
  *
  * | Capability | Selector              | Inference order (credentials present)      | Default       |
  * | ---------- | --------------------- | ------------------------------------------ | ------------- |
- * | database   | `DATABASE_DRIVER`     | —                                          | `neon`        |
+ * | database   | `DATABASE_DRIVER`     | —                                          | `postgres`    |
  * | cache      | `CACHE_PROVIDER`      | upstash → redis                            | `none`        |
  * | search     | `SEARCH_PROVIDER`     | upstash → algolia                          | `postgres`    |
  * | storage    | `STORAGE_PROVIDER`    | —                                          | `vercel`      |
@@ -174,7 +174,7 @@ const hasRedisUrl = (source: ProviderEnvSource): boolean =>
 const RESOLVERS: { [C in ProviderCapability]: CapabilityResolver<C> } = {
   database: {
     infer: () => undefined,
-    fallback: 'neon' satisfies DatabaseDriver,
+    fallback: 'postgres' satisfies DatabaseDriver,
   },
   cache: {
     infer: (source) => {
