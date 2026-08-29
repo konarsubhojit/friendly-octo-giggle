@@ -64,7 +64,7 @@ the selectors on the backend it already uses — existing `DATABASE_URL`,
 unchanged.
 
 An **explicit** selection must be complete: `SEARCH_PROVIDER=algolia` without
-`ALGOLIA_API_KEY`, or `CACHE_PROVIDER=redis` without `REDIS_URL`, is rejected at
+`ALGOLIA_ADMIN_API_KEY`, or `CACHE_PROVIDER=redis` without `REDIS_URL`, is rejected at
 startup with an error naming the missing variable. An inferred or defaulted
 provider is never rejected, because it is by construction one the deployment can
 already reach. Like the production-key checks, these are deferred during
@@ -95,6 +95,24 @@ carries no URLs, tokens, or other credential-bearing values, and it lists any
 deprecated variable alias in use by name only. Provider availability changes are
 reported as the structured `provider_unavailable`, `provider_fallback`,
 `provider_degraded`, and `provider_recovered` log events.
+
+#### Catalog-search migration
+
+Catalog search reads use one selected provider while product writes may safely
+continue when optional indexing fails. `postgres` is the baseline and queries
+the product database with the existing `ILIKE` fallback; it does not provide
+hosted typo tolerance, facets, highlighting, or suggestions. `algolia` uses
+`ALGOLIA_APP_ID`, `ALGOLIA_ADMIN_API_KEY`, and an environment-specific
+`ALGOLIA_PRODUCTS_INDEX`; the admin key is server-only. The optional
+`ALGOLIA_SEARCH_API_KEY` is not used by the application because searches are
+server-mediated. Existing `ALGOLIA_API_KEY` and `ALGOLIA_INDEX_NAME` values are
+accepted as compatibility aliases.
+
+For a cutover, configure the target provider, rebuild products from Admin →
+Search Index Management, compare result counts and relevance, then set
+`SEARCH_PROVIDER` to switch reads. Roll back by setting it to the prior
+provider; PostgreSQL requires no reindex. Order search remains separate and
+does not export order or customer data to Algolia.
 
 ### Web push setup
 

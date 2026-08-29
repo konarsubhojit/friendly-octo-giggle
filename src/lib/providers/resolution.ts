@@ -98,7 +98,11 @@ export const PROVIDER_REQUIRED_KEYS = {
   },
   search: {
     postgres: [],
-    algolia: ['ALGOLIA_APP_ID', 'ALGOLIA_API_KEY', 'ALGOLIA_INDEX_NAME'],
+    algolia: [
+      'ALGOLIA_APP_ID',
+      'ALGOLIA_ADMIN_API_KEY',
+      'ALGOLIA_PRODUCTS_INDEX',
+    ],
     upstash: ['UPSTASH_SEARCH_REST_URL', 'UPSTASH_SEARCH_REST_TOKEN'],
   },
   storage: {
@@ -147,8 +151,16 @@ export const DEPRECATED_ENV_ALIASES = {
 const isSet = (value: string | undefined): boolean =>
   typeof value === 'string' && value.trim().length > 0
 
+const LEGACY_PROVIDER_KEYS: Readonly<Record<string, string>> = {
+  ALGOLIA_ADMIN_API_KEY: 'ALGOLIA_API_KEY',
+  ALGOLIA_PRODUCTS_INDEX: 'ALGOLIA_INDEX_NAME',
+}
+
 const allSet = (source: ProviderEnvSource, keys: readonly string[]): boolean =>
-  keys.every((key) => isSet(source[key]))
+  keys.every(
+    (key) =>
+      isSet(source[key]) || isSet(source[LEGACY_PROVIDER_KEYS[key] ?? ''])
+  )
 
 const readSelector = (
   source: ProviderEnvSource,
@@ -239,7 +251,8 @@ const resolveCapability = <C extends ProviderCapability>(
   if (requested !== undefined && legalValues.includes(requested)) {
     const provider = requested as ProviderByCapability[C]
     requiredKeysFor(capability, provider).forEach((key) => {
-      if (isSet(source[key])) return
+      if (isSet(source[key]) || isSet(source[LEGACY_PROVIDER_KEYS[key] ?? '']))
+        return
       issues.push({
         capability,
         provider,
