@@ -193,6 +193,33 @@ describe('database connection factory', () => {
     expect(pgPoolEndMock).toHaveBeenCalledTimes(2)
   })
 
+  it('attempts both pool closes and reports shutdown failures', async () => {
+    const primaryEnd = vi.fn().mockRejectedValue(new Error('primary close'))
+    const readEnd = vi.fn().mockResolvedValue(undefined)
+    pgPoolMock
+      .mockImplementationOnce(function PgPoolMock() {
+        return { end: primaryEnd }
+      })
+      .mockImplementationOnce(function PgPoolMock() {
+        return { end: readEnd }
+      })
+
+    const connections = createDatabaseConnections(
+      {
+        DATABASE_URL: 'postgresql://primary.example.com:5432/app',
+        READ_DATABASE_URL: 'postgresql://replica.example.com:5432/app',
+      },
+      schema,
+      'postgres'
+    )
+
+    await expect(connections.close()).rejects.toThrow(
+      'Failed to close database pools'
+    )
+    expect(primaryEnd).toHaveBeenCalledOnce()
+    expect(readEnd).toHaveBeenCalledOnce()
+  })
+
   it('closes the primary pool when read pool startup fails', () => {
     pgPoolMock
       .mockImplementationOnce(function PgPoolMock() {

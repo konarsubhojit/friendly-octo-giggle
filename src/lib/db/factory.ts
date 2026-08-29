@@ -117,7 +117,17 @@ export const createDatabaseConnections = <
     primary,
     read,
     async close() {
-      await Promise.all([primary.pool.end(), read.pool.end()])
+      const results = await Promise.allSettled([
+        primary.pool.end(),
+        read.pool.end(),
+      ])
+      const failures = results
+        .filter((result) => result.status === 'rejected')
+        .map((result) => result.reason)
+
+      if (failures.length > 0) {
+        throw new AggregateError(failures, 'Failed to close database pools')
+      }
     },
   }
 }
