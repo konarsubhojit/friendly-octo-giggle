@@ -24,11 +24,13 @@ class UpstashPipeline implements CachePipeline {
     return this
   }
   sadd(key: string, ...members: string[]): this {
-    for (const m of members) this.inner.sadd(key, m)
+    const [member, ...rest] = members
+    if (member !== undefined) this.inner.sadd(key, member, ...rest)
     return this
   }
   srem(key: string, ...members: string[]): this {
-    for (const m of members) this.inner.srem(key, m)
+    const [member, ...rest] = members
+    if (member !== undefined) this.inner.srem(key, member, ...rest)
     return this
   }
   hgetall(key: string): this {
@@ -99,11 +101,9 @@ export class UpstashCacheClient implements CacheClient {
   }
 
   async sadd(key: string, ...members: string[]): Promise<number> {
-    if (members.length === 0) return 0
-    if (members.length === 1) return this.redis.sadd(key, members[0])
-    let total = 0
-    for (const m of members) total += await this.redis.sadd(key, m)
-    return total
+    const [member, ...rest] = members
+    if (member === undefined) return 0
+    return this.redis.sadd(key, member, ...rest)
   }
 
   async smembers(key: string): Promise<string[]> {
@@ -111,11 +111,9 @@ export class UpstashCacheClient implements CacheClient {
   }
 
   async srem(key: string, ...members: string[]): Promise<number> {
-    if (members.length === 0) return 0
-    if (members.length === 1) return this.redis.srem(key, members[0])
-    let total = 0
-    for (const m of members) total += await this.redis.srem(key, m)
-    return total
+    const [member, ...rest] = members
+    if (member === undefined) return 0
+    return this.redis.srem(key, member, ...rest)
   }
 
   async del(key: string): Promise<number> {

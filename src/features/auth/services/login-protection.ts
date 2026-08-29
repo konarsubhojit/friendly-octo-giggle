@@ -3,7 +3,6 @@ import {
   type RateLimiter,
 } from '@/lib/rate-limiter'
 
-const FAILED_LOGIN_WINDOW = '15 m'
 const MAX_FAILED_LOGIN_ATTEMPTS = 5
 export const ACCOUNT_LOCK_DURATION_MS = 15 * 60 * 1000
 

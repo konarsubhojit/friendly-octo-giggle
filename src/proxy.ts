@@ -10,7 +10,6 @@ import {
 } from '@/lib/rate-limit'
 import {
   createEdgeRateLimiter,
-  InMemoryRateLimiter,
   type RateLimiter,
   type RateLimitResult,
 } from '@/lib/rate-limiter/edge'

@@ -14,6 +14,34 @@ import { env } from '@/lib/env'
 import { logError } from '@/lib/logger'
 
 let singleton: CacheClient | null = null
+let standardRedisSingleton: CacheClient | null = null
+let standardRedisUrl: string | null = null
+
+export const getStandardRedisCacheClient = (
+  url: string
+): CacheClient => {
+  if (standardRedisSingleton) {
+    if (standardRedisUrl !== url) {
+      throw new Error('Standard Redis client is already configured for another URL')
+    }
+    return standardRedisSingleton
+  }
+
+  const { NodeRedisCacheClient } = require('./node-redis-adapter') as typeof import('./node-redis-adapter')
+  const client = new NodeRedisCacheClient(url, {
+    onError: (err) =>
+      logError({
+        error: err,
+        context: 'node_redis_connection',
+      }),
+  })
+  client.connect().catch((err: unknown) =>
+    logError({ error: err, context: 'node_redis_initial_connect' })
+  )
+  standardRedisSingleton = client
+  standardRedisUrl = url
+  return client
+}
 
 /**
  * Return the singleton cache client for the process.
@@ -41,19 +69,7 @@ export const getCacheClient = (): CacheClient | null => {
     case 'redis': {
       const url = env.REDIS_URL
       if (!url) return null
-      const { NodeRedisCacheClient } = require('./node-redis-adapter') as typeof import('./node-redis-adapter')
-      const client = new NodeRedisCacheClient(url, {
-        onError: (err) =>
-          logError({
-            error: err,
-            context: 'node_redis_connection',
-          }),
-      })
-      // Fire-and-forget connect; commands queue until ready.
-      client.connect().catch((err: unknown) =>
-        logError({ error: err, context: 'node_redis_initial_connect' })
-      )
-      singleton = client
+      singleton = getStandardRedisCacheClient(url)
       return singleton
     }
 
@@ -74,4 +90,6 @@ export const isCacheAvailable = (): boolean => {
 /** Exposed for tests that need to swap the singleton. */
 export const __resetCacheClientForTests = (): void => {
   singleton = null
+  standardRedisSingleton = null
+  standardRedisUrl = null
 }

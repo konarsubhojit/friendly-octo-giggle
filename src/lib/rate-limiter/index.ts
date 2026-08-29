@@ -17,7 +17,7 @@ export { InMemoryRateLimiter } from './memory'
 
 import type { RateLimiter, RateLimiterConfig } from './types'
 import { getProvider } from '@/lib/providers/resolution'
-import { getCacheClient } from '@/lib/cache/index'
+import { getStandardRedisCacheClient } from '@/lib/cache/index'
 import { env } from '@/lib/env'
 import { InMemoryRateLimiter } from './memory'
 
@@ -51,11 +51,11 @@ export function createRateLimiter(
     }
 
     case 'redis': {
-      const client = getCacheClient()
-      if (!client) return null
+      const url = env.REDIS_URL
+      if (!url) return null
       const { NodeRedisRateLimiter } = require('./node-redis') as typeof import('./node-redis')
       return new NodeRedisRateLimiter(
-        client,
+        getStandardRedisCacheClient(url),
         config.maxRequests,
         windowSeconds,
         config.prefix
