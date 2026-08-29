@@ -116,38 +116,57 @@ export class AlgoliaCatalogSearchClient implements CatalogSearchClient {
     options: { readonly limit?: number; readonly category?: string } = {}
   ): Promise<ProductSearchResult[]> {
     if (!this.isAvailable()) return []
-    const result = await this.getClient().searchSingleIndex({
-      indexName: this.getIndexName(),
-      searchParams: {
-        query,
-        hitsPerPage: options.limit ?? 20,
-        ...(options.category?.trim()
-          ? {
-              filters: `category:"${options.category.trim().replaceAll('"', '\\"')}"`,
-            }
-          : {}),
-        attributesToHighlight: ['name', 'description'],
-      },
-    })
-
-    return result.hits.map((hit) => {
-      const product = hit as typeof hit & Partial<ProductIndexDocument>
-      return {
-        id: String(hit.objectID),
-        score: 1,
-        content: {
-          name: product.name ?? '',
-          description: product.description ?? '',
-          category: product.category ?? '',
+    try {
+      const result = await this.getClient().searchSingleIndex({
+        indexName: this.getIndexName(),
+        searchParams: {
+          query,
+          hitsPerPage: options.limit ?? 20,
+          ...(options.category?.trim()
+            ? {
+                filters: `category:"${options.category
+                  .trim()
+                  .replaceAll('"', '\\"')}"`,
+              }
+            : {}),
+          attributesToHighlight: ['name', 'description'],
         },
-        metadata: { image: product.image ?? '' },
-      }
-    })
+      })
+
+      return result.hits.map((hit) => {
+        const product = hit as typeof hit & Partial<ProductIndexDocument>
+        return {
+          id: String(hit.objectID),
+          score: 1,
+          content: {
+            name: product.name ?? '',
+            description: product.description ?? '',
+            category: product.category ?? '',
+          },
+          metadata: { image: product.image ?? '' },
+        }
+      })
+    } catch (error) {
+      logError({
+        error,
+        context: 'search',
+        additionalInfo: { operation: 'algolia:searchProducts', query },
+      })
+      return []
+    }
   }
 
   async resetIndex(_indexName: 'products'): Promise<void> {
     if (!this.isAvailable()) return
-    await this.getClient().clearObjects({ indexName: this.getIndexName() })
+    try {
+      await this.getClient().clearObjects({ indexName: this.getIndexName() })
+    } catch (error) {
+      logError({
+        error,
+        context: 'search',
+        additionalInfo: { operation: 'algolia:resetIndex' },
+      })
+    }
   }
 
   async getIndexInfo(_indexName: 'products'): Promise<unknown> {

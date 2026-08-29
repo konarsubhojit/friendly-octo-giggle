@@ -134,6 +134,19 @@ describe('lib/search/client caching and failure paths', () => {
     )
   })
 
+  it('returns no results when Upstash search fails', async () => {
+    mockSearch.mockRejectedValue(new Error('Upstash unavailable'))
+
+    await expect(searchProducts('shirt')).resolves.toEqual([])
+    expect(logError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        additionalInfo: expect.objectContaining({
+          operation: 'searchProducts',
+        }),
+      })
+    )
+  })
+
   it('swallows and logs delete failures in removeProduct', async () => {
     mockDelete.mockRejectedValue(new Error('delete failed'))
 

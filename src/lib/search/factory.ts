@@ -45,6 +45,8 @@ export const getCatalogSearchClient = (): CatalogSearchClient => {
         return new UpstashCatalogSearchClient()
       case 'postgres':
         return new PostgresCatalogSearchClient()
+      default:
+        throw new Error('Unknown catalog search provider')
     }
   })()
   return client

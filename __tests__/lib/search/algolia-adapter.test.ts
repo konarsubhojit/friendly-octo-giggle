@@ -84,4 +84,15 @@ describe('AlgoliaCatalogSearchClient', () => {
     expect(mockSaveObjects.mock.calls[0]?.[0].objects).toHaveLength(1000)
     expect(mockSaveObjects.mock.calls[1]?.[0].objects).toHaveLength(1)
   })
+
+  it('returns no hits when the provider search fails', async () => {
+    process.env.ALGOLIA_APP_ID = 'app-id'
+    process.env.ALGOLIA_ADMIN_API_KEY = 'admin-key'
+    process.env.ALGOLIA_PRODUCTS_INDEX = 'friendly-products-test'
+    mockSearchSingleIndex.mockRejectedValue(new Error('Algolia unavailable'))
+
+    await expect(
+      new AlgoliaCatalogSearchClient().searchProducts('cotton')
+    ).resolves.toEqual([])
+  })
 })

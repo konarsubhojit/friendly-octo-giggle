@@ -187,23 +187,33 @@ export async function searchProducts(
     }
   }
 
-  const { limit = 20, category } = options
-  const index = getProductsIndex()
-  const normalizedCategory = category?.trim()
-  const results = await index.search({
-    query,
-    limit,
-    ...(normalizedCategory
-      ? { filter: { category: { equals: normalizedCategory } } }
-      : {}),
-  })
+  let mapped: ProductSearchResult[]
+  try {
+    const { limit = 20, category } = options
+    const index = getProductsIndex()
+    const normalizedCategory = category?.trim()
+    const results = await index.search({
+      query,
+      limit,
+      ...(normalizedCategory
+        ? { filter: { category: { equals: normalizedCategory } } }
+        : {}),
+    })
 
-  const mapped: ProductSearchResult[] = results.map((result) => ({
-    id: String(result.id),
-    score: result.score,
-    content: result.content,
-    metadata: result.metadata ?? { image: '' },
-  }))
+    mapped = results.map((result) => ({
+      id: String(result.id),
+      score: result.score,
+      content: result.content,
+      metadata: result.metadata ?? { image: '' },
+    }))
+  } catch (error) {
+    logError({
+      error,
+      context: 'search',
+      additionalInfo: { operation: 'searchProducts', query },
+    })
+    return []
+  }
 
   if (redis) {
     try {
