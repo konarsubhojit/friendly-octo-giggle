@@ -12,11 +12,12 @@ vi.mock('node:fs', () => ({
 }))
 vi.mock('@/lib/storage', () => ({
   getStorageAdapterFor: mockGetStorageAdapterFor,
+  getActiveProvider: () => 'r2',
   IMMUTABLE_CACHE_CONTROL: 'public, max-age=31536000, immutable',
 }))
 
 const makeAdapter = (
-  provider: 'vercel' | 'r2',
+  provider: 'vercel' | 'r2' | 's3',
   overrides: Partial<{
     getUrl: ReturnType<typeof vi.fn>
     list: ReturnType<typeof vi.fn>
@@ -46,6 +47,8 @@ describe('parseArgs', () => {
     expect(options.checkpointPath).toMatch(
       /\.storage-migration-checkpoint\.json$/
     )
+    expect(options.sourceProvider).toBe('vercel')
+    expect(options.destinationProvider).toBe('r2')
   })
 
   it('parses --apply', async () => {
@@ -79,6 +82,13 @@ describe('parseArgs', () => {
     const options = parseArgs(['--checkpoint=my-checkpoint.json'])
     expect(options.checkpointPath.endsWith('my-checkpoint.json')).toBe(true)
     expect(options.checkpointPath.startsWith('/')).toBe(true)
+  })
+
+  it('parses --from= and --to= provider options', async () => {
+    const { parseArgs } = await import('../../scripts/migrate-storage-to-r2')
+    const options = parseArgs(['--from=vercel', '--to=s3'])
+    expect(options.sourceProvider).toBe('vercel')
+    expect(options.destinationProvider).toBe('s3')
   })
 })
 
@@ -151,7 +161,7 @@ describe('listAllSourceObjects', () => {
 
     const { listAllSourceObjects } =
       await import('../../scripts/migrate-storage-to-r2')
-    const objects = await listAllSourceObjects(undefined)
+    const objects = await listAllSourceObjects('vercel', undefined)
 
     expect(objects.map((o) => o.pathname)).toEqual([
       'images/a.png',
@@ -176,7 +186,11 @@ describe('migrateOne', () => {
     )
 
     const { migrateOne } = await import('../../scripts/migrate-storage-to-r2')
-    const result = await migrateOne(object, { apply: true })
+    const result = await migrateOne(object, {
+      apply: true,
+      sourceProvider: 'vercel',
+      destinationProvider: 'r2',
+    })
     expect(result).toEqual({ outcome: 'already_migrated' })
   })
 
@@ -192,7 +206,11 @@ describe('migrateOne', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     const { migrateOne } = await import('../../scripts/migrate-storage-to-r2')
-    const result = await migrateOne(object, { apply: false })
+    const result = await migrateOne(object, {
+      apply: false,
+      sourceProvider: 'vercel',
+      destinationProvider: 'r2',
+    })
 
     expect(result).toEqual({ outcome: 'would_copy' })
     expect(r2Put).not.toHaveBeenCalled()
@@ -208,7 +226,11 @@ describe('migrateOne', () => {
     )
 
     const { migrateOne } = await import('../../scripts/migrate-storage-to-r2')
-    const result = await migrateOne(object, { apply: true })
+    const result = await migrateOne(object, {
+      apply: true,
+      sourceProvider: 'vercel',
+      destinationProvider: 'r2',
+    })
     expect(result).toEqual({
       outcome: 'failed',
       reason: 'source object disappeared before it could be copied',
@@ -231,7 +253,11 @@ describe('migrateOne', () => {
     )
 
     const { migrateOne } = await import('../../scripts/migrate-storage-to-r2')
-    const result = await migrateOne(object, { apply: true })
+    const result = await migrateOne(object, {
+      apply: true,
+      sourceProvider: 'vercel',
+      destinationProvider: 'r2',
+    })
     expect(result).toEqual({
       outcome: 'failed',
       reason: 'source fetch failed with HTTP 404',
@@ -279,7 +305,11 @@ describe('migrateOne', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     const { migrateOne } = await import('../../scripts/migrate-storage-to-r2')
-    const result = await migrateOne(object, { apply: true })
+    const result = await migrateOne(object, {
+      apply: true,
+      sourceProvider: 'vercel',
+      destinationProvider: 'r2',
+    })
 
     expect(result).toEqual({ outcome: 'copied' })
     expect(r2Put).toHaveBeenCalledWith(
@@ -320,7 +350,11 @@ describe('migrateOne', () => {
     )
 
     const { migrateOne } = await import('../../scripts/migrate-storage-to-r2')
-    const result = await migrateOne(object, { apply: true })
+    const result = await migrateOne(object, {
+      apply: true,
+      sourceProvider: 'vercel',
+      destinationProvider: 'r2',
+    })
     expect(result).toEqual({
       outcome: 'failed',
       reason: 'object missing from destination immediately after copy',
@@ -363,7 +397,11 @@ describe('migrateOne', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     const { migrateOne } = await import('../../scripts/migrate-storage-to-r2')
-    const result = await migrateOne(object, { apply: true })
+    const result = await migrateOne(object, {
+      apply: true,
+      sourceProvider: 'vercel',
+      destinationProvider: 'r2',
+    })
 
     expect(result).toEqual({
       outcome: 'failed',
@@ -398,6 +436,8 @@ describe('runMigration', () => {
       apply: false,
       limit: Number.POSITIVE_INFINITY,
       checkpointPath: '/tmp/checkpoint.json',
+      sourceProvider: 'vercel',
+      destinationProvider: 'r2',
     })
 
     expect(summary.alreadyMigrated).toBe(1)
@@ -456,6 +496,8 @@ describe('runMigration', () => {
       apply: true,
       limit: 1,
       checkpointPath: '/tmp/checkpoint.json',
+      sourceProvider: 'vercel',
+      destinationProvider: 'r2',
     })
 
     expect(summary.scanned).toBe(1)
@@ -487,6 +529,8 @@ describe('runMigration', () => {
       apply: true,
       limit: Number.POSITIVE_INFINITY,
       checkpointPath: '/tmp/checkpoint.json',
+      sourceProvider: 'vercel',
+      destinationProvider: 'r2',
     })
 
     expect(summary.failed).toBe(1)
@@ -494,5 +538,19 @@ describe('runMigration', () => {
       pathname: 'images/a.png',
       reason: 'source object disappeared before it could be copied',
     })
+  })
+
+  it('rejects a migration where source and destination are the same provider', async () => {
+    mockExistsSync.mockReturnValue(false)
+    const { runMigration } = await import('../../scripts/migrate-storage-to-r2')
+    await expect(
+      runMigration({
+        apply: false,
+        limit: 1,
+        checkpointPath: '/tmp/checkpoint.json',
+        sourceProvider: 'r2',
+        destinationProvider: 'r2',
+      })
+    ).rejects.toThrow(/must differ/)
   })
 })

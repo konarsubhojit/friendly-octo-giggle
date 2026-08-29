@@ -165,7 +165,7 @@ describe('EnvSchema', () => {
   })
 })
 
-describe('EnvSchema — storage provider (R2 / Vercel)', () => {
+describe('EnvSchema — storage provider (S3 / R2 / Vercel)', () => {
   const baseEnv = { DATABASE_URL: 'postgresql://localhost:5432/test' }
   // Mirrors the private R2_REQUIRED_KEYS list in src/lib/validations/env.ts —
   // not imported (it isn't exported) so this test independently pins the
@@ -184,6 +184,14 @@ describe('EnvSchema — storage provider (R2 / Vercel)', () => {
     R2_SECRET_ACCESS_KEY: 'secret-1',
     R2_BUCKET: 'images',
     R2_PUBLIC_BASE_URL: 'https://cdn.example.com',
+  }
+  const validS3Env = {
+    STORAGE_PROVIDER: 's3',
+    S3_REGION: 'us-east-1',
+    S3_BUCKET: 'images',
+    S3_ACCESS_KEY_ID: 'key-1',
+    S3_SECRET_ACCESS_KEY: 'secret-1',
+    S3_PUBLIC_BASE_URL: 'https://cdn.example.com',
   }
 
   it('accepts STORAGE_PROVIDER unset (defaults to vercel, no R2 vars required)', () => {
@@ -209,6 +217,11 @@ describe('EnvSchema — storage provider (R2 / Vercel)', () => {
 
   it('accepts a fully configured STORAGE_PROVIDER=r2 environment', () => {
     const result = EnvSchema.safeParse({ ...baseEnv, ...validR2Env })
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts a fully configured STORAGE_PROVIDER=s3 environment', () => {
+    const result = EnvSchema.safeParse({ ...baseEnv, ...validS3Env })
     expect(result.success).toBe(true)
   })
 
@@ -243,6 +256,11 @@ describe('EnvSchema — storage provider (R2 / Vercel)', () => {
       ...baseEnv,
       R2_ACCOUNT_ID: 'acct-1',
     })
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts STORAGE_PROVIDER=s3 with deprecated R2_* alias variables', () => {
+    const result = EnvSchema.safeParse({ ...baseEnv, ...validR2Env, STORAGE_PROVIDER: 's3' })
     expect(result.success).toBe(true)
   })
 

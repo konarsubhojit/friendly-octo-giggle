@@ -142,6 +142,11 @@ export const PROVIDER_REQUIRED_KEYS = {
 export const DEPRECATED_ENV_ALIASES = {
   database_url: 'DATABASE_URL',
   read_database_url: 'READ_DATABASE_URL',
+  R2_ACCESS_KEY_ID: 'S3_ACCESS_KEY_ID',
+  R2_SECRET_ACCESS_KEY: 'S3_SECRET_ACCESS_KEY',
+  R2_BUCKET: 'S3_BUCKET',
+  R2_PUBLIC_BASE_URL: 'S3_PUBLIC_BASE_URL',
+  R2_ACCOUNT_ID: 'S3_ENDPOINT (derived from R2_ACCOUNT_ID)',
 } as const
 
 const isSet = (value: string | undefined): boolean =>
@@ -270,6 +275,26 @@ const resolveCapability = <C extends ProviderCapability>(
 const listDeprecatedAliases = (source: ProviderEnvSource): string[] =>
   Object.keys(DEPRECATED_ENV_ALIASES).filter((alias) => isSet(source[alias]))
 
+const normalizeAliases = (source: ProviderEnvSource): ProviderEnvSource => {
+  const r2AccountId = source.R2_ACCOUNT_ID?.trim()
+  return {
+    ...source,
+    DATABASE_URL: source.DATABASE_URL ?? source.database_url,
+    READ_DATABASE_URL: source.READ_DATABASE_URL ?? source.read_database_url,
+    S3_REGION: source.S3_REGION ?? (r2AccountId ? 'auto' : undefined),
+    S3_BUCKET: source.S3_BUCKET ?? source.R2_BUCKET,
+    S3_ACCESS_KEY_ID: source.S3_ACCESS_KEY_ID ?? source.R2_ACCESS_KEY_ID,
+    S3_SECRET_ACCESS_KEY:
+      source.S3_SECRET_ACCESS_KEY ?? source.R2_SECRET_ACCESS_KEY,
+    S3_PUBLIC_BASE_URL: source.S3_PUBLIC_BASE_URL ?? source.R2_PUBLIC_BASE_URL,
+    S3_ENDPOINT:
+      source.S3_ENDPOINT ??
+      (r2AccountId ? `https://${r2AccountId}.r2.cloudflarestorage.com` : undefined),
+    S3_FORCE_PATH_STYLE:
+      source.S3_FORCE_PATH_STYLE ?? (r2AccountId ? 'true' : undefined),
+  }
+}
+
 /**
  * Resolve every capability from `source`.
  *
@@ -281,15 +306,16 @@ const listDeprecatedAliases = (source: ProviderEnvSource): string[] =>
 export const resolveProviders = (
   source: ProviderEnvSource
 ): ProviderResolution => {
+  const normalizedSource = normalizeAliases(source)
   const issues: ProviderConfigIssue[] = []
   const selections = {
-    database: resolveCapability('database', source, issues),
-    cache: resolveCapability('cache', source, issues),
-    search: resolveCapability('search', source, issues),
-    storage: resolveCapability('storage', source, issues),
-    rateLimit: resolveCapability('rateLimit', source, issues),
-    config: resolveCapability('config', source, issues),
-    jobs: resolveCapability('jobs', source, issues),
+    database: resolveCapability('database', normalizedSource, issues),
+    cache: resolveCapability('cache', normalizedSource, issues),
+    search: resolveCapability('search', normalizedSource, issues),
+    storage: resolveCapability('storage', normalizedSource, issues),
+    rateLimit: resolveCapability('rateLimit', normalizedSource, issues),
+    config: resolveCapability('config', normalizedSource, issues),
+    jobs: resolveCapability('jobs', normalizedSource, issues),
   } satisfies ProviderSelections
 
   return {

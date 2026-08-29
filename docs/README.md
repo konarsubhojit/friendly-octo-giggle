@@ -112,7 +112,7 @@ Use the catalog as the product-level index and the API and architecture guides f
 | **Styling**        | Tailwind CSS v4                                              |
 | **State**          | Redux Toolkit 2.x                                            |
 | **Logging**        | Pino                                                         |
-| **Image Storage**  | Vercel Blob or Cloudflare R2 (dual-read, `STORAGE_PROVIDER`) |
+| **Image Storage**  | Vercel Blob or S3-compatible adapters (`s3`/`r2`, dual-read, `STORAGE_PROVIDER`) |
 | **Search**         | Upstash Search (with DB fallback)                            |
 | **Workflows**      | Inngest (durable step functions)                             |
 | **AI**             | AI SDK (product assistant)                                   |

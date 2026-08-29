@@ -32,7 +32,7 @@ The core storefront requires PostgreSQL and NextAuth configuration. Enable newer
 - AI provider credentials: product assistant generation; guest requests use a hashed network identity and authenticated users receive persisted history.
 - Inngest: durable checkout processing, transactional email, order side-effects, and scheduled jobs.
 - An email provider: transactional email delivery.
-- Vercel Blob or Cloudflare R2: admin image upload. See [Image storage](#image-storage).
+- Vercel Blob or S3-compatible storage: admin image upload. See [Image storage](#image-storage).
 - Web Push (VAPID) credentials: browser push notifications for order-status changes. See [Web push setup](#web-push-setup).
 - Sentry: server, edge, and browser tracing/error capture.
 - Edge Config: maintenance, sale, and shipping feature settings.
@@ -143,32 +143,53 @@ provider-neutral adapters in `src/lib/storage/`, selected by
 
 - **`vercel`** (default when unset): uses Vercel Blob. Requires
   `BLOB_READ_WRITE_TOKEN`.
-- **`r2`**: uses Cloudflare R2 through its S3-compatible API
-  (`@aws-sdk/client-s3`). Requires `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
-  `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, and `R2_PUBLIC_BASE_URL` (see
-  `.env.example`).
+- **`s3`**: generic S3-compatible adapter (`@aws-sdk/client-s3`) that works
+  with AWS S3, MinIO, Cloudflare R2, DigitalOcean Spaces, Backblaze B2,
+  Wasabi, and similar providers. Requires `S3_REGION`, `S3_BUCKET`,
+  `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, and `S3_PUBLIC_BASE_URL`.
+  Optional: `S3_ENDPOINT`, `S3_FORCE_PATH_STYLE`, and
+  `S3_CA_CERT_PEM` (for local/self-hosted TLS endpoints that use a private CA).
+- **`r2`**: backward-compatible Cloudflare preset over the same S3 adapter.
+  Existing `R2_*` variables remain accepted as migration aliases.
 
-Reads always fall back from the active provider to the other one
+Reads fall back from the active provider to other **configured** providers
 (`resolveStorageUrl` in `src/lib/storage/index.ts`), with structured
 `storage_dual_read_fallback` / `storage_dual_read_miss` log events — so
-switching `STORAGE_PROVIDER` to `r2` is safe before every historical object
-has been copied over. To backfill existing Vercel-stored objects into R2,
-run the idempotent, resumable migration script:
+switching `STORAGE_PROVIDER` is safe before every historical object has been
+copied over. Unconfigured providers are never probed on fallback reads. To
+backfill existing objects, run the idempotent, resumable migration script:
 
 ```bash
 # Report what would be copied, without writing anything
 npm run migrate:storage
 
-# Perform the copy (verifies each object after writing; never deletes
-# the Vercel source)
+# Perform the copy to the active STORAGE_PROVIDER (verifies each object after
+# writing; never deletes the source)
 npm run migrate:storage -- --apply
+
+# Explicit source/destination (useful for roll-forward/rollback drills)
+npm run migrate:storage -- --apply --from=vercel --to=s3
+npm run migrate:storage -- --apply --from=s3 --to=vercel
 ```
 
 The script writes a resumable checkpoint to
 `.storage-migration-checkpoint.json` (git-ignored) so an interrupted run
 picks back up instead of restarting; pass `--checkpoint=<path>` to override
 its location, `--limit=<n>` to cap objects per run, or `--prefix=<prefix>`
-to scope it to a subset of keys.
+to scope it to a subset of keys. `--from` / `--to` accept `vercel`, `s3`,
+and `r2`.
+
+Fallback provider order is configurable:
+
+- `STORAGE_FALLBACK_PROVIDERS` — global comma-separated fallback order.
+- `STORAGE_FALLBACK_VERCEL`, `STORAGE_FALLBACK_R2`, `STORAGE_FALLBACK_S3` —
+  per-primary overrides.
+
+If unset, defaults remain migration-friendly (`vercel → r2,s3`, `r2 → vercel,s3`, `s3 → r2,vercel`).
+
+Public object serving can use a native provider URL (for example an S3 virtual
+hosted endpoint) or a custom `S3_PUBLIC_BASE_URL`/`R2_PUBLIC_BASE_URL` routed
+through Nginx, MinIO gateway, CDN, or similar edge proxy.
 
 #### Image resizing Worker
 
