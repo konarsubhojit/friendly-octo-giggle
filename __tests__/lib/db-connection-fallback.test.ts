@@ -10,7 +10,6 @@ const {
   neonDrizzleMock,
   pgPoolEndMock,
   pgPoolMock,
-  neonPoolEndMock,
   neonPoolMock,
 } = vi.hoisted(() => {
   const pgPoolEndMock = vi.fn().mockResolvedValue(undefined)
@@ -23,7 +22,6 @@ const {
     pgPoolMock: vi.fn(function PgPoolMock() {
       return { end: pgPoolEndMock }
     }),
-    neonPoolEndMock,
     neonPoolMock: vi.fn(function NeonPoolMock() {
       return { end: neonPoolEndMock }
     }),
