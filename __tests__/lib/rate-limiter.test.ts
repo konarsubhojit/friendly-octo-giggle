@@ -1,7 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import {
   InMemoryRateLimiter,
 } from '@/lib/rate-limiter'
+import { NodeRedisRateLimiter } from '@/lib/rate-limiter/node-redis'
+import type { CacheClient } from '@/lib/cache/index'
 
 describe('InMemoryRateLimiter', () => {
   it('allows requests within the limit', async () => {
@@ -44,5 +46,48 @@ describe('InMemoryRateLimiter', () => {
     const r2 = await limiter.limit('user:b')
     expect(r1.success).toBe(true)
     expect(r2.success).toBe(true)
+  })
+})
+
+describe('NodeRedisRateLimiter', () => {
+  const mockEval = vi.fn()
+  const mockClient = { eval: mockEval } as unknown as CacheClient
+
+  it('allows requests when under the limit', async () => {
+    mockEval.mockResolvedValueOnce([1, 60]) // current=1, ttl=60
+    const limiter = new NodeRedisRateLimiter(mockClient, 5, 60, 'rl:test')
+
+    const result = await limiter.limit('ip:1.2.3.4')
+
+    expect(result.success).toBe(true)
+    expect(result.remaining).toBe(4)
+    expect(result.limit).toBe(5)
+    expect(mockEval).toHaveBeenCalledWith(
+      expect.stringContaining('INCR'),
+      ['rl:test:ip:1.2.3.4'],
+      ['5', '60']
+    )
+  })
+
+  it('rejects requests when over the limit', async () => {
+    mockEval.mockResolvedValueOnce([6, 45]) // current=6 > limit=5
+    const limiter = new NodeRedisRateLimiter(mockClient, 5, 60, 'rl:test')
+
+    const result = await limiter.limit('ip:1.2.3.4')
+
+    expect(result.success).toBe(false)
+    expect(result.remaining).toBe(0)
+  })
+
+  it('computes reset timestamp from TTL', async () => {
+    const now = Date.now()
+    mockEval.mockResolvedValueOnce([1, 30])
+    const limiter = new NodeRedisRateLimiter(mockClient, 10, 60, 'rl:test')
+
+    const result = await limiter.limit('user:x')
+
+    // reset should be ~30 seconds from now
+    expect(result.reset).toBeGreaterThanOrEqual(now + 29_000)
+    expect(result.reset).toBeLessThanOrEqual(now + 31_000)
   })
 })

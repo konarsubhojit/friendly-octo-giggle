@@ -13,7 +13,7 @@ import {
   InMemoryRateLimiter,
   type RateLimiter,
   type RateLimitResult,
-} from '@/lib/rate-limiter'
+} from '@/lib/rate-limiter/edge'
 import {
   hasPermission,
   isStaffRole,

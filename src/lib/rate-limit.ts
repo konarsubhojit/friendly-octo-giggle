@@ -1,11 +1,9 @@
 import type { NextRequest } from 'next/server'
-import { getRedisClient } from './redis'
 import {
-  createEdgeRateLimiter,
+  createRateLimiter,
   type RateLimiter,
   type RateLimitResult,
 } from './rate-limiter'
-import { env } from './env'
 
 let generalLimiter: RateLimiter | null = null
 let strictLimiter: RateLimiter | null = null
@@ -14,26 +12,18 @@ export const GENERAL_RATE_LIMIT_MAX_REQUESTS = 60
 export const STRICT_RATE_LIMIT_MAX_REQUESTS = 10
 
 export const getGeneralLimiter = (): RateLimiter | null => {
-  const redis = getRedisClient()
-  if (!redis) return null
-  const url = env.UPSTASH_REDIS_REST_URL
-  const token = env.UPSTASH_REDIS_REST_TOKEN
-  generalLimiter ??= createEdgeRateLimiter(
-    { maxRequests: GENERAL_RATE_LIMIT_MAX_REQUESTS, prefix: 'rl:general' },
-    url && token ? { url, token } : undefined
-  )
+  generalLimiter ??= createRateLimiter({
+    maxRequests: GENERAL_RATE_LIMIT_MAX_REQUESTS,
+    prefix: 'rl:general',
+  })
   return generalLimiter
 }
 
 export const getStrictLimiter = (): RateLimiter | null => {
-  const redis = getRedisClient()
-  if (!redis) return null
-  const url = env.UPSTASH_REDIS_REST_URL
-  const token = env.UPSTASH_REDIS_REST_TOKEN
-  strictLimiter ??= createEdgeRateLimiter(
-    { maxRequests: STRICT_RATE_LIMIT_MAX_REQUESTS, prefix: 'rl:strict' },
-    url && token ? { url, token } : undefined
-  )
+  strictLimiter ??= createRateLimiter({
+    maxRequests: STRICT_RATE_LIMIT_MAX_REQUESTS,
+    prefix: 'rl:strict',
+  })
   return strictLimiter
 }
 

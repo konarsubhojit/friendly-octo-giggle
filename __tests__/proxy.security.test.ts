@@ -155,7 +155,7 @@ describe('proxy security perimeter', () => {
         remaining: 0,
         reset: Date.now() + 60_000,
       })
-      vi.doMock('@/lib/rate-limiter', () => ({
+      vi.doMock('@/lib/rate-limiter/edge', () => ({
         createEdgeRateLimiter: vi.fn(() => ({ limit: upstashLimit })),
         InMemoryRateLimiter: class {
           async limit() {
@@ -178,7 +178,7 @@ describe('proxy security perimeter', () => {
     })
 
     it('degrades to in-memory limiting when the distributed limiter throws', async () => {
-      vi.doMock('@/lib/rate-limiter', () => ({
+      vi.doMock('@/lib/rate-limiter/edge', () => ({
         createEdgeRateLimiter: vi.fn(() => ({
           limit: vi.fn().mockRejectedValue(new Error('redis down')),
         })),
