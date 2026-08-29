@@ -1,5 +1,15 @@
 import { z } from 'zod'
 import { PAYMENT_PROVIDERS } from '@/lib/payments/providers'
+import { resolveProviders } from '@/lib/providers/resolution'
+import {
+  CACHE_PROVIDERS,
+  CONFIG_PROVIDERS,
+  DATABASE_DRIVERS,
+  JOBS_PROVIDERS,
+  RATE_LIMIT_PROVIDERS,
+  SEARCH_PROVIDERS,
+  STORAGE_PROVIDERS,
+} from '@/lib/providers/types'
 
 // Keys that must be present in production (outside of the build phase).
 const PRODUCTION_REQUIRED_KEYS = ['NEXT_PUBLIC_APP_URL'] as const
@@ -34,25 +44,27 @@ const validateProductionKeys = (data: EnvData, ctx: z.RefinementCtx) => {
   })
 }
 
-const R2_REQUIRED_KEYS = [
-  'R2_ACCOUNT_ID',
-  'R2_ACCESS_KEY_ID',
-  'R2_SECRET_ACCESS_KEY',
-  'R2_BUCKET',
-  'R2_PUBLIC_BASE_URL',
-] as const
+/**
+ * Reject provider selections whose credentials are incomplete.
+ *
+ * The selection itself, and the required-key list behind it, come from the one
+ * resolution path in `@/lib/providers/resolution` — this refinement only
+ * translates its issues into field-scoped Zod errors, so code, tests, and
+ * documentation share a single precedence table.
+ *
+ * Deferred during `next build` for the same reason the production-key checks
+ * are: a build machine legitimately has no runtime credentials.
+ */
+const validateProviders = (data: EnvData, ctx: z.RefinementCtx) => {
+  const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build'
+  if (isBuildPhase) return
 
-const validateR2 = (data: EnvData, ctx: z.RefinementCtx) => {
-  if (data.STORAGE_PROVIDER !== 'r2') return
-
-  R2_REQUIRED_KEYS.forEach((key) => {
-    if (!data[key]?.trim()) {
-      ctx.addIssue({
-        code: 'custom',
-        path: [key],
-        message: `${key} must be set when STORAGE_PROVIDER='r2'`,
-      })
-    }
+  resolveProviders(data).issues.forEach((issue) => {
+    ctx.addIssue({
+      code: 'custom',
+      path: [issue.field],
+      message: issue.message,
+    })
   })
 }
 
@@ -124,7 +136,24 @@ const BaseEnvSchema = z.object({
   VAPID_PUBLIC_KEY: z.string().optional(),
   VAPID_PRIVATE_KEY: z.string().optional(),
   VAPID_SUBJECT: z.string().optional(),
-  STORAGE_PROVIDER: z.enum(['vercel', 'r2']).optional(),
+  DATABASE_DRIVER: z.enum(DATABASE_DRIVERS).optional(),
+  CACHE_PROVIDER: z.enum(CACHE_PROVIDERS).optional(),
+  SEARCH_PROVIDER: z.enum(SEARCH_PROVIDERS).optional(),
+  RATE_LIMIT_PROVIDER: z.enum(RATE_LIMIT_PROVIDERS).optional(),
+  CONFIG_PROVIDER: z.enum(CONFIG_PROVIDERS).optional(),
+  JOBS_PROVIDER: z.enum(JOBS_PROVIDERS).optional(),
+  EDGE_CONFIG: z.string().optional(),
+  ALGOLIA_APP_ID: z.string().optional(),
+  ALGOLIA_API_KEY: z.string().optional(),
+  ALGOLIA_INDEX_NAME: z.string().optional(),
+  STORAGE_PROVIDER: z.enum(STORAGE_PROVIDERS).optional(),
+  S3_REGION: z.string().optional(),
+  S3_BUCKET: z.string().optional(),
+  S3_ACCESS_KEY_ID: z.string().optional(),
+  S3_SECRET_ACCESS_KEY: z.string().optional(),
+  S3_PUBLIC_BASE_URL: z.string().optional(),
+  S3_ENDPOINT: z.string().optional(),
+  S3_FORCE_PATH_STYLE: z.enum(['true', 'false']).optional(),
   R2_ACCOUNT_ID: z.string().optional(),
   R2_ACCESS_KEY_ID: z.string().optional(),
   R2_SECRET_ACCESS_KEY: z.string().optional(),
@@ -134,7 +163,7 @@ const BaseEnvSchema = z.object({
 
 export const EnvSchema = BaseEnvSchema.superRefine((data, ctx) => {
   validateProductionKeys(data, ctx)
-  validateR2(data, ctx)
+  validateProviders(data, ctx)
   validateRazorpay(data, ctx)
   validateInngest(data, ctx)
 })

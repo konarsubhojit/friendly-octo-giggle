@@ -271,3 +271,126 @@ describe('EnvSchema — storage provider (R2 / Vercel)', () => {
     expect(result.success).toBe(true)
   })
 })
+
+describe('EnvSchema — provider selectors', () => {
+  const baseEnv = { DATABASE_URL: 'postgresql://localhost:5432/test' }
+
+  beforeEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it.each([
+    ['DATABASE_DRIVER', 'postgres', {}],
+    ['DATABASE_DRIVER', 'neon', {}],
+    ['CACHE_PROVIDER', 'none', {}],
+    ['CACHE_PROVIDER', 'redis', { REDIS_URL: 'redis://localhost:6379' }],
+    [
+      'CACHE_PROVIDER',
+      'upstash',
+      {
+        UPSTASH_REDIS_REST_URL: 'https://redis.upstash.io',
+        UPSTASH_REDIS_REST_TOKEN: 'token',
+      },
+    ],
+    ['SEARCH_PROVIDER', 'postgres', {}],
+    [
+      'SEARCH_PROVIDER',
+      'algolia',
+      {
+        ALGOLIA_APP_ID: 'app',
+        ALGOLIA_API_KEY: 'key',
+        ALGOLIA_INDEX_NAME: 'products',
+      },
+    ],
+    [
+      'SEARCH_PROVIDER',
+      'upstash',
+      {
+        UPSTASH_SEARCH_REST_URL: 'https://search.upstash.io',
+        UPSTASH_SEARCH_REST_TOKEN: 'token',
+      },
+    ],
+    [
+      'STORAGE_PROVIDER',
+      's3',
+      {
+        S3_REGION: 'eu-central-1',
+        S3_BUCKET: 'images',
+        S3_ACCESS_KEY_ID: 'access',
+        S3_SECRET_ACCESS_KEY: 'secret',
+        S3_PUBLIC_BASE_URL: 'https://cdn.example.com',
+      },
+    ],
+    ['RATE_LIMIT_PROVIDER', 'memory', {}],
+    ['RATE_LIMIT_PROVIDER', 'redis', { REDIS_URL: 'redis://localhost:6379' }],
+    ['CONFIG_PROVIDER', 'environment', {}],
+    ['CONFIG_PROVIDER', 'edge-config', { EDGE_CONFIG: 'https://ec.test/id' }],
+    ['JOBS_PROVIDER', 'inline', {}],
+    [
+      'JOBS_PROVIDER',
+      'inngest',
+      { INNGEST_EVENT_KEY: 'evt', INNGEST_SIGNING_KEY: 'sign' },
+    ],
+  ])('accepts %s=%s with its credentials', (selector, value, credentials) => {
+    const result = EnvSchema.safeParse({
+      ...baseEnv,
+      [selector]: value,
+      ...credentials,
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it.each([
+    ['CACHE_PROVIDER', 'redis', 'REDIS_URL'],
+    ['SEARCH_PROVIDER', 'algolia', 'ALGOLIA_APP_ID'],
+    ['RATE_LIMIT_PROVIDER', 'upstash', 'UPSTASH_REDIS_REST_URL'],
+    ['CONFIG_PROVIDER', 'edge-config', 'EDGE_CONFIG'],
+    ['JOBS_PROVIDER', 'inngest', 'INNGEST_EVENT_KEY'],
+    ['STORAGE_PROVIDER', 's3', 'S3_BUCKET'],
+  ])(
+    'rejects %s=%s with an error on the missing %s field',
+    (selector, value, missingField) => {
+      const result = EnvSchema.safeParse({ ...baseEnv, [selector]: value })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        const paths = result.error.issues.map((issue) => issue.path[0])
+        expect(paths).toContain(missingField)
+      }
+    }
+  )
+
+  it('rejects an unknown selector value', () => {
+    const result = EnvSchema.safeParse({
+      ...baseEnv,
+      CACHE_PROVIDER: 'memcached',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('defers provider credential validation during the production build phase', () => {
+    vi.stubEnv('NEXT_PHASE', 'phase-production-build')
+
+    const result = EnvSchema.safeParse({
+      ...baseEnv,
+      CACHE_PROVIDER: 'redis',
+      STORAGE_PROVIDER: 'r2',
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts an existing deployment that sets no selectors at all', () => {
+    const result = EnvSchema.safeParse({
+      ...baseEnv,
+      READ_DATABASE_URL: 'postgresql://localhost:5432/read',
+      UPSTASH_REDIS_REST_URL: 'https://redis.upstash.io',
+      UPSTASH_REDIS_REST_TOKEN: 'token',
+      UPSTASH_SEARCH_REST_URL: 'https://search.upstash.io',
+      UPSTASH_SEARCH_REST_TOKEN: 'token',
+      INNGEST_EVENT_KEY: 'evt',
+      INNGEST_SIGNING_KEY: 'sign',
+    })
+    expect(result.success).toBe(true)
+  })
+})
