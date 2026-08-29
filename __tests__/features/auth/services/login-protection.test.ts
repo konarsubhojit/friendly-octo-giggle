@@ -1,25 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockLimit = vi.hoisted(() => vi.fn())
-const mockSlidingWindow = vi.hoisted(() => vi.fn(() => 'sliding-window'))
 const mockGetRedisClient = vi.hoisted(() => vi.fn())
-const mockRatelimit = vi.hoisted(() => vi.fn())
 
-vi.mock('@upstash/ratelimit', () => {
-  class Ratelimit {
-    constructor(config: unknown) {
-      mockRatelimit(config)
-    }
-
+vi.mock('@/lib/rate-limiter', () => {
+  class MockLimiter {
     limit = mockLimit
-
-    static slidingWindow = mockSlidingWindow
   }
-  return { Ratelimit }
+  return {
+    createEdgeRateLimiter: vi.fn(() => new MockLimiter()),
+    InMemoryRateLimiter: vi.fn(),
+    UpstashRateLimiter: vi.fn(),
+  }
 })
 
 vi.mock('@/lib/redis', () => ({
   getRedisClient: mockGetRedisClient,
+}))
+
+vi.mock('@/lib/env', () => ({
+  env: {
+    UPSTASH_REDIS_REST_URL: 'https://test.upstash.io',
+    UPSTASH_REDIS_REST_TOKEN: 'test-token', // NOSONAR
+  },
 }))
 
 import {

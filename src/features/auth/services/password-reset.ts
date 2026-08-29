@@ -1,70 +1,70 @@
 import { randomBytes, createHash } from 'node:crypto'
-import { Ratelimit } from '@upstash/ratelimit'
 import { getRedisClient } from '@/lib/redis'
+import {
+  createEdgeRateLimiter,
+  type RateLimiter,
+} from '@/lib/rate-limiter'
+import { env } from '@/lib/env'
 
 const PASSWORD_RESET_TOKEN_BYTES = 32 // NOSONAR S2068: byte length constant, not a credential
 const PASSWORD_RESET_TOKEN_TTL_MS = 30 * 60 * 1000
 const PASSWORD_RESET_IDENTIFIER_PREFIX = 'password-reset:' // NOSONAR S2068: namespace prefix for Redis keys, not a credential
 
-const FORGOT_LIMIT_WINDOW = '15 m'
-const RESET_LIMIT_WINDOW = '15 m'
+const FORGOT_LIMIT_WINDOW_S = 15 * 60
+const RESET_LIMIT_WINDOW_S = 15 * 60
 const FORGOT_LIMIT_PER_EMAIL = 3
 const FORGOT_LIMIT_PER_IP = 10
 const RESET_LIMIT_PER_IDENTIFIER = 10
 const RESET_LIMIT_PER_IP = 20
 
-let forgotByEmailLimiter: Ratelimit | null = null
-let forgotByIpLimiter: Ratelimit | null = null
-let resetByIdentifierLimiter: Ratelimit | null = null
-let resetByIpLimiter: Ratelimit | null = null
+let forgotByEmailLimiter: RateLimiter | null = null
+let forgotByIpLimiter: RateLimiter | null = null
+let resetByIdentifierLimiter: RateLimiter | null = null
+let resetByIpLimiter: RateLimiter | null = null
 
-const getForgotByEmailLimiter = (): Ratelimit | null => {
+const getUpstashCreds = (): { url: string; token: string } | undefined => {
+  const url = env.UPSTASH_REDIS_REST_URL
+  const token = env.UPSTASH_REDIS_REST_TOKEN
+  return url && token ? { url, token } : undefined
+}
+
+const getForgotByEmailLimiter = (): RateLimiter | null => {
   const redis = getRedisClient()
   if (!redis) return null
-  forgotByEmailLimiter ??= new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(
-      FORGOT_LIMIT_PER_EMAIL,
-      FORGOT_LIMIT_WINDOW
-    ),
-    prefix: 'rl:auth:forgot:email',
-  })
+  forgotByEmailLimiter ??= createEdgeRateLimiter(
+    { maxRequests: FORGOT_LIMIT_PER_EMAIL, windowSeconds: FORGOT_LIMIT_WINDOW_S, prefix: 'rl:auth:forgot:email' },
+    getUpstashCreds()
+  )
   return forgotByEmailLimiter
 }
 
-const getForgotByIpLimiter = (): Ratelimit | null => {
+const getForgotByIpLimiter = (): RateLimiter | null => {
   const redis = getRedisClient()
   if (!redis) return null
-  forgotByIpLimiter ??= new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(FORGOT_LIMIT_PER_IP, FORGOT_LIMIT_WINDOW),
-    prefix: 'rl:auth:forgot:ip',
-  })
+  forgotByIpLimiter ??= createEdgeRateLimiter(
+    { maxRequests: FORGOT_LIMIT_PER_IP, windowSeconds: FORGOT_LIMIT_WINDOW_S, prefix: 'rl:auth:forgot:ip' },
+    getUpstashCreds()
+  )
   return forgotByIpLimiter
 }
 
-const getResetByIdentifierLimiter = (): Ratelimit | null => {
+const getResetByIdentifierLimiter = (): RateLimiter | null => {
   const redis = getRedisClient()
   if (!redis) return null
-  resetByIdentifierLimiter ??= new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(
-      RESET_LIMIT_PER_IDENTIFIER,
-      RESET_LIMIT_WINDOW
-    ),
-    prefix: 'rl:auth:reset:identifier',
-  })
+  resetByIdentifierLimiter ??= createEdgeRateLimiter(
+    { maxRequests: RESET_LIMIT_PER_IDENTIFIER, windowSeconds: RESET_LIMIT_WINDOW_S, prefix: 'rl:auth:reset:identifier' },
+    getUpstashCreds()
+  )
   return resetByIdentifierLimiter
 }
 
-const getResetByIpLimiter = (): Ratelimit | null => {
+const getResetByIpLimiter = (): RateLimiter | null => {
   const redis = getRedisClient()
   if (!redis) return null
-  resetByIpLimiter ??= new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(RESET_LIMIT_PER_IP, RESET_LIMIT_WINDOW),
-    prefix: 'rl:auth:reset:ip',
-  })
+  resetByIpLimiter ??= createEdgeRateLimiter(
+    { maxRequests: RESET_LIMIT_PER_IP, windowSeconds: RESET_LIMIT_WINDOW_S, prefix: 'rl:auth:reset:ip' },
+    getUpstashCreds()
+  )
   return resetByIpLimiter
 }
 

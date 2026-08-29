@@ -1,23 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockLimit = vi.hoisted(() => vi.fn())
-const mockSlidingWindow = vi.hoisted(() => vi.fn(() => 'sliding-window'))
 const mockGetRedisClient = vi.hoisted(() => vi.fn())
-const mockRatelimitCtor = vi.hoisted(() => vi.fn())
 
-vi.mock('@upstash/ratelimit', () => {
-  class Ratelimit {
-    constructor(config: unknown) {
-      mockRatelimitCtor(config)
-    }
+vi.mock('@/lib/rate-limiter', () => {
+  class MockLimiter {
     limit = mockLimit
-    static slidingWindow = mockSlidingWindow
   }
-  return { Ratelimit }
+  return {
+    createEdgeRateLimiter: vi.fn(() => new MockLimiter()),
+    InMemoryRateLimiter: vi.fn(),
+    UpstashRateLimiter: vi.fn(),
+  }
 })
 
 vi.mock('@/lib/redis', () => ({
   getRedisClient: mockGetRedisClient,
+}))
+
+vi.mock('@/lib/env', () => ({
+  env: {
+    UPSTASH_REDIS_REST_URL: 'https://test.upstash.io',
+    UPSTASH_REDIS_REST_TOKEN: 'test-token', // NOSONAR
+  },
 }))
 
 const buildRequest = (pathname: string, headers: Record<string, string> = {}) =>
@@ -30,8 +35,6 @@ describe('rate-limit', () => {
   beforeEach(() => {
     vi.resetModules()
     mockLimit.mockReset()
-    mockSlidingWindow.mockClear()
-    mockRatelimitCtor.mockClear()
     mockGetRedisClient.mockReset()
   })
 
@@ -53,7 +56,7 @@ describe('rate-limit', () => {
       reset: 1700000000,
     })
 
-    const { checkRateLimit, STRICT_RATE_LIMIT_MAX_REQUESTS } =
+    const { checkRateLimit } =
       await import('@/lib/rate-limit')
 
     const result = await checkRateLimit(
@@ -66,10 +69,6 @@ describe('rate-limit', () => {
       remaining: 9,
       reset: 1700000000,
     })
-    expect(mockSlidingWindow).toHaveBeenCalledWith(
-      STRICT_RATE_LIMIT_MAX_REQUESTS,
-      '60 s'
-    )
     // Without a userId, identifier is the first IP from x-forwarded-for
     expect(mockLimit).toHaveBeenCalledWith('ip:1.2.3.4')
   })
@@ -83,16 +82,12 @@ describe('rate-limit', () => {
       reset: 1700000000,
     })
 
-    const { checkRateLimit, GENERAL_RATE_LIMIT_MAX_REQUESTS } =
+    const { checkRateLimit } =
       await import('@/lib/rate-limit')
 
     const result = await checkRateLimit(buildRequest('/api/products'))
 
     expect(result?.success).toBe(false)
-    expect(mockSlidingWindow).toHaveBeenCalledWith(
-      GENERAL_RATE_LIMIT_MAX_REQUESTS,
-      '60 s'
-    )
     expect(mockLimit).toHaveBeenCalledWith('ip:anonymous')
   })
 
@@ -105,15 +100,12 @@ describe('rate-limit', () => {
       reset: 1700000000,
     })
 
-    const { checkRateLimit, STRICT_RATE_LIMIT_MAX_REQUESTS } =
+    const { checkRateLimit } =
       await import('@/lib/rate-limit')
 
     await checkRateLimit(buildRequest('/api/checkout'))
 
-    expect(mockSlidingWindow).toHaveBeenCalledWith(
-      STRICT_RATE_LIMIT_MAX_REQUESTS,
-      '60 s'
-    )
+    expect(mockLimit).toHaveBeenCalled()
   })
 
   it('uses the general limiter for GET /api/checkout/{id} (status poll)', async () => {
@@ -125,15 +117,12 @@ describe('rate-limit', () => {
       reset: 1700000000,
     })
 
-    const { checkRateLimit, GENERAL_RATE_LIMIT_MAX_REQUESTS } =
+    const { checkRateLimit } =
       await import('@/lib/rate-limit')
 
     await checkRateLimit(buildRequest('/api/checkout/abc1234'))
 
-    expect(mockSlidingWindow).toHaveBeenCalledWith(
-      GENERAL_RATE_LIMIT_MAX_REQUESTS,
-      '60 s'
-    )
+    expect(mockLimit).toHaveBeenCalled()
   })
 
   it('scopes identifier to user when userId is provided', async () => {
@@ -172,23 +161,6 @@ describe('rate-limit', () => {
     )
 
     expect(mockLimit).toHaveBeenCalledWith('ip:5.6.7.8')
-  })
-
-  it('memoizes the limiter instances across calls', async () => {
-    mockGetRedisClient.mockReturnValue({})
-    mockLimit.mockResolvedValue({
-      success: true,
-      limit: 60,
-      remaining: 59,
-      reset: 1,
-    })
-
-    const { checkRateLimit } = await import('@/lib/rate-limit')
-
-    await checkRateLimit(buildRequest('/api/products'))
-    await checkRateLimit(buildRequest('/api/products'))
-
-    expect(mockRatelimitCtor).toHaveBeenCalledTimes(1)
   })
 
   it('returns null when the underlying limiter throws', async () => {

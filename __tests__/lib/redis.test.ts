@@ -21,20 +21,18 @@ const mockRedisInstance = {
   eval: vi.fn(),
   scan: vi.fn(),
   pipeline: vi.fn(() => mockPipeline),
+  isReady: true,
 }
 
-const MockRedis = vi.fn(function () {
-  return mockRedisInstance
-})
-
-vi.mock('@upstash/redis', () => ({
-  Redis: MockRedis,
+vi.mock('@/lib/cache', () => ({
+  getCacheClient: vi.fn(() => mockRedisInstance),
 }))
 
 vi.mock('@/lib/env', () => ({
   env: {
     UPSTASH_REDIS_REST_URL: 'https://test.upstash.io',
     UPSTASH_REDIS_REST_TOKEN: 'test-token', // NOSONAR - test fixture, not a real credential
+    REDIS_URL: undefined,
   },
 }))
 
@@ -92,43 +90,20 @@ describe('getRedisClient', () => {
     expect(first).toBe(second)
   })
 
-  it('initialises Redis with url and token from env', async () => {
-    vi.doMock('@upstash/redis', () => ({ Redis: MockRedis }))
-    vi.doMock('@/lib/env', () => ({
-      env: {
-        UPSTASH_REDIS_REST_URL: 'https://test.upstash.io',
-        UPSTASH_REDIS_REST_TOKEN: 'test-token', // NOSONAR
-      },
-    }))
-
+  it('delegates to getCacheClient from @/lib/cache', async () => {
+    const cache = await import('@/lib/cache')
     const { getRedisClient } = await import('@/lib/redis')
     getRedisClient()
-
-    expect(MockRedis).toHaveBeenCalledWith(
-      expect.objectContaining({
-        url: 'https://test.upstash.io',
-        token: 'test-token', // NOSONAR
-      })
-    )
+    expect(cache.getCacheClient).toHaveBeenCalled()
   })
 
-  it('returns null when UPSTASH_REDIS_REST_URL is absent', async () => {
-    vi.doMock('@/lib/env', () => ({
-      env: { UPSTASH_REDIS_REST_TOKEN: 'test-token' }, // NOSONAR
+  it('returns null when getCacheClient returns null', async () => {
+    vi.doMock('@/lib/cache', () => ({
+      getCacheClient: vi.fn(() => null),
     }))
-    vi.doMock('@upstash/redis', () => ({ Redis: MockRedis }))
-
-    const { getRedisClient } = await import('@/lib/redis')
-    const client = getRedisClient()
-
-    expect(client).toBeNull()
-  })
-
-  it('returns null when UPSTASH_REDIS_REST_TOKEN is absent', async () => {
     vi.doMock('@/lib/env', () => ({
-      env: { UPSTASH_REDIS_REST_URL: 'https://test.upstash.io' },
+      env: {},
     }))
-    vi.doMock('@upstash/redis', () => ({ Redis: MockRedis }))
 
     const { getRedisClient } = await import('@/lib/redis')
     const client = getRedisClient()
@@ -145,11 +120,14 @@ describe('getCachedData', () => {
     vi.clearAllMocks()
 
     vi.doMock('@vercel/functions', () => ({ waitUntil: mockWaitUntil }))
-    vi.doMock('@upstash/redis', () => ({ Redis: MockRedis }))
+    vi.doMock('@/lib/cache', () => ({
+      getCacheClient: vi.fn(() => mockRedisInstance),
+    }))
     vi.doMock('@/lib/env', () => ({
       env: {
         UPSTASH_REDIS_REST_URL: 'https://test.upstash.io',
         UPSTASH_REDIS_REST_TOKEN: 'test-token', // NOSONAR
+        REDIS_URL: undefined,
       },
     }))
     vi.doMock('@/lib/logger', () => ({
@@ -302,11 +280,14 @@ describe('invalidateCache', () => {
     vi.clearAllMocks()
 
     vi.doMock('@vercel/functions', () => ({ waitUntil: mockWaitUntil }))
-    vi.doMock('@upstash/redis', () => ({ Redis: MockRedis }))
+    vi.doMock('@/lib/cache', () => ({
+      getCacheClient: vi.fn(() => mockRedisInstance),
+    }))
     vi.doMock('@/lib/env', () => ({
       env: {
         UPSTASH_REDIS_REST_URL: 'https://test.upstash.io',
         UPSTASH_REDIS_REST_TOKEN: 'test-token', // NOSONAR
+        REDIS_URL: undefined,
       },
     }))
     vi.doMock('@/lib/logger', () => ({

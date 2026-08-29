@@ -1,9 +1,17 @@
-import { Redis } from '@upstash/redis'
+/**
+ * Backward-compatible cache helpers.
+ *
+ * This module preserves the public API that the rest of the app relies on
+ * (`getRedisClient`, `getCachedData`, `invalidateCache`, …) but delegates to
+ * the new app-owned cache contract (`@/lib/cache`) under the hood.
+ *
+ * New code should import from `@/lib/cache` directly.
+ */
+
 import { waitUntil } from '@vercel/functions'
 import { logCacheOperation, logError, Timer } from './logger'
+import { getCacheClient, type CacheClient } from './cache'
 import { env } from './env'
-
-let redis: Redis | null = null
 
 const REDIS_GET_TIMEOUT_MS = 3_000
 const REDIS_FETCH_TIMEOUT_MS = 8_000
@@ -26,23 +34,18 @@ export const withTimeout = <T>(
 }
 
 export const isRedisAvailable = (): boolean =>
-  Boolean(env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN)
+  Boolean(env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) ||
+  Boolean(env.REDIS_URL)
 
-export const getRedisClient = (): Redis | null => {
-  if (!env.UPSTASH_REDIS_REST_URL || !env.UPSTASH_REDIS_REST_TOKEN) {
-    return null
-  }
-
-  if (redis) {
-    return redis
-  }
-
-  redis = new Redis({
-    url: env.UPSTASH_REDIS_REST_URL,
-    token: env.UPSTASH_REDIS_REST_TOKEN,
-  })
-
-  return redis
+/**
+ * Return the cache client, typed as `CacheClient` (the app-owned contract).
+ *
+ * Legacy callers that relied on Upstash-specific methods continue to work
+ * because both the Upstash adapter and the old `@upstash/redis` instance
+ * expose the same `get / set / setex / del / scan / pipeline / eval` surface.
+ */
+export const getRedisClient = (): CacheClient | null => {
+  return getCacheClient()
 }
 
 const LOCK_TTL_SECONDS = 10
@@ -58,7 +61,7 @@ const RELEASE_LOCK_SCRIPT = `
 `
 
 const fetchWithStampedePrevention = async <T>(
-  redisClient: Redis,
+  redisClient: CacheClient,
   key: string,
   ttl: number,
   staleTime: number,

@@ -155,14 +155,13 @@ describe('proxy security perimeter', () => {
         remaining: 0,
         reset: Date.now() + 60_000,
       })
-      vi.doMock('@upstash/ratelimit', () => ({
-        Ratelimit: class {
-          static slidingWindow = vi.fn(() => 'sliding-window')
-          limit = upstashLimit
+      vi.doMock('@/lib/rate-limiter', () => ({
+        createEdgeRateLimiter: vi.fn(() => ({ limit: upstashLimit })),
+        InMemoryRateLimiter: class {
+          async limit() {
+            return { success: true, limit: 10, remaining: 9, reset: Date.now() + 60_000 }
+          }
         },
-      }))
-      vi.doMock('@upstash/redis', () => ({
-        Redis: class {},
       }))
       vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://upstash.test')
       vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'token')
@@ -179,14 +178,15 @@ describe('proxy security perimeter', () => {
     })
 
     it('degrades to in-memory limiting when the distributed limiter throws', async () => {
-      vi.doMock('@upstash/ratelimit', () => ({
-        Ratelimit: class {
-          static slidingWindow = vi.fn(() => 'sliding-window')
-          limit = vi.fn().mockRejectedValue(new Error('redis down'))
+      vi.doMock('@/lib/rate-limiter', () => ({
+        createEdgeRateLimiter: vi.fn(() => ({
+          limit: vi.fn().mockRejectedValue(new Error('redis down')),
+        })),
+        InMemoryRateLimiter: class {
+          async limit() {
+            return { success: true, limit: 10, remaining: 9, reset: Date.now() + 60_000 }
+          }
         },
-      }))
-      vi.doMock('@upstash/redis', () => ({
-        Redis: class {},
       }))
       vi.stubEnv('UPSTASH_REDIS_REST_URL', 'https://upstash.test')
       vi.stubEnv('UPSTASH_REDIS_REST_TOKEN', 'token')

@@ -2,7 +2,10 @@ import { desc } from 'drizzle-orm'
 import { s, type Redis } from '@upstash/redis'
 import { drizzleDb } from '@/lib/db'
 import { logError } from '@/lib/logger'
-import { getRedisClient, isRedisAvailable } from '@/lib/redis'
+import {
+  getSearchRedisClient,
+  isSearchRedisAvailable,
+} from '@/lib/search/redis'
 import { orders } from '@/lib/schema'
 
 const ORDERS_INDEX_NAME = 'orders'
@@ -70,12 +73,12 @@ const getOrdersIndex = (redis: Redis) =>
   })
 
 export const areOrdersSearchControlsAvailable = (): boolean =>
-  isRedisAvailable()
+  isSearchRedisAvailable()
 
 export async function ensureOrdersSearchIndex(): Promise<{
   indexCreated: boolean
 }> {
-  const redis = getRedisClient()
+  const redis = getSearchRedisClient()
 
   if (!redis) {
     throw new Error('Redis Search is not configured')
@@ -118,7 +121,7 @@ const fetchOrdersForBackfill = async (): Promise<BackfillableOrder[]> => {
 }
 
 export async function backfillOrdersSearchIndex(): Promise<number> {
-  const redis = getRedisClient()
+  const redis = getSearchRedisClient()
 
   if (!redis) {
     throw new Error('Redis Search is not configured')
