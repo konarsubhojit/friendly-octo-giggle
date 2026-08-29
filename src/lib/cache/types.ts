@@ -46,6 +46,7 @@ export interface CacheClient {
   hgetall<T extends Record<string, string> = Record<string, string>>(
     key: string
   ): Promise<T | null>
+  hincrby(key: string, field: string, increment: number): Promise<number>
 
   // ── Sets ──────────────────────────────────────────────
   sadd(key: string, ...members: string[]): Promise<number>

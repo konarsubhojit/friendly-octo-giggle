@@ -10,7 +10,7 @@
 
 import { waitUntil } from '@vercel/functions'
 import { logCacheOperation, logError, Timer } from './logger'
-import { getCacheClient, type CacheClient } from './cache'
+import { getCacheClient, type CacheClient } from './cache/index'
 import { env } from './env'
 
 const REDIS_GET_TIMEOUT_MS = 3_000

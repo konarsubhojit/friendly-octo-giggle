@@ -50,47 +50,50 @@ class NullPipeline implements CachePipeline {
 export class NullCacheClient implements CacheClient {
   readonly isReady = false
 
-  async get<T>(): Promise<T | null> {
+  async get<T>(_key: string): Promise<T | null> {
     return null
   }
-  async set(): Promise<string | null> {
+  async set(_key: string, _value: unknown, _options?: { ex?: number; nx?: boolean }): Promise<string | null> {
     return null
   }
-  async setex(): Promise<string | null> {
-    return null
-  }
-
-  async hset(): Promise<number> {
-    return 0
-  }
-  async hgetall(): Promise<null> {
+  async setex(_key: string, _seconds: number, _value: unknown): Promise<string | null> {
     return null
   }
 
-  async sadd(): Promise<number> {
+  async hset(_key: string, _fields: Record<string, unknown>): Promise<number> {
     return 0
   }
-  async smembers(): Promise<string[]> {
+  async hgetall(_key: string): Promise<null> {
+    return null
+  }
+  async hincrby(_key: string, _field: string, _increment: number): Promise<number> {
+    return 0
+  }
+
+  async sadd(_key: string, ..._members: string[]): Promise<number> {
+    return 0
+  }
+  async smembers(_key: string): Promise<string[]> {
     return []
   }
-  async srem(): Promise<number> {
+  async srem(_key: string, ..._members: string[]): Promise<number> {
     return 0
   }
 
-  async del(): Promise<number> {
+  async del(_key: string): Promise<number> {
     return 0
   }
-  async expire(): Promise<boolean> {
+  async expire(_key: string, _seconds: number): Promise<boolean> {
     return false
   }
-  async scan(): Promise<[number, string[]]> {
+  async scan(_cursor: number, _options?: { match?: string; count?: number }): Promise<[number, string[]]> {
     return [0, []]
   }
 
   pipeline(): CachePipeline {
     return new NullPipeline()
   }
-  async eval(): Promise<unknown> {
+  async eval(_script: string, _keys: string[], _args: string[]): Promise<unknown> {
     return null
   }
   async quit(): Promise<void> {}

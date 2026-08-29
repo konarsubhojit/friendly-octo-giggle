@@ -181,6 +181,10 @@ export class NodeRedisCacheClient implements CacheClient {
     return result as T
   }
 
+  async hincrby(key: string, field: string, increment: number): Promise<number> {
+    return this.withTimeout(this.client.hIncrBy(key, field, increment))
+  }
+
   // ── Sets ──────────────────────────────────────────────
 
   async sadd(key: string, ...members: string[]): Promise<number> {

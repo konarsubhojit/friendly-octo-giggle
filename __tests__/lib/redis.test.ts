@@ -24,7 +24,7 @@ const mockRedisInstance = {
   isReady: true,
 }
 
-vi.mock('@/lib/cache', () => ({
+vi.mock('@/lib/cache/index', () => ({
   getCacheClient: vi.fn(() => mockRedisInstance),
 }))
 
@@ -91,14 +91,14 @@ describe('getRedisClient', () => {
   })
 
   it('delegates to getCacheClient from @/lib/cache', async () => {
-    const cache = await import('@/lib/cache')
+    const cache = await import('@/lib/cache/index')
     const { getRedisClient } = await import('@/lib/redis')
     getRedisClient()
     expect(cache.getCacheClient).toHaveBeenCalled()
   })
 
   it('returns null when getCacheClient returns null', async () => {
-    vi.doMock('@/lib/cache', () => ({
+    vi.doMock('@/lib/cache/index', () => ({
       getCacheClient: vi.fn(() => null),
     }))
     vi.doMock('@/lib/env', () => ({
@@ -120,7 +120,7 @@ describe('getCachedData', () => {
     vi.clearAllMocks()
 
     vi.doMock('@vercel/functions', () => ({ waitUntil: mockWaitUntil }))
-    vi.doMock('@/lib/cache', () => ({
+    vi.doMock('@/lib/cache/index', () => ({
       getCacheClient: vi.fn(() => mockRedisInstance),
     }))
     vi.doMock('@/lib/env', () => ({
@@ -280,7 +280,7 @@ describe('invalidateCache', () => {
     vi.clearAllMocks()
 
     vi.doMock('@vercel/functions', () => ({ waitUntil: mockWaitUntil }))
-    vi.doMock('@/lib/cache', () => ({
+    vi.doMock('@/lib/cache/index', () => ({
       getCacheClient: vi.fn(() => mockRedisInstance),
     }))
     vi.doMock('@/lib/env', () => ({

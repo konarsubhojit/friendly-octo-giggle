@@ -62,10 +62,18 @@ export class UpstashCacheClient implements CacheClient {
     value: unknown,
     options?: { ex?: number; nx?: boolean }
   ): Promise<string | null> {
-    return this.redis.set(key, value, {
-      ...(options?.ex !== undefined ? { ex: options.ex } : {}),
-      ...(options?.nx ? { nx: true } : {}),
-    })
+    // Upstash uses a discriminated union for set options — build a concrete
+    // variant to satisfy the type checker.
+    if (options?.ex !== undefined && options?.nx) {
+      return this.redis.set(key, value, { ex: options.ex, nx: true }) as Promise<string | null>
+    }
+    if (options?.ex !== undefined) {
+      return this.redis.set(key, value, { ex: options.ex }) as Promise<string | null>
+    }
+    if (options?.nx) {
+      return this.redis.set(key, value, { nx: true }) as Promise<string | null>
+    }
+    return this.redis.set(key, value) as Promise<string | null>
   }
 
   async setex(
@@ -84,6 +92,10 @@ export class UpstashCacheClient implements CacheClient {
     key: string
   ): Promise<T | null> {
     return this.redis.hgetall<T>(key)
+  }
+
+  async hincrby(key: string, field: string, increment: number): Promise<number> {
+    return this.redis.hincrby(key, field, increment)
   }
 
   async sadd(key: string, ...members: string[]): Promise<number> {

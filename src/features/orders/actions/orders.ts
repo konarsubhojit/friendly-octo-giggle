@@ -9,6 +9,7 @@
 import { waitUntil } from '@vercel/functions'
 import { db } from '@/lib/db'
 import { getRedisClient, invalidateCache } from '@/lib/redis'
+import { getSearchRedisClient } from '@/lib/search/redis'
 import { formatStructuredAddress } from '@/lib/address-utils'
 import { generateOrderId } from '@/lib/short-id'
 import { logError, logBusinessEvent } from '@/lib/logger'
@@ -105,7 +106,7 @@ const fetchRedisOrderHashes = async (
     pipeline.hgetall(redisOrderKey(orderId))
   }
 
-  return pipeline.exec<(Record<string, unknown> | null)[]>()
+  return pipeline.exec() as Promise<(Record<string, unknown> | null)[]>
 }
 
 const splitRedisOrders = (
@@ -417,7 +418,7 @@ const searchOrdersViaIndex = async (
   userId?: string,
   status?: string
 ): Promise<string[] | null> => {
-  const redis = getRedisClient()
+  const redis = getSearchRedisClient()
   if (!redis) return null
 
   try {
@@ -446,7 +447,7 @@ const searchOrdersViaIndex = async (
       limit,
     })
 
-    return results.map((result) => {
+    return results.map((result: { key: unknown }) => {
       const key = String(result.key)
       return key.startsWith('order:') ? key.slice(6) : key
     })
