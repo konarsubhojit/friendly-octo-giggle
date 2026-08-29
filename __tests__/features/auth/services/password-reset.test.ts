@@ -1,44 +1,44 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockLimit = vi.hoisted(() => vi.fn())
-const mockSlidingWindow = vi.hoisted(() => vi.fn(() => 'sliding-window'))
-const mockGetRedisClient = vi.hoisted(() => vi.fn())
 
-vi.mock('@upstash/ratelimit', () => {
-  class Ratelimit {
-    constructor(_config: unknown) {
-      void _config
-    }
-    limit = mockLimit
-    static slidingWindow = mockSlidingWindow
-  }
-  return { Ratelimit }
-})
+const setupMockLimiter = () => {
+  class MockLimiter { limit = mockLimit }
+  vi.doMock('@/lib/rate-limiter', () => ({
+    createRateLimiter: vi.fn(() => new MockLimiter()),
+    InMemoryRateLimiter: vi.fn(),
+  }))
+}
 
-vi.mock('@/lib/redis', () => ({
-  getRedisClient: mockGetRedisClient,
-}))
+const setupNullLimiter = () => {
+  vi.doMock('@/lib/rate-limiter', () => ({
+    createRateLimiter: vi.fn(() => null),
+    InMemoryRateLimiter: vi.fn(),
+  }))
+}
 
 describe('password-reset token helpers', () => {
   beforeEach(() => {
     vi.resetModules()
     mockLimit.mockReset()
-    mockGetRedisClient.mockReset()
   })
 
   it('normalizeEmailForLookup trims and lowercases', async () => {
+    setupMockLimiter()
     const { normalizeEmailForLookup } =
       await import('@/features/auth/services/password-reset')
     expect(normalizeEmailForLookup('  Foo@Bar.COM  ')).toBe('foo@bar.com')
   })
 
   it('createPasswordResetIdentifier prefixes user ids', async () => {
+    setupMockLimiter()
     const { createPasswordResetIdentifier } =
       await import('@/features/auth/services/password-reset')
     expect(createPasswordResetIdentifier('u1')).toBe('password-reset:u1')
   })
 
   it('parsePasswordResetIdentifier strips/null-checks the prefix', async () => {
+    setupMockLimiter()
     const { parsePasswordResetIdentifier } =
       await import('@/features/auth/services/password-reset')
     expect(parsePasswordResetIdentifier('password-reset:abc')).toBe('abc')
@@ -46,6 +46,7 @@ describe('password-reset token helpers', () => {
   })
 
   it('hashPasswordResetToken returns deterministic sha256 hex', async () => {
+    setupMockLimiter()
     const { hashPasswordResetToken } =
       await import('@/features/auth/services/password-reset')
     const hash = hashPasswordResetToken('tok')
@@ -54,6 +55,7 @@ describe('password-reset token helpers', () => {
   })
 
   it('generatePasswordResetToken yields plainToken/hash/expiry consistently', async () => {
+    setupMockLimiter()
     const mod = await import('@/features/auth/services/password-reset')
     const before = Date.now()
     const { plainToken, tokenHash, expiresAt } =
@@ -72,11 +74,10 @@ describe('consumeForgotPasswordRateLimits', () => {
   beforeEach(() => {
     vi.resetModules()
     mockLimit.mockReset()
-    mockGetRedisClient.mockReset()
   })
 
-  it('returns false flags when redis is unavailable', async () => {
-    mockGetRedisClient.mockReturnValue(null)
+  it('returns false flags when rate limiter is unavailable', async () => {
+    setupNullLimiter()
     const { consumeForgotPasswordRateLimits } =
       await import('@/features/auth/services/password-reset')
     await expect(
@@ -85,11 +86,10 @@ describe('consumeForgotPasswordRateLimits', () => {
         ipAddress: '1.1.1.1',
       })
     ).resolves.toEqual({ emailLimited: false, ipLimited: false })
-    expect(mockLimit).not.toHaveBeenCalled()
   })
 
   it('marks emailLimited when the email limiter denies', async () => {
-    mockGetRedisClient.mockReturnValue({})
+    setupMockLimiter()
     mockLimit
       .mockResolvedValueOnce({ success: false }) // email
       .mockResolvedValueOnce({ success: true }) // ip
@@ -104,7 +104,7 @@ describe('consumeForgotPasswordRateLimits', () => {
   })
 
   it('marks ipLimited when the ip limiter denies', async () => {
-    mockGetRedisClient.mockReturnValue({})
+    setupMockLimiter()
     mockLimit
       .mockResolvedValueOnce({ success: true }) // email
       .mockResolvedValueOnce({ success: false }) // ip
@@ -123,11 +123,10 @@ describe('consumeResetPasswordRateLimits', () => {
   beforeEach(() => {
     vi.resetModules()
     mockLimit.mockReset()
-    mockGetRedisClient.mockReset()
   })
 
-  it('returns false flags when redis is unavailable', async () => {
-    mockGetRedisClient.mockReturnValue(null)
+  it('returns false flags when rate limiter is unavailable', async () => {
+    setupNullLimiter()
     const { consumeResetPasswordRateLimits } =
       await import('@/features/auth/services/password-reset')
     await expect(
@@ -139,7 +138,7 @@ describe('consumeResetPasswordRateLimits', () => {
   })
 
   it('flags identifierLimited and ipLimited per limiter response', async () => {
-    mockGetRedisClient.mockReturnValue({})
+    setupMockLimiter()
     mockLimit
       .mockResolvedValueOnce({ success: false }) // identifier
       .mockResolvedValueOnce({ success: false }) // ip
