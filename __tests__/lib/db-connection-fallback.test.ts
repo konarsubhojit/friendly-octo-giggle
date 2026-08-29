@@ -1,194 +1,275 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { __resetProviderResolutionForTests } from '@/lib/providers/resolution'
+import {
+  createDatabaseConnections,
+  createDatabasePoolConfig,
+} from '@/lib/db/factory'
 
-/**
- * Tests that the database connection falls back to DATABASE_URL for the read
- * pool when READ_DATABASE_URL is not set, and uses READ_DATABASE_URL when it
- * is provided. This verifies the `env.READ_DATABASE_URL ?? env.DATABASE_URL`
- * fallback in lib/db.ts.
- */
+const {
+  nodeDrizzleMock,
+  neonDrizzleMock,
+  mockLogError,
+  pgPoolEndMock,
+  pgPoolMock,
+  neonPoolMock,
+} = vi.hoisted(() => {
+  const pgPoolEndMock = vi.fn().mockResolvedValue(undefined)
+  const neonPoolEndMock = vi.fn().mockResolvedValue(undefined)
 
-const makePoolMock = () => vi.fn()
+  return {
+    nodeDrizzleMock: vi.fn((pool: unknown) => ({ driver: 'postgres', pool })),
+    neonDrizzleMock: vi.fn((pool: unknown) => ({ driver: 'neon', pool })),
+    mockLogError: vi.fn(),
+    pgPoolEndMock,
+    pgPoolMock: vi.fn(function PgPoolMock() {
+      return { end: pgPoolEndMock }
+    }),
+    neonPoolMock: vi.fn(function NeonPoolMock() {
+      return { end: neonPoolEndMock }
+    }),
+  }
+})
 
-const makeOtherMocks = (PoolMock: ReturnType<typeof makePoolMock>) => {
-  const drizzleMock = vi.fn(() => ({
-    query: {
-      products: { findMany: vi.fn(), findFirst: vi.fn() },
-      productShares: { findFirst: vi.fn() },
-    },
-    insert: vi.fn(() => ({ values: vi.fn(() => ({ returning: vi.fn() })) })),
-    update: vi.fn(() => ({ set: vi.fn(() => ({ where: vi.fn() })) })),
-  }))
+vi.mock('pg', () => ({
+  Pool: pgPoolMock,
+}))
 
-  vi.doMock('@neondatabase/serverless', () => ({ Pool: PoolMock }))
-  vi.doMock('drizzle-orm/neon-serverless', () => ({ drizzle: drizzleMock }))
-  vi.doMock('drizzle-orm/pg-core', () => ({
-    withReplicas: vi.fn((primary: unknown) => primary),
-  }))
-  vi.doMock('@/lib/schema', () => ({
-    checkoutRequestStatusEnum: {},
-    emailTypeEnum: {},
-    failedEmailStatusEnum: {},
-    discountTypeEnum: {},
-    orderStatusEnum: {},
-    userRoleEnum: {},
-    accounts: {},
-    adminAuditLogs: {},
-    adminSavedViews: {},
-    cartItems: {},
-    carts: {},
-    categories: {},
-    checkoutRequests: {},
-    failedEmails: {},
-    orderItems: {},
-    coupons: {},
-    couponRedemptions: {},
-    orders: {},
-    passwordHistory: {},
-    addresses: {},
-    productShares: {},
-    productVariants: {},
-    productOptions: {},
-    productOptionValues: {},
-    productVariantOptionValues: {},
-    products: {},
-    reviews: {},
-    reviewVotes: {},
-    sessions: {},
-    users: {},
-    verificationTokens: {},
-    wishlists: {},
-    accountsRelations: {},
-    adminSavedViewsRelations: {},
-    cartsRelations: {},
-    cartItemsRelations: {},
-    categoriesRelations: {},
-    checkoutRequestsRelations: {},
-    refunds: {},
-    refundsRelations: {},
-    returnRequests: {},
-    returnRequestsRelations: {},
-    returnItems: {},
-    returnItemsRelations: {},
-    returnEvidence: {},
-    returnEvidenceRelations: {},
-    stockReservations: {},
-    stockReservationsRelations: {},
-    stockReservationStatusEnum: {},
-    orderItemsRelations: {},
-    ordersRelations: {},
-    couponsRelations: {},
-    couponRedemptionsRelations: {},
-    passwordHistoryRelations: {},
-    addressesRelations: {},
-    notificationPreferences: {},
-    notificationPreferencesRelations: {},
-    pushSubscriptions: {},
-    pushSubscriptionsRelations: {},
-    productSharesRelations: {},
-    productVariantsRelations: {},
-    productOptionsRelations: {},
-    productOptionValuesRelations: {},
-    productVariantOptionValuesRelations: {},
-    productsRelations: {},
-    reviewsRelations: {},
-    reviewVotesRelations: {},
-    sessionsRelations: {},
-    usersRelations: {},
-    wishlistsRelations: {},
-  }))
-  vi.doMock('@/lib/cache', () => ({
-    cacheProductsList: vi.fn(),
-    cacheProductById: vi.fn(),
-    invalidateProductCaches: vi.fn(),
-    cacheShareResolve: vi.fn(),
-    CACHE_KEYS: { PRODUCTS_ALL: 'products:all' },
-    CACHE_TTL: { PRODUCTS_LIST: 60, STALE_TIME: 10 },
-  }))
-  vi.doMock('@/lib/redis', () => ({
-    getCachedData: vi.fn((_, __, fetcher: () => unknown) => fetcher()),
-  }))
-  vi.doMock('@/lib/serializers', () => ({
-    serializeProduct: vi.fn((p: Record<string, unknown>) => p),
-    serializeVariant: vi.fn((v: Record<string, unknown>) => v),
-  }))
-  vi.doMock('drizzle-orm', () => ({
-    eq: vi.fn(),
-    desc: vi.fn(),
-    and: vi.fn(),
-    isNull: vi.fn(),
-    ilike: vi.fn(),
-    or: vi.fn(),
-    ne: vi.fn(),
-    inArray: vi.fn(),
-    sql: vi.fn(),
-  }))
+vi.mock('@neondatabase/serverless', () => ({
+  Pool: neonPoolMock,
+}))
 
-  return drizzleMock
+vi.mock('drizzle-orm/node-postgres', () => ({
+  drizzle: nodeDrizzleMock,
+}))
+
+vi.mock('drizzle-orm/neon-serverless', () => ({
+  drizzle: neonDrizzleMock,
+}))
+
+vi.mock('@/lib/logger', () => ({
+  logError: mockLogError,
+}))
+
+const schema = {
+  users: {},
 }
 
-/** Clear the global pool singletons so lib/db.ts recreates them on next import */
-const clearGlobalPools = () => {
-  const g = globalThis as Record<string, unknown>
-  delete g.writePool
-  delete g.readPool
-}
+const encodedCredentialUrl = `postgresql://${'user'}:${'p%40ss'}@localhost:5432/app?sslmode=disable`
 
-describe('db connection fallback (READ_DATABASE_URL not set)', () => {
+describe('database connection factory', () => {
   beforeEach(() => {
-    vi.resetModules()
-    clearGlobalPools()
+    vi.clearAllMocks()
+    vi.stubEnv('DATABASE_DRIVER', '')
+    __resetProviderResolutionForTests()
   })
 
   afterEach(() => {
-    vi.resetModules()
-    clearGlobalPools()
+    vi.unstubAllEnvs()
+    __resetProviderResolutionForTests()
   })
 
-  it('uses DATABASE_URL for both write and read pools when READ_DATABASE_URL is absent', async () => {
-    const PoolMock = makePoolMock()
-    makeOtherMocks(PoolMock)
-
-    vi.doMock('@/lib/env', () => ({
-      env: {
-        DATABASE_URL: 'postgres://write:pass@primary:5432/db',
-        // READ_DATABASE_URL is intentionally not set
-        NODE_ENV: 'test',
+  it('uses the generic PostgreSQL driver by default', () => {
+    createDatabaseConnections(
+      {
+        DATABASE_URL: encodedCredentialUrl,
       },
-    }))
-
-    await import('@/lib/db')
-
-    expect(PoolMock).toHaveBeenCalledTimes(2)
-    const connectionStrings = PoolMock.mock.calls.map(
-      (call: unknown[]) =>
-        (call[0] as { connectionString: string }).connectionString
+      schema
     )
-    // Both pools should fall back to DATABASE_URL
-    expect(connectionStrings[0]).toBe('postgres://write:pass@primary:5432/db')
-    expect(connectionStrings[1]).toBe('postgres://write:pass@primary:5432/db')
+
+    expect(pgPoolMock).toHaveBeenCalledTimes(2)
+    expect(nodeDrizzleMock).toHaveBeenCalledTimes(2)
+    expect(neonPoolMock).not.toHaveBeenCalled()
+    expect(neonDrizzleMock).not.toHaveBeenCalled()
   })
 
-  it('uses READ_DATABASE_URL for the read pool when it is set', async () => {
-    const PoolMock = makePoolMock()
-    makeOtherMocks(PoolMock)
-
-    vi.doMock('@/lib/env', () => ({
-      env: {
-        DATABASE_URL: 'postgres://write:pass@primary:5432/db',
-        READ_DATABASE_URL: 'postgres://read:pass@replica:5432/db',
-        NODE_ENV: 'test',
+  it('uses DATABASE_URL for both pools when READ_DATABASE_URL is absent', () => {
+    createDatabaseConnections(
+      {
+        DATABASE_URL: 'postgresql://primary.example.com:5432/app',
       },
-    }))
-
-    await import('@/lib/db')
-
-    expect(PoolMock).toHaveBeenCalledTimes(2)
-    const connectionStrings = PoolMock.mock.calls.map(
-      (call: unknown[]) =>
-        (call[0] as { connectionString: string }).connectionString
+      schema,
+      'postgres'
     )
-    // Write pool uses DATABASE_URL, read pool uses READ_DATABASE_URL
-    expect(connectionStrings[0]).toBe('postgres://write:pass@primary:5432/db')
-    expect(connectionStrings[1]).toBe('postgres://read:pass@replica:5432/db')
+
+    expect(pgPoolMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        connectionString: 'postgresql://primary.example.com:5432/app',
+      })
+    )
+    expect(pgPoolMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        connectionString: 'postgresql://primary.example.com:5432/app',
+      })
+    )
+  })
+
+  it('uses READ_DATABASE_URL for the read pool when it is set', () => {
+    createDatabaseConnections(
+      {
+        DATABASE_URL: 'postgresql://primary.example.com:5432/app',
+        READ_DATABASE_URL: 'postgresql://replica.example.com:5432/app',
+      },
+      schema,
+      'postgres'
+    )
+
+    expect(pgPoolMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        connectionString: 'postgresql://primary.example.com:5432/app',
+      })
+    )
+    expect(pgPoolMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        connectionString: 'postgresql://replica.example.com:5432/app',
+      })
+    )
+  })
+
+  it('keeps the Neon adapter available through DATABASE_DRIVER=neon', () => {
+    vi.stubEnv('DATABASE_DRIVER', 'neon')
+    __resetProviderResolutionForTests()
+
+    createDatabaseConnections(
+      {
+        DATABASE_URL: 'postgresql://neon.example.com:5432/app?sslmode=require',
+      },
+      schema
+    )
+
+    expect(neonPoolMock).toHaveBeenCalledTimes(2)
+    expect(neonDrizzleMock).toHaveBeenCalledTimes(2)
+    expect(pgPoolMock).not.toHaveBeenCalled()
+    expect(nodeDrizzleMock).not.toHaveBeenCalled()
+  })
+
+  it('applies safe pool defaults and explicit overrides', () => {
+    expect(createDatabasePoolConfig({})).toEqual({
+      max: 10,
+      idleTimeoutMillis: 20000,
+      connectionTimeoutMillis: 5000,
+    })
+
+    expect(
+      createDatabasePoolConfig({
+        DATABASE_POOL_MAX: '4',
+        DATABASE_POOL_IDLE_TIMEOUT_MS: '30000',
+        DATABASE_POOL_CONNECTION_TIMEOUT_MS: '1500',
+      })
+    ).toEqual({
+      max: 4,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 1500,
+    })
+  })
+
+  it('rejects invalid pool settings during startup', () => {
+    expect(() =>
+      createDatabasePoolConfig({ DATABASE_POOL_MAX: '0' })
+    ).toThrow('DATABASE_POOL_MAX must be a positive integer')
+
+    expect(() =>
+      createDatabasePoolConfig({
+        DATABASE_POOL_CONNECTION_TIMEOUT_MS: 'not-a-number',
+      })
+    ).toThrow('DATABASE_POOL_CONNECTION_TIMEOUT_MS must be a positive integer')
+  })
+
+  it('closes both primary and read pools for graceful shutdown', async () => {
+    const connections = createDatabaseConnections(
+      {
+        DATABASE_URL: 'postgresql://primary.example.com:5432/app',
+        READ_DATABASE_URL: 'postgresql://replica.example.com:5432/app',
+      },
+      schema,
+      'postgres'
+    )
+
+    await connections.close()
+
+    expect(pgPoolEndMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('attempts both pool closes and reports shutdown failures', async () => {
+    const primaryEnd = vi.fn().mockRejectedValue(new Error('primary close'))
+    const readEnd = vi.fn().mockResolvedValue(undefined)
+    pgPoolMock
+      .mockImplementationOnce(function PgPoolMock() {
+        return { end: primaryEnd }
+      })
+      .mockImplementationOnce(function PgPoolMock() {
+        return { end: readEnd }
+      })
+
+    const connections = createDatabaseConnections(
+      {
+        DATABASE_URL: 'postgresql://primary.example.com:5432/app',
+        READ_DATABASE_URL: 'postgresql://replica.example.com:5432/app',
+      },
+      schema,
+      'postgres'
+    )
+
+    await expect(connections.close()).rejects.toThrow(
+      'Failed to close database pools'
+    )
+    expect(primaryEnd).toHaveBeenCalledOnce()
+    expect(readEnd).toHaveBeenCalledOnce()
+  })
+
+  it('closes the primary pool when read pool startup fails', () => {
+    pgPoolMock
+      .mockImplementationOnce(function PgPoolMock() {
+        return { end: pgPoolEndMock }
+      })
+      .mockImplementationOnce(function PgPoolMock() {
+        throw new Error('read pool unavailable')
+      })
+
+    expect(() =>
+      createDatabaseConnections(
+        {
+          DATABASE_URL: 'postgresql://primary.example.com:5432/app',
+          READ_DATABASE_URL: 'postgresql://replica.example.com:5432/app',
+        },
+        schema,
+        'postgres'
+      )
+    ).toThrow('read pool unavailable')
+
+    expect(pgPoolEndMock).toHaveBeenCalledOnce()
+  })
+
+  it('logs primary pool cleanup failure without masking startup failure', async () => {
+    const cleanupError = new Error('cleanup failed')
+    pgPoolEndMock.mockRejectedValueOnce(cleanupError)
+    pgPoolMock
+      .mockImplementationOnce(function PgPoolMock() {
+        return { end: pgPoolEndMock }
+      })
+      .mockImplementationOnce(function PgPoolMock() {
+        throw new Error('read pool unavailable')
+      })
+
+    expect(() =>
+      createDatabaseConnections(
+        {
+          DATABASE_URL: 'postgresql://primary.example.com:5432/app',
+          READ_DATABASE_URL: 'postgresql://replica.example.com:5432/app',
+        },
+        schema,
+        'postgres'
+      )
+    ).toThrow('read pool unavailable')
+
+    await vi.waitFor(() => {
+      expect(mockLogError).toHaveBeenCalledWith({
+        error: cleanupError,
+        context: 'database_startup_cleanup_failure',
+      })
+    })
   })
 })

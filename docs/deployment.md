@@ -49,7 +49,7 @@ hostname, so the table below is the whole contract:
 
 | Capability | Selector              | Values                           | Inference when unset (credentials present) | Default       |
 | ---------- | --------------------- | -------------------------------- | ------------------------------------------ | ------------- |
-| Database   | `DATABASE_DRIVER`     | `postgres`, `neon`               | —                                          | `neon`        |
+| Database   | `DATABASE_DRIVER`     | `postgres`, `neon`               | —                                          | `postgres`    |
 | Cache      | `CACHE_PROVIDER`      | `redis`, `upstash`, `none`       | Upstash → Redis                            | `none`        |
 | Search     | `SEARCH_PROVIDER`     | `postgres`, `algolia`, `upstash` | Upstash → Algolia                          | `postgres`    |
 | Storage    | `STORAGE_PROVIDER`    | `s3`, `vercel`, `r2`             | —                                          | `vercel`      |
@@ -61,7 +61,7 @@ Precedence is: explicit selector, then inference from _which credentials are
 present_, then the default. Inference is what keeps a deployment that predates
 the selectors on the backend it already uses — existing `DATABASE_URL`,
 `READ_DATABASE_URL`, Upstash, R2, and Vercel Blob variables all remain accepted
-unchanged, and setting no selector never switches a provider.
+unchanged.
 
 An **explicit** selection must be complete: `SEARCH_PROVIDER=algolia` without
 `ALGOLIA_API_KEY`, or `CACHE_PROVIDER=redis` without `REDIS_URL`, is rejected at
@@ -70,10 +70,24 @@ provider is never rejected, because it is by construction one the deployment can
 already reach. Like the production-key checks, these are deferred during
 `next build`, where a build machine legitimately holds no runtime credentials.
 
+For database connections, `postgres` is the default and uses the standard
+PostgreSQL wire protocol through `pg.Pool`. It works with local PostgreSQL,
+PgBouncer, RDS, Cloud SQL, Azure Database for PostgreSQL, Supabase, Railway,
+Render, Neon standard endpoints, and any provider exposing a standard
+PostgreSQL URL. Set `DATABASE_DRIVER=neon` only when the deployment benefits
+from Neon's specialized serverless adapter, such as Vercel-style runtimes using
+Neon's HTTP/WebSocket optimized connection layer.
+
+Database pool behavior can be tuned with `DATABASE_POOL_MAX`,
+`DATABASE_POOL_IDLE_TIMEOUT_MS`, and
+`DATABASE_POOL_CONNECTION_TIMEOUT_MS`. Defaults are 10 connections, 20 seconds
+idle timeout, and 5 seconds connection timeout. `READ_DATABASE_URL` remains
+optional and falls back to `DATABASE_URL`.
+
 For self-hosted deployments, the generic protocols — `postgres`, `redis`, and
-`s3` — are the recommended selections; the managed values (`neon`, `upstash`,
-`vercel`, `edge-config`) remain the defaults so existing deployments are
-unaffected.
+`s3` — are the recommended selections; managed values (`neon`, `upstash`,
+`vercel`, `edge-config`) remain available for deployments that need their
+specialized adapters.
 
 `summarizeProviders()` renders the resolved selection, how each was chosen, and
 whether its credentials are complete, for startup or health diagnostics. It

@@ -88,11 +88,11 @@ const {
   }
 })
 
-vi.mock('@neondatabase/serverless', () => ({
+vi.mock('pg', () => ({
   Pool: vi.fn(),
 }))
 
-vi.mock('drizzle-orm/neon-serverless', () => ({
+vi.mock('drizzle-orm/node-postgres', () => ({
   drizzle: vi.fn(() => ({
     query: {
       products: {
