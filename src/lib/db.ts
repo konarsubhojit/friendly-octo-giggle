@@ -160,20 +160,28 @@ const databaseConnections = (globalForDb.databaseConnections ??=
   createDatabaseConnections(env, schema))
 
 export const closeDatabaseConnections = async (): Promise<void> => {
-  await globalForDb.databaseConnections?.close()
-  globalForDb.databaseConnections = undefined
+  try {
+    await globalForDb.databaseConnections?.close()
+  } finally {
+    globalForDb.databaseConnections = undefined
+  }
 }
 
 const registerShutdownHandler = () => {
   if (globalForDb.databaseShutdownRegistered || env.NODE_ENV === 'test') return
   globalForDb.databaseShutdownRegistered = true
 
-  const close = () => {
-    void closeDatabaseConnections()
+  const closeAndExit = (signal: NodeJS.Signals) => {
+    void closeDatabaseConnections().finally(() => {
+      process.kill(process.pid, signal)
+    })
   }
 
-  process.once('SIGINT', close)
-  process.once('SIGTERM', close)
+  process.once('SIGINT', closeAndExit)
+  process.once('SIGTERM', closeAndExit)
+  process.once('beforeExit', () => {
+    void closeDatabaseConnections()
+  })
 }
 
 registerShutdownHandler()

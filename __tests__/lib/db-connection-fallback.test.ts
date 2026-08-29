@@ -186,4 +186,27 @@ describe('database connection factory', () => {
 
     expect(pgPoolEndMock).toHaveBeenCalledTimes(2)
   })
+
+  it('closes the primary pool when read pool startup fails', () => {
+    pgPoolMock
+      .mockImplementationOnce(function PgPoolMock() {
+        return { end: pgPoolEndMock }
+      })
+      .mockImplementationOnce(function PgPoolMock() {
+        throw new Error('read pool unavailable')
+      })
+
+    expect(() =>
+      createDatabaseConnections(
+        {
+          DATABASE_URL: 'postgresql://primary.example.com:5432/app',
+          READ_DATABASE_URL: 'postgresql://replica.example.com:5432/app',
+        },
+        schema,
+        'postgres'
+      )
+    ).toThrow('read pool unavailable')
+
+    expect(pgPoolEndMock).toHaveBeenCalledOnce()
+  })
 })

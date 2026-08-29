@@ -92,12 +92,19 @@ export const createDatabaseConnections = <
     poolConfig,
     schema
   )
-  const read = createDatabaseConnection(
-    driver,
-    readConnectionString,
-    poolConfig,
-    schema
-  )
+
+  let read: DatabaseConnection<TSchema>
+  try {
+    read = createDatabaseConnection(
+      driver,
+      readConnectionString,
+      poolConfig,
+      schema
+    )
+  } catch (error) {
+    void primary.pool.end()
+    throw error
+  }
 
   return {
     driver,
