@@ -8,9 +8,7 @@ import {
   createPasswordResetEmail,
   type AuthEmailMessage,
 } from '@/features/auth/inngest/templates'
-import { deliverEmail } from '@/lib/email'
 import { SCORE_NAMES } from '@/lib/inngest/scores'
-import { logError } from '@/lib/logger'
 
 /**
  * Both of these gate a user out of their account until they arrive, so they get
@@ -53,7 +51,8 @@ export const sendAuthEmailFunction = inngest.createFunction(
     // Keyed on the issued token's request id, so a duplicate publish collapses
     // but a genuine second request (a user clicking "resend") still sends.
     idempotency: 'event.name + "-" + event.data.requestId',
-    onFailure: ({ event, error }) => {
+    onFailure: async ({ event, error }) => {
+      const { logError } = await import('@/lib/logger')
       logError({
         error,
         context: 'inngest_auth_email_retries_exhausted',
@@ -62,20 +61,20 @@ export const sendAuthEmailFunction = inngest.createFunction(
           requestId: event.data.event.data.requestId,
         },
       })
-      return Promise.resolve()
     },
   },
   async ({ event, step }) => {
     const message = buildMessage(event.data)
 
-    const result = await step.run('deliver-auth-email', () =>
-      deliverEmail({
+    const result = await step.run('deliver-auth-email', async () => {
+      const { deliverEmail } = await import('@/lib/email')
+      return deliverEmail({
         to: event.data.to,
         subject: message.subject,
         html: message.html,
         text: message.text,
       })
-    )
+    })
 
     await step.score('score-auth-email-fallback', {
       name: SCORE_NAMES.emailProviderFallbackUsed,

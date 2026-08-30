@@ -1,9 +1,5 @@
 import { cron } from 'inngest'
-import { lt } from 'drizzle-orm'
-import { drizzleDb } from '@/lib/db'
 import { inngest } from '@/lib/inngest/client'
-import { logBusinessEvent } from '@/lib/logger'
-import { adminAuditLogs } from '@/lib/schema'
 
 export const ACTIVITY_RETENTION_MONTHS = 24
 
@@ -21,6 +17,11 @@ export const getActivityRetentionCutoff = (now = new Date()) =>
   )
 
 export const deleteExpiredAdminAuditLogs = async (cutoff: Date) => {
+  const [{ lt }, { drizzleDb }, { adminAuditLogs }] = await Promise.all([
+    import('drizzle-orm'),
+    import('@/lib/db'),
+    import('@/lib/schema'),
+  ])
   const deleted = await drizzleDb
     .delete(adminAuditLogs)
     .where(lt(adminAuditLogs.createdAt, cutoff))
@@ -41,6 +42,7 @@ export const activityRetentionFunction = inngest.createFunction(
       deleteExpiredAdminAuditLogs(cutoff)
     )
 
+    const { logBusinessEvent } = await import('@/lib/logger')
     logBusinessEvent({
       event: 'cron_admin_activity_retention_completed',
       details: {

@@ -484,8 +484,8 @@ Every transition is claim-shaped, so replays are harmless:
   decrement, `HELD → CONSUMED` and `reservedStock` drops by the consumed units.
 - **Release** — on terminal checkout failure and on retry exhaustion, best
   effort: a failed release is logged and never masks the original failure.
-- **Expire** — `expire-stock-reservations` runs every thirty minutes, claims at
-  most 500 rows whose `expiresAt` has passed **by the database clock**, and
+- **Expire** — `expire-stock-reservations` runs hourly, claims at most 1,000
+  rows whose `expiresAt` has passed **by the database clock**, and
   returns their units. The 30-minute TTL is far longer than the pipeline's
   worst observed latency, so expiry only ever reclaims abandoned holds.
 
@@ -598,13 +598,14 @@ Scheduled work is declared as `cron` triggers on Inngest functions, so there is
 no separate cron endpoint to authenticate:
 
 - `retry-failed-emails` daily at 02:30 UTC
-- `refresh-exchange-rates` every 6 hours
+- `refresh-exchange-rates` daily at 03:00 UTC
 - `scan-abandoned-carts` daily at 10:00 UTC
-- `expire-stock-reservations` every 30 minutes
+- `expire-stock-reservations` hourly
 
-Each scan fans out one event per item rather than looping in a single
-invocation, so a slow provider cannot stall the batch and every item retries
-independently.
+Abandoned-cart scans fan out one event per cart to preserve experiment
+attribution and per-cart idempotency. Failed-email retries fan out bounded
+groups of ten; each group uses at most five concurrent sends in one checkpoint,
+retaining bounded failure isolation without one child run per row.
 
 ### Exchange Rate Refresh
 
