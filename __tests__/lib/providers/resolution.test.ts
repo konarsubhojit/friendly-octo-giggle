@@ -263,6 +263,30 @@ describe('resolveProviders — backward compatibility', () => {
     expect(Object.keys(DEPRECATED_ENV_ALIASES)).toContain('database_url')
   })
 
+  it('accepts S3 selection from deprecated R2_* aliases and reports them', () => {
+    const { selections, issues, deprecatedAliases } = resolveProviders({
+      ...baseEnv,
+      STORAGE_PROVIDER: 's3',
+      R2_ACCOUNT_ID: SECRETS.R2_ACCOUNT_ID,
+      R2_ACCESS_KEY_ID: SECRETS.R2_ACCESS_KEY_ID,
+      R2_SECRET_ACCESS_KEY: SECRETS.R2_SECRET_ACCESS_KEY,
+      R2_BUCKET: SECRETS.R2_BUCKET,
+      R2_PUBLIC_BASE_URL: SECRETS.R2_PUBLIC_BASE_URL,
+    })
+
+    expect(issues).toEqual([])
+    expect(selections.storage.provider).toBe('s3')
+    expect(deprecatedAliases).toEqual(
+      expect.arrayContaining([
+        'R2_ACCOUNT_ID',
+        'R2_ACCESS_KEY_ID',
+        'R2_SECRET_ACCESS_KEY',
+        'R2_BUCKET',
+        'R2_PUBLIC_BASE_URL',
+      ])
+    )
+  })
+
   it('reports no deprecated aliases for a canonical environment', () => {
     expect(resolveProviders(baseEnv).deprecatedAliases).toEqual([])
   })

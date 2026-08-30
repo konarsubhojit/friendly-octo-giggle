@@ -52,7 +52,7 @@
 ## Platform operations
 
 - PostgreSQL with Drizzle, short public IDs, transactions, primary/read-replica routing, migrations, and idempotent bootstrap support.
-- Redis caching and order search, Upstash Search with SQL fallback, dual-provider image storage (Vercel Blob or Cloudflare R2, dual-read fallback) with edge resizing via a Cloudflare Worker, Inngest durable workflows, async email delivery, provider retries, and failed-email persistence.
+- Redis caching and order search, Upstash Search with SQL fallback, dual-provider image storage (Vercel Blob or S3-compatible providers, dual-read fallback across configured adapters) with edge resizing via a Cloudflare Worker, Inngest durable workflows, async email delivery, provider retries, and failed-email persistence.
 - Pino request logging with correlation IDs, Sentry instrumentation, Prometheus metrics, a `GET /api/health` liveness endpoint, scheduled exchange-rate refresh, product-affinity scoring, and failed-email retry jobs.
 - Zod request/environment validation, rate limiting, ownership checks, signed guest identifiers, secure webhook/worker verification, and cache invalidation after writes.
 

@@ -10,7 +10,7 @@
  */
 
 /** The set of backends the application knows how to talk to. */
-export type StorageProviderName = 'vercel' | 'r2'
+export type StorageProviderName = 'vercel' | 's3' | 'r2'
 
 /** Bytes accepted by `put`. Mirrors what a Node.js server route can produce. */
 export type StorageBody = Blob | Buffer | Uint8Array

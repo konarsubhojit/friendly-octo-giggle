@@ -1,13 +1,13 @@
 #!/usr/bin/env -S npx tsx
 /**
- * Vercel Blob → Cloudflare R2 storage migration.
+ * Storage migration between configured providers.
  *
- * Copies every object already stored in Vercel Blob into R2, without ever
- * deleting the Vercel copy — the cutover to `STORAGE_PROVIDER=r2` is a
+ * Copies every object from one provider into another, without ever deleting the
+ * source copy — the cutover to a new `STORAGE_PROVIDER` is a
  * read-path change (`resolveStorageUrl`'s dual-read fallback in
- * `src/lib/storage/index.ts`), so the Vercel objects must keep existing
- * until every consumer has been confirmed on the new provider and a
- * separate, deliberate cleanup is run.
+ * `src/lib/storage/index.ts`), so source-provider objects must stay in place
+ * until every consumer has been confirmed on the new provider and a separate,
+ * deliberate cleanup is run.
  *
  * Guarantees:
  *   - Idempotent: an object already present at the destination (checked via
@@ -21,22 +21,22 @@
  *     (`getUrl`) and compares the source and destination byte length before
  *     marking the object migrated. A copy that "succeeded" but produced a
  *     truncated object is reported as a failure, not a silent success.
- *   - Dry-run by default: nothing is written to R2 unless `--apply` is
+ *   - Dry-run by default: nothing is written to the destination unless `--apply` is
  *     passed. Dry-run still performs the verification reachability checks
  *     (source fetch HEAD, destination existence check) so its report
  *     reflects what a real run would actually do, not just what `list()`
  *     returns.
  *
  * Usage:
- *   npm run migrate:storage -- --dry-run          # default; report only
- *   npm run migrate:storage -- --apply             # perform the copy
- *   npm run migrate:storage -- --apply --limit=100  # cap objects per run
+ *   npm run migrate:storage -- --dry-run                      # default; report only
+ *   npm run migrate:storage -- --apply                        # perform the copy
+ *   npm run migrate:storage -- --apply --from=vercel --to=r2  # explicit source/destination
+ *   npm run migrate:storage -- --apply --from=vercel --to=s3 --limit=100
  *   npm run migrate:storage -- --apply --prefix=images/2025/
  *
- * Requires the same environment as the running application: R2 write
- * credentials (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
- * `R2_BUCKET`, `R2_PUBLIC_BASE_URL`) and `BLOB_READ_WRITE_TOKEN` for Vercel
- * Blob — both are read through `@/lib/storage`, which in turn loads
+ * Requires the same environment as the running application: source and
+ * destination provider credentials (for `vercel`, `r2`, or `s3`) are read
+ * through `@/lib/storage`, which in turn loads
  * `@/lib/env`, so every other validated environment variable (notably
  * `DATABASE_URL`) must also be present even though this script never
  * touches the database.
@@ -46,9 +46,11 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 import {
+  getActiveProvider,
   getStorageAdapterFor,
   type ListedObject,
   IMMUTABLE_CACHE_CONTROL,
+  type StorageProviderName,
 } from '@/lib/storage'
 
 export interface MigrationOptions {
@@ -56,6 +58,8 @@ export interface MigrationOptions {
   readonly prefix?: string
   readonly limit: number
   readonly checkpointPath: string
+  readonly sourceProvider: StorageProviderName
+  readonly destinationProvider: StorageProviderName
 }
 
 export interface Checkpoint {
@@ -84,6 +88,8 @@ export const parseArgs = (argv: readonly string[]): MigrationOptions => {
   let prefix: string | undefined
   let limit = Number.POSITIVE_INFINITY
   let checkpointPath = DEFAULT_CHECKPOINT_PATH
+  let sourceProvider: StorageProviderName = 'vercel'
+  let destinationProvider: StorageProviderName = 'r2'
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]
@@ -97,7 +103,19 @@ export const parseArgs = (argv: readonly string[]): MigrationOptions => {
       limit = Number.parseInt(arg.slice('--limit='.length), 10)
     } else if (arg.startsWith('--checkpoint=')) {
       checkpointPath = path.resolve(arg.slice('--checkpoint='.length))
+    } else if (arg.startsWith('--from=')) {
+      sourceProvider = arg.slice('--from='.length) as StorageProviderName
+    } else if (arg.startsWith('--source=')) {
+      sourceProvider = arg.slice('--source='.length) as StorageProviderName
+    } else if (arg.startsWith('--to=')) {
+      destinationProvider = arg.slice('--to='.length) as StorageProviderName
+    } else if (arg.startsWith('--destination=')) {
+      destinationProvider = arg.slice('--destination='.length) as StorageProviderName
     }
+  }
+
+  if (!argv.some((arg) => arg.startsWith('--to=') || arg.startsWith('--destination='))) {
+    destinationProvider = getActiveProvider()
   }
 
   return {
@@ -106,6 +124,8 @@ export const parseArgs = (argv: readonly string[]): MigrationOptions => {
     limit:
       Number.isFinite(limit) && limit > 0 ? limit : Number.POSITIVE_INFINITY,
     checkpointPath,
+    sourceProvider,
+    destinationProvider,
   }
 }
 
@@ -136,14 +156,15 @@ export const saveCheckpoint = (
 
 /** All Vercel Blob objects under `prefix`, paginated to completion. */
 export const listAllSourceObjects = async (
+  sourceProvider: StorageProviderName,
   prefix: string | undefined
 ): Promise<ListedObject[]> => {
-  const vercel = getStorageAdapterFor('vercel')
+  const sourceAdapter = getStorageAdapterFor(sourceProvider)
   const objects: ListedObject[] = []
   let cursor: string | undefined
 
   do {
-    const page = await vercel.list({ prefix, cursor, limit: 1000 })
+    const page = await sourceAdapter.list({ prefix, cursor, limit: 1000 })
     objects.push(...page.objects)
     cursor = page.hasMore ? page.cursor : undefined
   } while (cursor)
@@ -153,27 +174,27 @@ export const listAllSourceObjects = async (
 
 /**
  * Migrate one object: verify-skip if already at the destination, otherwise
- * (when `apply`) fetch the source bytes, write them to R2, and verify the
+ * (when `apply`) fetch the source bytes, write them to the destination, and verify the
  * write by re-reading the destination and comparing size.
  */
 export const migrateOne = async (
   object: ListedObject,
-  options: Pick<MigrationOptions, 'apply'>
+  options: Pick<MigrationOptions, 'apply' | 'sourceProvider' | 'destinationProvider'>
 ): Promise<
   | { outcome: 'already_migrated' }
   | { outcome: 'would_copy' }
   | { outcome: 'copied' }
   | { outcome: 'failed'; reason: string }
 > => {
-  const vercel = getStorageAdapterFor('vercel')
-  const r2 = getStorageAdapterFor('r2')
+  const source = getStorageAdapterFor(options.sourceProvider)
+  const destination = getStorageAdapterFor(options.destinationProvider)
 
-  const existingUrl = await r2.getUrl(object.pathname)
+  const existingUrl = await destination.getUrl(object.pathname)
   if (existingUrl) return { outcome: 'already_migrated' }
 
   if (!options.apply) return { outcome: 'would_copy' }
 
-  const sourceUrl = await vercel.getUrl(object.pathname)
+  const sourceUrl = await source.getUrl(object.pathname)
   if (!sourceUrl) {
     return {
       outcome: 'failed',
@@ -192,12 +213,12 @@ export const migrateOne = async (
   const bytes = Buffer.from(await response.arrayBuffer())
   const contentType = response.headers.get('content-type')
 
-  await r2.put(object.pathname, bytes, {
+  await destination.put(object.pathname, bytes, {
     contentType,
     cacheControl: IMMUTABLE_CACHE_CONTROL,
   })
 
-  const verifiedUrl = await r2.getUrl(object.pathname)
+  const verifiedUrl = await destination.getUrl(object.pathname)
   if (!verifiedUrl) {
     return {
       outcome: 'failed',
@@ -230,7 +251,16 @@ export const runMigration = async (
   const checkpoint = loadCheckpoint(options.checkpointPath)
   const alreadyMigratedSet = new Set(checkpoint.migrated)
 
-  const allObjects = await listAllSourceObjects(options.prefix)
+  if (options.sourceProvider === options.destinationProvider) {
+    throw new Error(
+      `Source and destination providers must differ. Both were '${options.sourceProvider}'.`
+    )
+  }
+
+  const allObjects = await listAllSourceObjects(
+    options.sourceProvider,
+    options.prefix
+  )
   const objects = allObjects.slice(0, options.limit)
 
   let migrated = 0
@@ -244,7 +274,11 @@ export const runMigration = async (
       continue
     }
 
-    const result = await migrateOne(object, { apply: options.apply })
+    const result = await migrateOne(object, {
+      apply: options.apply,
+      sourceProvider: options.sourceProvider,
+      destinationProvider: options.destinationProvider,
+    })
 
     if (result.outcome === 'already_migrated') {
       skippedExisting += 1

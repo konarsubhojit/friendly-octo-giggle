@@ -65,7 +65,7 @@ The architecture is a serverless-first e-commerce system built around a small nu
 │  • Optional Upstash Search index                             │
 │  • Inngest durable workflows for all background work         │
 │  • Optional Vercel Edge Config for feature/shipping config   │
-│  • Vercel Blob or Cloudflare R2 for product images           │
+│  • Vercel Blob or S3-compatible storage for product images    │
 │    (STORAGE_PROVIDER, dual-read fallback)                    │
 └──────────────────────────────────────────────────────────────┘
 ```
@@ -110,7 +110,7 @@ The dominant design principles in the current code are:
 | Upstash Search                    | Product search index with DB fallback                                                                |
 | Inngest                           | Durable, step-checkpointed background workflows                                                      |
 | Vercel Blob                       | Hosted media storage (default provider)                                                              |
-| Cloudflare R2                     | S3-compatible media storage (via `@aws-sdk/client-s3`), selected with `STORAGE_PROVIDER=r2`          |
+| S3-compatible storage (`s3`/`r2`) | Generic adapter for AWS S3, MinIO, R2, Spaces, B2, Wasabi (with `r2` as a preset alias)              |
 | Cloudflare Workers                | `workers/images` — edge image resizing via `cf.image`, served through the custom `next/image` loader |
 | Vercel Edge Config                | Feature flags and shipping configuration                                                             |
 | Vercel Analytics / Speed Insights | Runtime telemetry                                                                                    |

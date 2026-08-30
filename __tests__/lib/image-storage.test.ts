@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockGetStorageAdapterFor = vi.hoisted(() => vi.fn())
 const mockActiveProvider = vi.hoisted(() => ({
-  value: 'vercel' as 'vercel' | 'r2',
+  value: 'vercel' as 'vercel' | 'r2' | 's3',
 }))
 
 vi.mock('@/lib/storage', () => ({
@@ -14,7 +14,7 @@ vi.mock('@/lib/storage', () => ({
 const makeFile = (name = 'photo.PNG', type = 'image/png') =>
   new File([new Uint8Array([0x89, 0x50])], name, { type })
 
-const makeAdapter = (provider: 'vercel' | 'r2', put = vi.fn()) => ({
+const makeAdapter = (provider: 'vercel' | 'r2' | 's3', put = vi.fn()) => ({
   provider,
   put,
   delete: vi.fn(),
@@ -58,6 +58,7 @@ describe('uploadImage', () => {
       contentType: 'image/png',
       provider: 'r2',
     })
+
     mockGetStorageAdapterFor.mockReturnValue(makeAdapter('r2', put))
 
     const { uploadImage } = await import('@/lib/image-storage')
@@ -65,6 +66,23 @@ describe('uploadImage', () => {
 
     expect(mockGetStorageAdapterFor).toHaveBeenCalledWith('r2')
     expect(result.provider).toBe('r2')
+  })
+
+  it('uses the s3 adapter when STORAGE_PROVIDER=s3', async () => {
+    mockActiveProvider.value = 's3'
+    const put = vi.fn().mockResolvedValue({
+      url: 'https://s3.example.com/images/x.png',
+      pathname: 'images/x.png',
+      contentType: 'image/png',
+      provider: 's3',
+    })
+    mockGetStorageAdapterFor.mockReturnValue(makeAdapter('s3', put))
+
+    const { uploadImage } = await import('@/lib/image-storage')
+    const result = await uploadImage(makeFile())
+
+    expect(mockGetStorageAdapterFor).toHaveBeenCalledWith('s3')
+    expect(result.provider).toBe('s3')
   })
 
   it('lets an explicit options.provider override STORAGE_PROVIDER', async () => {
