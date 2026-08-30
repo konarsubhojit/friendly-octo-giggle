@@ -192,11 +192,14 @@ describe('retrySingleEmailFunction', () => {
 
   it('rejects batches larger than ten at the event boundary', async () => {
     const validation = emailDeliveryFailed.schema['~standard'].validate({
-      emails: Array.from({ length: EMAIL_RETRY_BATCH_SIZE + 1 }, (_, index) => ({
-        failedEmailId: `failed-${index}`,
-        emailType: 'order_confirmation',
-        referenceId: `order-${index}`,
-      })),
+      emails: Array.from(
+        { length: EMAIL_RETRY_BATCH_SIZE + 1 },
+        (_, index) => ({
+          failedEmailId: `failed-${index}`,
+          emailType: 'order_confirmation',
+          referenceId: `order-${index}`,
+        })
+      ),
     })
 
     expect(validation).toEqual(

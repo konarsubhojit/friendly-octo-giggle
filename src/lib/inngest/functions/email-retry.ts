@@ -19,10 +19,7 @@ export const emailDeliveryFailed = eventType('email/delivery.failed', {
   schema: z.union([
     failedEmailSchema,
     z.object({
-      emails: z
-        .array(failedEmailSchema)
-        .min(1)
-        .max(EMAIL_RETRY_BATCH_SIZE),
+      emails: z.array(failedEmailSchema).min(1).max(EMAIL_RETRY_BATCH_SIZE),
     }),
   ]),
 })
@@ -117,8 +114,7 @@ export const retrySingleEmailFunction = inngest.createFunction(
     throttle: { limit: 30, period: '1m' },
   },
   async ({ event, step }) => {
-    const emails =
-      'emails' in event.data ? event.data.emails : [event.data]
+    const emails = 'emails' in event.data ? event.data.emails : [event.data]
     const stepId = 'emails' in event.data ? 'retry-email-batch' : 'retry-email'
     const stepResult: FailedEmailRetryResult | FailedEmailRetryResult[] =
       await step.run(stepId, async (): Promise<FailedEmailRetryResult[]> => {

@@ -150,10 +150,8 @@ export const runCheckoutRequestSteps = async ({
 
   // Step 3 — verify payment and persist the order atomically.
   const orderId = await step.run('create-order', async () => {
-    const {
-      createOrderForCheckoutRequest,
-      recordCheckoutProcessingFailure,
-    } = await import('@/features/cart/services/checkout-service')
+    const { createOrderForCheckoutRequest, recordCheckoutProcessingFailure } =
+      await import('@/features/cart/services/checkout-service')
     try {
       return await createOrderForCheckoutRequest(checkoutRequestId)
     } catch (error) {
@@ -236,10 +234,7 @@ export const handleCheckoutRequestFailure = async ({
   const parsed = CheckoutQueueMessageSchema.safeParse(originalEventData)
 
   if (!parsed.success) {
-    await logCheckoutError(
-      error,
-      'inngest_checkout_failure_without_request_id'
-    )
+    await logCheckoutError(error, 'inngest_checkout_failure_without_request_id')
     return
   }
 
