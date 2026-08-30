@@ -165,8 +165,8 @@ describe('resolveProviders — ambiguous configurations', () => {
     )
 
     expect(issues.map((issue) => issue.field)).toEqual([
-      'ALGOLIA_API_KEY',
-      'ALGOLIA_INDEX_NAME',
+      'ALGOLIA_ADMIN_API_KEY',
+      'ALGOLIA_PRODUCTS_INDEX',
     ])
   })
 

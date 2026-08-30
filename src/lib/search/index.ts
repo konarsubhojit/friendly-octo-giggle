@@ -1,6 +1,7 @@
 // Product search: Upstash Search client + cached service layer
 export {
   isSearchAvailable,
+  getSearchCapabilities,
   indexProduct,
   indexProducts,
   removeProduct,
@@ -8,10 +9,15 @@ export {
   resetIndex,
   getIndexInfo,
 } from './client'
+export { __resetCatalogSearchClientForTests } from './factory'
 export type {
-  ProductSearchResult,
+  CatalogSearchCapabilities,
+  CatalogSearchClient,
+  CatalogSearchProvider,
   ProductContent,
+  ProductIndexDocument,
   ProductMetadata,
-} from './client'
+  ProductSearchResult,
+} from './types'
 
 export { searchProductIds, searchProductIdsCached } from './product-search'

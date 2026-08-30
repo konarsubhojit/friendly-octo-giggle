@@ -64,6 +64,7 @@
     "@vercel/edge-config": "^1.4.3",
     "@vercel/functions": "^3.9.3",
     "@vercel/speed-insights": "^2.0.0",
+    "algoliasearch": "^5.57.0",
     "autoprefixer": "^10.5.4",
     "bcryptjs": "^3.0.3",
     "d3-array": "3.2.4",
