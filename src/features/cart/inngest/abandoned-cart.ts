@@ -2,12 +2,7 @@ import { cron, experiment } from 'inngest'
 import { inngest } from '@/lib/inngest/client'
 import { abandonedCartReminderDue } from '@/features/cart/inngest/events.abandoned'
 import { cartRecoveryScorer } from '@/features/cart/inngest/scorers'
-import {
-  deliverAbandonedCartReminder,
-  findAbandonedCartCandidates,
-} from '@/features/cart/services/abandoned-cart-service'
 import { cartSession } from '@/lib/inngest/sessions'
-import { logBusinessEvent, logError } from '@/lib/logger'
 
 /**
  * Marketing email, so a shorter retry tail than transactional mail: a reminder
@@ -41,11 +36,14 @@ export const scanAbandonedCartsFunction = inngest.createFunction(
     retries: 2,
   },
   async ({ step }) => {
-    const candidates = await step.run('find-abandoned-carts', () =>
-      findAbandonedCartCandidates()
-    )
+    const candidates = await step.run('find-abandoned-carts', async () => {
+      const { findAbandonedCartCandidates } =
+        await import('@/features/cart/services/abandoned-cart-service')
+      return findAbandonedCartCandidates()
+    })
 
     if (candidates.length === 0) {
+      const { logBusinessEvent } = await import('@/lib/logger')
       logBusinessEvent({
         event: 'cron_abandoned_cart_skip',
         details: { reason: 'no_candidates' },
@@ -65,6 +63,7 @@ export const scanAbandonedCartsFunction = inngest.createFunction(
       )
     )
 
+    const { logBusinessEvent } = await import('@/lib/logger')
     logBusinessEvent({
       event: 'cron_abandoned_cart_queued',
       details: { total: candidates.length },
@@ -99,7 +98,8 @@ export const sendAbandonedCartReminderFunction = inngest.createFunction(
     // provider quota.
     concurrency: { limit: 5 },
     throttle: { limit: 60, period: '1m' },
-    onFailure: ({ event, error }) => {
+    onFailure: async ({ event, error }) => {
+      const { logError } = await import('@/lib/logger')
       logError({
         error,
         context: 'inngest_abandoned_cart_reminder_failed',
@@ -108,7 +108,6 @@ export const sendAbandonedCartReminderFunction = inngest.createFunction(
           reminderNumber: event.data.event.data.reminderNumber,
         },
       })
-      return Promise.resolve()
     },
   },
   async ({ event, step, group, defer }) => {
@@ -117,23 +116,27 @@ export const sendAbandonedCartReminderFunction = inngest.createFunction(
     const { result, experimentRef } = await group.experiment('reminder-copy', {
       variants: {
         gentle: () =>
-          step.run('send-gentle-reminder', () =>
-            deliverAbandonedCartReminder({
+          step.run('send-gentle-reminder', async () => {
+            const { deliverAbandonedCartReminder } =
+              await import('@/features/cart/services/abandoned-cart-service')
+            return deliverAbandonedCartReminder({
               cartId,
               userId,
               reminderNumber,
               tone: 'gentle',
             })
-          ),
+          }),
         urgency: () =>
-          step.run('send-urgency-reminder', () =>
-            deliverAbandonedCartReminder({
+          step.run('send-urgency-reminder', async () => {
+            const { deliverAbandonedCartReminder } =
+              await import('@/features/cart/services/abandoned-cart-service')
+            return deliverAbandonedCartReminder({
               cartId,
               userId,
               reminderNumber,
               tone: 'urgency',
             })
-          ),
+          }),
       },
       select: experiment.bucket(userId, {
         weights: {

@@ -6,7 +6,6 @@ const { mockExpireDueReservations, mockLogBusinessEvent } = vi.hoisted(() => ({
 }))
 
 vi.mock('@/features/orders/services/stock-reservation', () => ({
-  RESERVATION_EXPIRY_BATCH_SIZE: 500,
   expireDueReservations: mockExpireDueReservations,
 }))
 
@@ -17,6 +16,7 @@ import {
   expireStockReservationsFunction,
 } from '@/lib/inngest/functions/stock-reservations'
 import { SCORE_NAMES } from '@/lib/inngest/scores'
+import { RESERVATION_EXPIRY_BATCH_SIZE } from '@/features/orders/services/stock-reservation.constants'
 
 type FunctionInternals = {
   opts: {
@@ -52,9 +52,9 @@ beforeEach(() => {
 })
 
 describe('expireStockReservationsFunction', () => {
-  it('sweeps every thirty minutes with a bounded retry budget', () => {
+  it('sweeps hourly with a bounded retry budget', () => {
     expect(internals.opts.id).toBe('expire-stock-reservations')
-    expect(internals.opts.triggers).toEqual([{ cron: '*/30 * * * *' }])
+    expect(internals.opts.triggers).toEqual([{ cron: '0 * * * *' }])
     expect(internals.opts.retries).toBe(RESERVATION_EXPIRY_RETRIES)
   })
 
@@ -66,7 +66,9 @@ describe('expireStockReservationsFunction', () => {
 
     const result = await run()
 
-    expect(mockExpireDueReservations).toHaveBeenCalledWith(500)
+    expect(mockExpireDueReservations).toHaveBeenCalledWith(
+      RESERVATION_EXPIRY_BATCH_SIZE
+    )
     expect(result).toEqual({ reservations: 3, quantity: 7, drained: true })
     expect(scores).toEqual([
       { name: SCORE_NAMES.reservationExpirySweepDrained, value: true },
@@ -78,7 +80,7 @@ describe('expireStockReservationsFunction', () => {
 
   it('reports an undrained backlog when the batch fills', async () => {
     mockExpireDueReservations.mockResolvedValue({
-      reservations: 500,
+      reservations: RESERVATION_EXPIRY_BATCH_SIZE,
       quantity: 900,
     })
 

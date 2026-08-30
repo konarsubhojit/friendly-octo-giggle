@@ -27,7 +27,10 @@ import { primaryDrizzleDb } from '@/lib/db'
 import { productVariants, stockReservations } from '@/lib/schema'
 import { logBusinessEvent } from '@/lib/logger'
 import { recordStockReservationMetric } from '@/lib/metrics'
+import { RESERVATION_EXPIRY_BATCH_SIZE } from './stock-reservation.constants'
 import type { OrderTransaction } from './order-restock'
+
+export { RESERVATION_EXPIRY_BATCH_SIZE } from './stock-reservation.constants'
 
 /**
  * How long a hold survives without being consumed.
@@ -46,10 +49,9 @@ export const RESERVATION_TTL_MINUTES = (() => {
 /**
  * Rows a single expiry sweep may claim.
  *
- * Bounded so a backlog cannot exhaust the function timeout; the cron runs
- * every thirty minutes, so a backlog drains rather than accumulating.
+ * Bounded so a backlog cannot exhaust the function timeout; the hourly cron
+ * processes twice the previous batch, preserving its daily drain capacity.
  */
-export const RESERVATION_EXPIRY_BATCH_SIZE = 500
 
 export interface ReservationItemInput {
   readonly variantId: string

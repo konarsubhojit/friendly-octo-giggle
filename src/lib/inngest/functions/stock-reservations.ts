@@ -1,15 +1,11 @@
 import { cron } from 'inngest'
 import { inngest } from '@/lib/inngest/client'
 import { SCORE_NAMES } from '@/lib/inngest/scores'
-import { logBusinessEvent } from '@/lib/logger'
-import {
-  RESERVATION_EXPIRY_BATCH_SIZE,
-  expireDueReservations,
-} from '@/features/orders/services/stock-reservation'
+import { RESERVATION_EXPIRY_BATCH_SIZE } from '@/features/orders/services/stock-reservation.constants'
 
 /**
- * Two retries. A sweep that fails is not urgent — the next run is thirty
- * minutes away and claims exactly the same rows — but a transient connection error
+ * Two retries. A sweep that fails is not urgent — the next run is one hour
+ * away and claims exactly the same rows — but a transient connection error
  * should not cost a whole interval either.
  */
 export const RESERVATION_EXPIRY_RETRIES = 2
@@ -27,13 +23,15 @@ export const expireStockReservationsFunction = inngest.createFunction(
   {
     id: 'expire-stock-reservations',
     name: 'Expire stock reservations',
-    triggers: [cron('*/30 * * * *')],
+    triggers: [cron('0 * * * *')],
     retries: RESERVATION_EXPIRY_RETRIES,
   },
   async ({ step }) => {
-    const settlement = await step.run('expire-due-reservations', () =>
-      expireDueReservations(RESERVATION_EXPIRY_BATCH_SIZE)
-    )
+    const settlement = await step.run('expire-due-reservations', async () => {
+      const { expireDueReservations } =
+        await import('@/features/orders/services/stock-reservation')
+      return expireDueReservations(RESERVATION_EXPIRY_BATCH_SIZE)
+    })
 
     // A full batch means the backlog outran one interval; the dashboard needs
     // to see that, because the next run inherits whatever was left behind.
@@ -45,6 +43,7 @@ export const expireStockReservationsFunction = inngest.createFunction(
     })
 
     if (settlement.reservations > 0) {
+      const { logBusinessEvent } = await import('@/lib/logger')
       logBusinessEvent({
         event: 'cron_stock_reservations_expired',
         details: {

@@ -1,21 +1,36 @@
 import { cron, eventType } from 'inngest'
 import { z } from 'zod'
 import { inngest } from '@/lib/inngest/client'
-import {
-  getRetriableFailedEmails,
-  retryFailedEmail,
-} from '@/lib/email/failed-emails'
 import { SCORE_NAMES } from '@/lib/inngest/scores'
-import { logBusinessEvent } from '@/lib/logger'
+import type { FailedEmailRetryResult } from '@/lib/email/failed-emails'
 
-/** One stuck email, ready to be retried on its own run. */
-export const emailDeliveryFailed = eventType('email/delivery.failed', {
-  schema: z.object({
-    failedEmailId: z.string().min(1),
-    emailType: z.string().min(1),
-    referenceId: z.string().min(1),
-  }),
+export const EMAIL_RETRY_BATCH_SIZE = 10
+const EMAIL_RETRY_PARALLELISM = 5
+
+const failedEmailSchema = z.object({
+  failedEmailId: z.string().min(1),
+  emailType: z.string().min(1),
+  referenceId: z.string().min(1),
 })
+
+/** A bounded group of stuck emails, ready for one child run. */
+export const emailDeliveryFailed = eventType('email/delivery.failed', {
+  // Retain the legacy single-row shape while already-queued events drain.
+  schema: z.union([
+    failedEmailSchema,
+    z.object({
+      emails: z.array(failedEmailSchema).min(1).max(EMAIL_RETRY_BATCH_SIZE),
+    }),
+  ]),
+})
+
+const chunksOf = <T>(values: readonly T[], size: number): T[][] => {
+  const chunks: T[][] = []
+  for (let index = 0; index < values.length; index += size) {
+    chunks.push(values.slice(index, index + size))
+  }
+  return chunks
+}
 
 /**
  * Nightly sweep for emails that never made it out.
@@ -23,9 +38,9 @@ export const emailDeliveryFailed = eventType('email/delivery.failed', {
  * The route this replaces mapped every retriable row into a single
  * `Promise.allSettled` inside one invocation: one slow provider stalled the
  * whole batch, and an invocation timeout dropped the remainder with no retry.
- * Fanning out one event per row makes each retry independently durable and
- * lets throughput be governed by the child function's concurrency limit
- * instead of by how many sends fit in a function budget.
+ * Bounded events retain durable retry isolation without creating one function
+ * run per row. Each child processes at most ten rows with bounded parallelism,
+ * so one slow provider cannot stall the entire nightly backlog.
  */
 export const retryFailedEmailsFunction = inngest.createFunction(
   {
@@ -35,6 +50,8 @@ export const retryFailedEmailsFunction = inngest.createFunction(
   },
   async ({ step }) => {
     const retriable = await step.run('load-retriable-emails', async () => {
+      const { getRetriableFailedEmails } =
+        await import('@/lib/email/failed-emails')
       const rows = await getRetriableFailedEmails()
       return rows.map((row) => ({
         id: row.id,
@@ -44,6 +61,7 @@ export const retryFailedEmailsFunction = inngest.createFunction(
     })
 
     if (retriable.length === 0) {
+      const { logBusinessEvent } = await import('@/lib/logger')
       logBusinessEvent({
         event: 'cron_retry_emails_skip',
         details: { reason: 'no_retriable_emails' },
@@ -54,15 +72,18 @@ export const retryFailedEmailsFunction = inngest.createFunction(
 
     await step.sendEvent(
       'queue-email-retries',
-      retriable.map((row) =>
+      chunksOf(retriable, EMAIL_RETRY_BATCH_SIZE).map((batch) =>
         emailDeliveryFailed.create({
-          failedEmailId: row.id,
-          emailType: row.emailType,
-          referenceId: row.referenceId,
+          emails: batch.map((row) => ({
+            failedEmailId: row.id,
+            emailType: row.emailType,
+            referenceId: row.referenceId,
+          })),
         })
       )
     )
 
+    const { logBusinessEvent } = await import('@/lib/logger')
     logBusinessEvent({
       event: 'cron_retry_emails_queued',
       details: { total: retriable.length },
@@ -74,7 +95,7 @@ export const retryFailedEmailsFunction = inngest.createFunction(
 )
 
 /**
- * Retry a single stuck email.
+ * Retry one bounded batch of stuck emails.
  *
  * `retries: 0` because `retryFailedEmail` maintains its own attempt counter and
  * error history in `failedEmails`; layering Inngest retries on top would inflate
@@ -83,24 +104,60 @@ export const retryFailedEmailsFunction = inngest.createFunction(
 export const retrySingleEmailFunction = inngest.createFunction(
   {
     id: 'retry-single-email',
-    name: 'Retry a single failed email',
+    name: 'Retry a batch of failed emails',
     triggers: [emailDeliveryFailed],
     retries: 0,
-    // Keeps the nightly fan-out from stampeding the provider, which is what
-    // caused the batch to stall in the first place.
+    // Bounds concurrent batch runs. Work inside each run is also capped at five.
     concurrency: { limit: 5 },
+    // Governs batch starts rather than individual rows; the nightly loader is
+    // independently capped, and each batch contains at most ten rows.
     throttle: { limit: 30, period: '1m' },
   },
   async ({ event, step }) => {
-    const result = await step.run('retry-email', () =>
-      retryFailedEmail(event.data.failedEmailId)
-    )
+    const emails = 'emails' in event.data ? event.data.emails : [event.data]
+    const stepId = 'emails' in event.data ? 'retry-email-batch' : 'retry-email'
+    const stepResult: FailedEmailRetryResult | FailedEmailRetryResult[] =
+      await step.run(stepId, async (): Promise<FailedEmailRetryResult[]> => {
+        const { retryFailedEmail } = await import('@/lib/email/failed-emails')
+        const settled: FailedEmailRetryResult[] = []
+        for (const batch of chunksOf(emails, EMAIL_RETRY_PARALLELISM)) {
+          const batchResults = await Promise.all(
+            batch.map(async (email) => {
+              try {
+                return await retryFailedEmail(email.failedEmailId)
+              } catch (error) {
+                const message =
+                  error instanceof Error ? error.message : String(error)
+                const { logError } = await import('@/lib/logger')
+                logError({
+                  error,
+                  context: 'failed_email_batch_retry',
+                  additionalInfo: { failedEmailId: email.failedEmailId },
+                })
+                return {
+                  id: email.failedEmailId,
+                  success: false,
+                  error: message,
+                }
+              }
+            })
+          )
+          settled.push(...batchResults)
+        }
+        return settled
+      })
+    const results = Array.isArray(stepResult) ? stepResult : [stepResult]
 
+    const recovered = results.filter((result) => result.success).length
     await step.score('score-retry-recovered', {
       name: SCORE_NAMES.emailRetryRecovered,
-      value: result.success,
+      value: recovered / results.length,
     })
 
-    return result
+    return {
+      attempted: results.length,
+      recovered,
+      results,
+    }
   }
 )

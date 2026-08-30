@@ -287,9 +287,15 @@ INNGEST_SIGNING_KEY=...
 ```
 
 - Register the app at `https://your-domain.com/api/inngest` in the Inngest dashboard.
-- Scheduled work (failed-email retries, exchange-rate refresh, abandoned-cart
-  scan) is declared as `cron` triggers on Inngest functions, so no platform cron
-  configuration is required.
+- Scheduled work is declared as `cron` triggers on Inngest functions, so no
+  platform cron configuration is required: failed-email retries run daily at
+  02:30 UTC, exchange rates daily at 03:00 UTC, abandoned-cart scans daily at
+  10:00 UTC, stock-reservation expiry hourly, affinity scoring daily at 04:00
+  UTC, and activity retention monthly at 04:00 UTC on day one.
+- Failed-email retry rows are queued in groups of ten. Each child run processes
+  at most five rows concurrently under the existing function-level concurrency
+  and provider throttle, reducing `/api/inngest` fan-out while keeping bounded
+  failure isolation.
 - If `INNGEST_EVENT_KEY` is unset, checkout still completes: the API route
   processes the request inline via `waitUntil` as a last-resort safety net. That
   path has no durability or retries, so treat an unset key as an outage, not a

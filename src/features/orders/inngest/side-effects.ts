@@ -6,10 +6,7 @@ import {
   orderSearchIndexInvoke,
   orderSearchIndexRequested,
 } from '@/features/orders/inngest/events'
-import { indexOrderInRedis } from '@/features/orders/services/order-mirror'
-import { invalidateOrderCaches } from '@/features/orders/services/order-cache'
 import { SCORE_NAMES } from '@/lib/inngest/scores'
-import { logger } from '@/lib/logger'
 
 /**
  * Redis and the cache layer are both remote services on the far side of a
@@ -44,9 +41,11 @@ export const indexOrderForSearchFunction = inngest.createFunction(
   async ({ event, step }) => {
     const { orderId } = event.data
 
-    const outcome = await step.run('index-order', () =>
-      indexOrderInRedis(orderId)
-    )
+    const outcome = await step.run('index-order', async () => {
+      const { indexOrderInRedis } =
+        await import('@/features/orders/services/order-mirror')
+      return indexOrderInRedis(orderId)
+    })
 
     await step.score('score-order-indexed', {
       name: SCORE_NAMES.orderIndexed,
@@ -56,6 +55,7 @@ export const indexOrderForSearchFunction = inngest.createFunction(
     if (outcome === 'order-missing') {
       // Not an error worth retrying: an order that no longer exists has
       // nothing to mirror, and the read path falls back to Postgres.
+      const { logger } = await import('@/lib/logger')
       logger.warn({ orderId }, 'inngest_index_order_missing')
     }
 
@@ -83,9 +83,11 @@ export const invalidateOrderCachesFunction = inngest.createFunction(
   async ({ event, step }) => {
     const { orderId, userId, productIds } = event.data
 
-    await step.run('invalidate-caches', () =>
-      invalidateOrderCaches({ userId, productIds })
-    )
+    await step.run('invalidate-caches', async () => {
+      const { invalidateOrderCaches } =
+        await import('@/features/orders/services/order-cache')
+      return invalidateOrderCaches({ userId, productIds })
+    })
 
     return { orderId, invalidatedProducts: productIds.length }
   }
