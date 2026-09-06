@@ -11,9 +11,7 @@ const { mockSelect, mockItemsWhere, mockEvidenceOrderBy } = vi.hoisted(() => {
   let call = 0
   const mockSelect = vi.fn(() => {
     call += 1
-    return call === 1
-      ? { from: mockItemsFrom }
-      : { from: mockEvidenceFrom }
+    return call === 1 ? { from: mockItemsFrom } : { from: mockEvidenceFrom }
   })
 
   return { mockSelect, mockItemsWhere, mockEvidenceOrderBy }

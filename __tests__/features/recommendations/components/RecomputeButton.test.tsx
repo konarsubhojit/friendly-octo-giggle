@@ -21,9 +21,7 @@ describe('RecomputeButton', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Recompute now' }))
 
-    expect(
-      screen.getByRole('button', { name: 'Queueing…' })
-    ).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Queueing…' })).toBeDisabled()
 
     await waitFor(() => {
       expect(
