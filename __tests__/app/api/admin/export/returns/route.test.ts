@@ -91,8 +91,16 @@ describe('GET /api/admin/export/returns', () => {
       role: 'ADMIN',
       userId: 'admin',
     })
+    const decidedReturnRequest = {
+      ...baseReturnRequest,
+      id: 'ret0002',
+      decisionReason: 'Approved by support',
+      refund: { status: 'COMPLETED' },
+      decidedAt: new Date('2025-01-03T00:00:00.000Z'),
+      receivedAt: new Date('2025-01-04T00:00:00.000Z'),
+    }
     mockFindMany
-      .mockResolvedValueOnce([baseReturnRequest])
+      .mockResolvedValueOnce([baseReturnRequest, decidedReturnRequest])
       .mockResolvedValueOnce([])
 
     const response = await GET()
@@ -107,6 +115,9 @@ describe('GET /api/admin/export/returns', () => {
     )
     expect(lines[1]).toBe(
       'ret0001,ORD1234567,jane@example.com,REQUESTED,DAMAGED,,2,3,1000.00,,2025-01-02T03:04:05.000Z,,'
+    )
+    expect(lines[2]).toBe(
+      'ret0002,ORD1234567,jane@example.com,REQUESTED,DAMAGED,Approved by support,2,3,1000.00,COMPLETED,2025-01-02T03:04:05.000Z,2025-01-03T00:00:00.000Z,2025-01-04T00:00:00.000Z'
     )
   })
 

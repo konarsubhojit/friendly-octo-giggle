@@ -152,9 +152,14 @@ describe('GET /api/admin/returns', () => {
 
   it('ignores an invalid cursor', async () => {
     const response = await GET(makeRequest('?cursor=not-a-date'))
+    const body = await response.json()
 
     expect(response.status).toBe(200)
     expect(mockSelectWhere).toHaveBeenCalledWith(undefined)
+    expect(body.data.returns).toEqual([
+      { ...row, createdAt: row.createdAt.toISOString() },
+    ])
+    expect(body.data.nextCursor).toBeNull()
   })
 
   it('handles unexpected errors', async () => {
