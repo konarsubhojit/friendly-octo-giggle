@@ -35,7 +35,7 @@ describe('createRateLimiter', () => {
   it('returns an InMemoryRateLimiter for the memory provider', () => {
     mockGetProvider.mockReturnValue('memory')
 
-    const limiter = createRateLimiter({ maxRequests: 5 })
+    const limiter = createRateLimiter({ maxRequests: 5, prefix: 'rl' })
 
     expect(limiter).toBeInstanceOf(InMemoryRateLimiter)
   })
@@ -43,7 +43,11 @@ describe('createRateLimiter', () => {
   it('defaults to an InMemoryRateLimiter for an unknown provider', () => {
     mockGetProvider.mockReturnValue('something-else')
 
-    const limiter = createRateLimiter({ maxRequests: 5, windowSeconds: 30 })
+    const limiter = createRateLimiter({
+      maxRequests: 5,
+      windowSeconds: 30,
+      prefix: 'rl',
+    })
 
     expect(limiter).toBeInstanceOf(InMemoryRateLimiter)
   })
@@ -51,7 +55,7 @@ describe('createRateLimiter', () => {
   it('returns null for the upstash provider when credentials are missing', () => {
     mockGetProvider.mockReturnValue('upstash')
 
-    const limiter = createRateLimiter({ maxRequests: 5 })
+    const limiter = createRateLimiter({ maxRequests: 5, prefix: 'rl' })
 
     expect(limiter).toBeNull()
   })
@@ -59,7 +63,7 @@ describe('createRateLimiter', () => {
   it('returns null for the redis provider when REDIS_URL is missing', () => {
     mockGetProvider.mockReturnValue('redis')
 
-    const limiter = createRateLimiter({ maxRequests: 5 })
+    const limiter = createRateLimiter({ maxRequests: 5, prefix: 'rl' })
 
     expect(limiter).toBeNull()
     expect(mockGetStandardRedisCacheClient).not.toHaveBeenCalled()

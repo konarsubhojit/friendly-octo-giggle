@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { RetryButton } from '@/app/(public)/offline/RetryButton'
 
@@ -12,6 +12,10 @@ describe('RetryButton', () => {
       ...globalThis.window,
       location: { ...globalThis.window.location, reload },
     })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('renders a "Try Again" button', () => {
