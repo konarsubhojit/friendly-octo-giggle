@@ -11,7 +11,9 @@ describe('RetryButton', () => {
     reload.mockReset()
     Object.defineProperty(window, 'location', {
       configurable: true,
-      value: { ...originalLocation, reload },
+      value: Object.create(originalLocation, {
+        reload: { value: reload },
+      }),
     })
   })
 
