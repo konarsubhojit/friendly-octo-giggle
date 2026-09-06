@@ -761,7 +761,9 @@ Update user role.
 
 #### POST /api/upload
 
-Upload image to Vercel Blob storage.
+Upload image to the configured storage backend (Vercel Blob or
+Cloudflare R2, selected by `STORAGE_PROVIDER`; see
+[Deployment](./deployment.md#image-storage)).
 
 **Authentication**: Required (ADMIN)
 
@@ -771,6 +773,7 @@ Upload image to Vercel Blob storage.
 
 ```
 Form field: file
+Form field: provider (optional — "vercel" or "r2"; defaults to STORAGE_PROVIDER)
 ```
 
 **Validation**:
@@ -786,7 +789,8 @@ Form field: file
   "data": {
     "url": "https://blob.vercel-storage.com/abc123.jpg",
     "pathname": "abc123.jpg",
-    "contentType": "image/jpeg"
+    "contentType": "image/jpeg",
+    "provider": "vercel"
   }
 }
 ```

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { CurrencyCode } from '@/lib/currency'
 
 export const ChatMessageSchema = z.object({
   role: z.enum(['user', 'assistant']),
@@ -34,4 +35,27 @@ export type DailyUsage = { requests: number; tokens: number }
 export type RequestIdentity = {
   userId: string
   isAuthenticated: boolean
+}
+
+export type AssistantSurface = `product:${string}` | 'catalog'
+
+export type AssistantToolName =
+  | 'search_catalog'
+  | 'get_product_details'
+  | 'compare_products'
+  | 'get_order_status'
+
+export type ToolExecutionContext = {
+  identity: RequestIdentity
+  currencyCode: CurrencyCode
+  formatPrice: (priceInINR: number) => string
+  anchorProductId?: string
+}
+
+export type AssistantTool<Args> = {
+  name: AssistantToolName
+  description: string
+  argsSchema: z.ZodType<Args>
+  requiresAuth: boolean
+  execute: (args: Args, ctx: ToolExecutionContext) => Promise<string>
 }

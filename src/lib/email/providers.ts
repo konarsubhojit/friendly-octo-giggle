@@ -19,6 +19,8 @@ const SMTP_PORT = Number(process.env.GOOGLE_SMTP_PORT ?? '465')
 const SMTP_SECURE =
   process.env.GOOGLE_SMTP_SECURE === 'true' ||
   (process.env.GOOGLE_SMTP_SECURE !== 'false' && SMTP_PORT === 465)
+/** Per-stage SMTP budget: connect, greeting, and socket idle. */
+const SMTP_TIMEOUT_MS = 8_000
 
 let mailerSendClient: MailerSend | null = null
 let mailerSendInitialized = false
@@ -62,6 +64,14 @@ export const initGoogleSmtp = () => {
       port: SMTP_PORT,
       secure: SMTP_SECURE,
       auth: { user: smtpUser, pass: smtpPassword },
+      // Nodemailer's defaults are minutes long. Delivery runs on request paths
+      // such as registration, where an unreachable SMTP host would otherwise
+      // hold the response open until the serverless function itself times out
+      // and the user is left on a form that never resolves. Failing fast lets
+      // the MailerSend fallback take over instead.
+      connectionTimeout: SMTP_TIMEOUT_MS,
+      greetingTimeout: SMTP_TIMEOUT_MS,
+      socketTimeout: SMTP_TIMEOUT_MS,
     })
     smtpInitialized = true
   }

@@ -1,5 +1,3 @@
-import { Pool } from '@neondatabase/serverless'
-import { drizzle } from 'drizzle-orm/neon-serverless'
 import {
   products,
   productVariants,
@@ -9,6 +7,8 @@ import {
   productShares,
   categories,
   users,
+  adminAuditLogs,
+  adminSavedViews,
   accounts,
   sessions,
   verificationTokens,
@@ -19,6 +19,9 @@ import {
   orders,
   orderItems,
   refunds,
+  returnRequests,
+  returnItems,
+  returnEvidence,
   carts,
   cartItems,
   wishlists,
@@ -31,6 +34,7 @@ import {
   emailTypeEnum,
   failedEmailStatusEnum,
   usersRelations,
+  adminSavedViewsRelations,
   accountsRelations,
   passwordHistoryRelations,
   addressesRelations,
@@ -55,6 +59,9 @@ import {
   ordersRelations,
   orderItemsRelations,
   refundsRelations,
+  returnRequestsRelations,
+  returnItemsRelations,
+  returnEvidenceRelations,
   cartsRelations,
   cartItemsRelations,
   wishlistsRelations,
@@ -65,6 +72,9 @@ import {
 } from './schema'
 import { withReplicas } from 'drizzle-orm/pg-core'
 import { env } from './env'
+import { createDatabaseConnections } from './db/factory'
+import type { DatabaseConnections } from './db/factory'
+import { logError } from './logger'
 
 // All schema tables and relations collected into one object for Drizzle relational queries
 const schema = {
@@ -76,6 +86,8 @@ const schema = {
   discountTypeEnum,
   stockReservationStatusEnum,
   users,
+  adminAuditLogs,
+  adminSavedViews,
   accounts,
   sessions,
   verificationTokens,
@@ -97,11 +109,15 @@ const schema = {
   orders,
   orderItems,
   refunds,
+  returnRequests,
+  returnItems,
+  returnEvidence,
   carts,
   cartItems,
   wishlists,
   failedEmails,
   usersRelations,
+  adminSavedViewsRelations,
   categoriesRelations,
   accountsRelations,
   passwordHistoryRelations,
@@ -121,6 +137,9 @@ const schema = {
   ordersRelations,
   orderItemsRelations,
   refundsRelations,
+  returnRequestsRelations,
+  returnItemsRelations,
+  returnEvidenceRelations,
   cartsRelations,
   cartItemsRelations,
   wishlistsRelations,
@@ -134,32 +153,54 @@ const schema = {
 // ─── Connection Pool (singleton for serverless) ─────────
 
 const globalForDb = globalThis as unknown as {
-  writePool: Pool | undefined
-  readPool: Pool | undefined
+  databaseConnections: DatabaseConnections<typeof schema> | undefined
+  databaseShutdownRegistered: boolean | undefined
 }
 
-const createPool = (connectionString: string) =>
-  new Pool({
-    connectionString,
-    max: 10,
-    idleTimeoutMillis: 20000,
-    connectionTimeoutMillis: 5000,
+const databaseConnections = (globalForDb.databaseConnections ??=
+  createDatabaseConnections(env, schema))
+
+export const closeDatabaseConnections = async (): Promise<void> => {
+  try {
+    await globalForDb.databaseConnections?.close()
+  } finally {
+    globalForDb.databaseConnections = undefined
+  }
+}
+
+const registerShutdownHandler = () => {
+  if (globalForDb.databaseShutdownRegistered || env.NODE_ENV === 'test') return
+  globalForDb.databaseShutdownRegistered = true
+
+  const closeAndExit = (signal: NodeJS.Signals) => {
+    void closeDatabaseConnections()
+      .catch((error: unknown) => {
+        logError({ error, context: 'database_shutdown_failure' })
+      })
+      .finally(() => {
+        try {
+          process.kill(process.pid, signal)
+        } catch {
+          process.exit(1)
+        }
+      })
+  }
+
+  process.once('SIGINT', closeAndExit)
+  process.once('SIGTERM', closeAndExit)
+  process.once('beforeExit', () => {
+    void closeDatabaseConnections().catch((error: unknown) => {
+      logError({ error, context: 'database_shutdown_failure' })
+    })
   })
-
-const writePool = (globalForDb.writePool ??= createPool(env.DATABASE_URL))
-const readPool = (globalForDb.readPool ??= createPool(
-  env.READ_DATABASE_URL ?? env.DATABASE_URL
-))
-
-if (env.NODE_ENV === 'development') {
-  globalForDb.writePool = writePool
-  globalForDb.readPool = readPool
 }
+
+registerShutdownHandler()
 
 // ─── Drizzle Instance ───────────────────────────────────
 
-export const primaryDrizzleDb = drizzle(writePool, { schema })
-export const readDrizzleDb = drizzle(readPool, { schema })
+export const primaryDrizzleDb = databaseConnections.primary.db
+export const readDrizzleDb = databaseConnections.read.db
 export const drizzleDb = withReplicas(primaryDrizzleDb, [readDrizzleDb])
 
 // Export type for use in other files

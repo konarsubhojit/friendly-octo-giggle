@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { AssistantMarkdown } from './AssistantMarkdown'
+import { AssistantMarkdown } from '@/features/ai/components/AssistantMarkdown'
 
 interface ProductAssistantProps {
   readonly productId: string

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { POST } from '@/app/api/upload/route'
-import { auth } from '@/lib/auth'
+import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { uploadImage } from '@/lib/image-storage'
 import {
   MAX_FILE_SIZE,
@@ -8,7 +8,9 @@ import {
 } from '@/lib/upload-constants'
 import { logError } from '@/lib/logger'
 
-vi.mock('@/lib/auth', () => ({ auth: vi.fn() }))
+vi.mock('@/features/admin/services/admin-auth', () => ({
+  checkAdminAuth: vi.fn(),
+}))
 vi.mock('@/lib/image-storage', () => ({ uploadImage: vi.fn() }))
 vi.mock(
   '@/lib/upload-constants',
@@ -16,7 +18,7 @@ vi.mock(
 )
 vi.mock('@/lib/logger', () => ({ logError: vi.fn() }))
 
-const mockAuth = auth as ReturnType<typeof vi.fn>
+const mockCheckAdminAuth = vi.mocked(checkAdminAuth)
 const mockUploadImage = uploadImage as ReturnType<typeof vi.fn>
 
 const PNG_MAGIC_BYTES = Uint8Array.from([
@@ -81,7 +83,11 @@ describe('POST /api/upload', () => {
   })
 
   it('returns 401 when not authenticated', async () => {
-    mockAuth.mockResolvedValue(null)
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: false,
+      error: 'Not authenticated',
+      status: 401,
+    })
     const res = await POST(makeRequest())
     expect(res.status).toBe(401)
     const body = await res.json()
@@ -89,7 +95,11 @@ describe('POST /api/upload', () => {
   })
 
   it('returns 403 when not admin', async () => {
-    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'USER' } })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: false,
+      error: 'Not authorized - Admin access required',
+      status: 403,
+    })
     const res = await POST(makeRequest())
     expect(res.status).toBe(403)
     const body = await res.json()
@@ -97,7 +107,11 @@ describe('POST /api/upload', () => {
   })
 
   it('returns 400 when no file provided', async () => {
-    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'u1',
+      role: 'ADMIN',
+    })
     const res = await POST(makeRequest())
     expect(res.status).toBe(400)
     const body = await res.json()
@@ -105,7 +119,11 @@ describe('POST /api/upload', () => {
   })
 
   it('returns 400 for invalid file type', async () => {
-    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'u1',
+      role: 'ADMIN',
+    })
     const res = await POST(
       makeRequest(
         createFile({
@@ -123,7 +141,11 @@ describe('POST /api/upload', () => {
   })
 
   it('returns 400 when SVG content is uploaded with an image MIME type', async () => {
-    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'u1',
+      role: 'ADMIN',
+    })
     const svgPayload = new TextEncoder().encode(
       '<svg><script>alert(1)</script></svg>'
     )
@@ -145,7 +167,11 @@ describe('POST /api/upload', () => {
   })
 
   it('returns 400 when PNG payload has only a spoofed 4-byte signature prefix', async () => {
-    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'u1',
+      role: 'ADMIN',
+    })
     const spoofedPngPrefix = Uint8Array.from([
       0x89, 0x50, 0x4e, 0x47, 0x00, 0x00, 0x00, 0x00, 0x41, 0x42, 0x43, 0x44,
     ])
@@ -168,7 +194,11 @@ describe('POST /api/upload', () => {
   })
 
   it('returns 400 for file too large', async () => {
-    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'u1',
+      role: 'ADMIN',
+    })
     const res = await POST(
       makeRequest(
         createFile({
@@ -186,7 +216,11 @@ describe('POST /api/upload', () => {
   })
 
   it('returns 413 when content-length exceeds the maximum body size', async () => {
-    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'u1',
+      role: 'ADMIN',
+    })
     const formDataSpy = vi.fn(async () => ({
       get: () => null,
     }))
@@ -209,17 +243,25 @@ describe('POST /api/upload', () => {
   })
 
   it('returns 400 for invalid provider', async () => {
-    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'u1',
+      role: 'ADMIN',
+    })
     const file = createFile()
-    const res = await POST(makeRequest(file, { provider: 'gcs' }))
+    const res = await POST(makeRequest(file, { provider: 'azure' }))
     expect(res.status).toBe(400)
     const body = await res.json()
-    expect(body.error).toBe('Invalid provider. Expected "vercel" or "azure".')
+    expect(body.error).toBe('Invalid provider. Expected "vercel" or "r2".')
     expect(mockUploadImage).not.toHaveBeenCalled()
   })
 
   it('uploads successfully via Vercel (default)', async () => {
-    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'u1',
+      role: 'ADMIN',
+    })
     const uploadResult = {
       url: 'https://blob.vercel-storage.com/test.png',
       pathname: 'test.png',
@@ -242,31 +284,30 @@ describe('POST /api/upload', () => {
       pathname: uploadResult.pathname,
       contentType: uploadResult.contentType,
       provider: 'vercel',
-      azureAccountAlias: null,
     })
     expect(mockUploadImage).toHaveBeenCalledWith(expect.any(File), {
       provider: undefined,
-      azureAccountAlias: undefined,
     })
     const [uploadedFile] = mockUploadImage.mock.calls[0] as [File]
     expect(uploadedFile.name).toBe('generated-uuid.png')
     expect(uploadedFile.type).toBe('image/png')
   })
 
-  it('uploads successfully via Azure with alias', async () => {
-    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
+  it('uploads successfully via r2 when requested', async () => {
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'u1',
+      role: 'ADMIN',
+    })
     const uploadResult = {
-      url: 'https://acct.blob.core.windows.net/container/images/abc.png',
+      url: 'https://cdn.example.com/images/abc.png',
       pathname: 'images/abc.png',
       contentType: 'image/png',
-      provider: 'azure' as const,
-      azureAccountAlias: 'primary',
+      provider: 'r2' as const,
     }
     mockUploadImage.mockResolvedValue(uploadResult)
     const file = createFile()
-    const res = await POST(
-      makeRequest(file, { provider: 'azure', azureAccountAlias: 'primary' })
-    )
+    const res = await POST(makeRequest(file, { provider: 'r2' }))
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.success).toBe(true)
@@ -274,17 +315,15 @@ describe('POST /api/upload', () => {
       url: uploadResult.url,
       pathname: uploadResult.pathname,
       contentType: uploadResult.contentType,
-      provider: 'azure',
-      azureAccountAlias: 'primary',
+      provider: 'r2',
     })
     expect(mockUploadImage).toHaveBeenCalledWith(expect.any(File), {
-      provider: 'azure',
-      azureAccountAlias: 'primary',
+      provider: 'r2',
     })
   })
 
   it('returns 500 on error', async () => {
-    mockAuth.mockRejectedValue(new Error('boom'))
+    mockCheckAdminAuth.mockRejectedValue(new Error('boom'))
     const res = await POST(makeRequest())
     expect(res.status).toBe(500)
     const body = await res.json()
@@ -293,7 +332,11 @@ describe('POST /api/upload', () => {
   })
 
   it('returns 500 and logs context when uploadImage rejects with default provider', async () => {
-    mockAuth.mockResolvedValue({ user: { id: 'user-123', role: 'ADMIN' } })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'user-123',
+      role: 'ADMIN',
+    })
     mockUploadImage.mockRejectedValue(new Error('upload failed'))
     const file = createFile({ name: 'fail.png' })
     vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('generated-uuid')
@@ -313,21 +356,22 @@ describe('POST /api/upload', () => {
           userId: 'user-123',
           // No provider input → route leaves provider as 'unknown' before upload
           provider: 'unknown',
-          azureAccountAlias: 'unknown',
         }),
       })
     )
   })
 
-  it('returns 500 and logs context when uploadImage rejects with explicit azure provider + alias', async () => {
-    mockAuth.mockResolvedValue({ user: { id: 'user-456', role: 'ADMIN' } })
+  it('returns 500 and logs context when uploadImage rejects with explicit r2 provider', async () => {
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'user-456',
+      role: 'ADMIN',
+    })
     mockUploadImage.mockRejectedValue(new Error('upload failed'))
-    const file = createFile({ name: 'fail-azure.png' })
+    const file = createFile({ name: 'fail-r2.png' })
     vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('generated-uuid')
 
-    const res = await POST(
-      makeRequest(file, { provider: 'azure', azureAccountAlias: 'images-west' })
-    )
+    const res = await POST(makeRequest(file, { provider: 'r2' }))
 
     expect(res.status).toBe(500)
     const body = await res.json()
@@ -340,10 +384,7 @@ describe('POST /api/upload', () => {
         additionalInfo: expect.objectContaining({
           fileName: 'generated-uuid.png',
           userId: 'user-456',
-          provider: 'azure',
-          // alias is only captured into the log context after a successful upload;
-          // when uploadImage throws, it remains at its pre-upload default.
-          azureAccountAlias: 'unknown',
+          provider: 'r2',
         }),
       })
     )
@@ -378,7 +419,11 @@ describe('POST /api/upload', () => {
       'webp',
     ],
   ])('accepts %s payloads', async (_label, signature, mimeType, extension) => {
-    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'u1',
+      role: 'ADMIN',
+    })
     mockUploadImage.mockResolvedValue({
       url: 'https://blob/test',
       pathname: 'test',
@@ -398,7 +443,11 @@ describe('POST /api/upload', () => {
   })
 
   it('rejects payloads shorter than the magic byte window', async () => {
-    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'u1',
+      role: 'ADMIN',
+    })
 
     const res = await POST(
       makeRequest(createFile({ bytes: Uint8Array.from([0x89, 0x50]) }))
@@ -409,36 +458,12 @@ describe('POST /api/upload', () => {
     expect(body.error).toContain(VALID_IMAGE_TYPES_DISPLAY)
   })
 
-  it('rejects a blank azure account alias', async () => {
-    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
-
-    const res = await POST(
-      makeRequest(createFile(), { azureAccountAlias: '   ' })
-    )
-
-    expect(res.status).toBe(400)
-    const body = await res.json()
-    expect(body.error).toContain('azureAccountAlias')
-  })
-
-  it('treats a null azure account alias as absent', async () => {
-    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
-    mockUploadImage.mockResolvedValue({
-      url: 'https://blob/test',
-      pathname: 'test',
-      contentType: 'image/png',
-      provider: 'vercel' as const,
-    })
-
-    const res = await POST(
-      makeRequest(createFile(), { azureAccountAlias: null })
-    )
-
-    expect(res.status).toBe(200)
-  })
-
   it('ignores an unparseable content-length header', async () => {
-    mockAuth.mockResolvedValue({ user: { id: 'u1', role: 'ADMIN' } })
+    mockCheckAdminAuth.mockResolvedValue({
+      authorized: true,
+      userId: 'u1',
+      role: 'ADMIN',
+    })
     mockUploadImage.mockResolvedValue({
       url: 'https://blob/test',
       pathname: 'test',

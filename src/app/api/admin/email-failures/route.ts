@@ -17,6 +17,7 @@ import {
   FailedEmailQuerySchema,
   ManualRetryBodySchema,
 } from '@/features/admin/validations'
+import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 
 const parseStatusList = (statusParam: string): FailedEmailStatus[] => {
   const valid = new Set<FailedEmailStatus>(['pending', 'failed', 'sent'])
@@ -94,6 +95,15 @@ export const POST = async (request: NextRequest) => {
   try {
     const { ids } = await parseJsonBody(request, ManualRetryBodySchema)
     const results = await batchRetryFailedEmails(ids)
+
+    await recordAdminAuditLog({
+      userId: authCheck.userId,
+      role: authCheck.role,
+      entity: 'failed_email',
+      entityId: ids.join(','),
+      action: 'manual_retry',
+      diff: { ids },
+    })
 
     return apiSuccess({ results })
   } catch (error) {

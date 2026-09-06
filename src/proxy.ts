@@ -1,7 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
-import { Ratelimit } from '@upstash/ratelimit'
-import { Redis } from '@upstash/redis'
 import { getFeatureFlags } from '@/lib/edge-config'
 import {
   buildIdentifier,
@@ -10,6 +8,11 @@ import {
   getStrictLimiter,
   STRICT_RATE_LIMIT_MAX_REQUESTS,
 } from '@/lib/rate-limit'
+import {
+  createEdgeRateLimiter,
+  type RateLimiter,
+  type RateLimitResult,
+} from '@/lib/rate-limiter/edge'
 import {
   hasPermission,
   isStaffRole,
@@ -101,6 +104,9 @@ const STRICT_RATE_LIMIT_PATHS = [
 // from sharing the same tight bucket as the write endpoint (POST /api/checkout).
 const STRICT_RATE_LIMIT_EXACT_PATHS = ['/api/checkout']
 
+// Prefix matching is intentional: one `/api/ai` bucket covers both the
+// product-anchored chat route and the catalog-wide `/api/ai/assistant/chat`
+// surface, so adding a second route does not create a second rate-limit budget.
 const AI_RATE_LIMIT_PATHS = ['/api/ai']
 const AI_RATE_LIMIT_MAX_REQUESTS = 10 // stricter: 10 per minute for AI
 // In-memory sliding-window counters keyed by IP + path prefix.
@@ -129,12 +135,7 @@ const buildCspHeader = (nonce: string): string =>
     "frame-src 'self' https://accounts.google.com https://login.microsoftonline.com",
   ].join('; ')
 
-type RateLimitResult = {
-  success: boolean
-  limit: number
-  remaining: number
-  reset: number
-}
+// RateLimitResult is imported from @/lib/rate-limiter above.
 
 type AuthTokenLike = {
   id?: string | null
@@ -142,19 +143,22 @@ type AuthTokenLike = {
 } | null
 
 // Distributed rate limiter for AI routes — enforced across all serverless
-// instances via Upstash Redis to prevent per-instance bypasses.
-let aiLimiter: Ratelimit | null = null
+// instances via the rate limiter contract (Upstash when configured, in-memory
+// fallback) to prevent per-instance bypasses.
+let aiLimiter: RateLimiter | null = null
 
-const getAiLimiter = (): Ratelimit | null => {
+const getAiLimiter = (): RateLimiter | null => {
   const url = process.env.UPSTASH_REDIS_REST_URL
   const token = process.env.UPSTASH_REDIS_REST_TOKEN
-  if (!url || !token) return null
   if (!aiLimiter) {
-    aiLimiter = new Ratelimit({
-      redis: new Redis({ url, token }),
-      limiter: Ratelimit.slidingWindow(AI_RATE_LIMIT_MAX_REQUESTS, '60 s'),
-      prefix: 'rl:ai',
-    })
+    aiLimiter = createEdgeRateLimiter(
+      {
+        maxRequests: AI_RATE_LIMIT_MAX_REQUESTS,
+        windowSeconds: 60,
+        prefix: 'rl:ai',
+      },
+      url && token ? { url, token } : undefined
+    )
   }
   return aiLimiter
 }
@@ -384,20 +388,15 @@ export async function proxy(request: NextRequest) {
   const identifier = buildIdentifier(userId, ipAddress)
 
   if (isAiPath) {
-    // AI paths: distributed rate limiting via Upstash (works across all instances)
+    // AI paths: distributed rate limiting via the rate limiter contract.
+    // The factory returns an Upstash or in-memory limiter based on config.
     const limiter = getAiLimiter()
     let rateLimitResult: RateLimitResult | null = null
     if (limiter) {
       try {
-        const result = await limiter.limit(identifier)
-        rateLimitResult = {
-          success: result.success,
-          limit: result.limit,
-          remaining: result.remaining,
-          reset: result.reset,
-        }
+        rateLimitResult = await limiter.limit(identifier)
       } catch {
-        // Redis unavailable — fall back to in-memory limit
+        // Upstash unavailable — fall back to in-memory limit
         rateLimitResult = getInMemoryAiRateLimitResult(identifier, pathname)
       }
     } else {

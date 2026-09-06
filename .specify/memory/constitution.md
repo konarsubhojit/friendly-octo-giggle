@@ -1,7 +1,40 @@
 <!--
   Sync Impact Report
   ==================
-  Version change: 2.0.0 → 3.0.0
+
+  Amendment (3.0.1 → 3.1.0)
+  -------------------------------
+  Bump rationale: MINOR — Azure Blob Storage is removed as a supported
+    image-storage provider and replaced with Cloudflare R2, introducing
+    a new provider-neutral storage abstraction
+    (`src/lib/storage/{types,vercel,r2,index}.ts`) and a new
+    `workers/images` Cloudflare Worker for edge resizing. This adds
+    new architecture rather than redefining an existing principle, so
+    it is MINOR rather than MAJOR.
+  Modified sections:
+    - Technology & Architecture Constraints — Image Storage bullet
+      rewritten: Azure Blob Storage removed; Cloudflare R2 (via
+      `@aws-sdk/client-s3`'s S3-compatible API) added alongside Vercel
+      Blob, selected by `STORAGE_PROVIDER`, with dual-read fallback in
+      `resolveStorageUrl` and edge resizing via the `workers/images`
+      Worker (`cf.image`) fronted by the custom `next/image` loader in
+      `src/lib/image-loader.ts`.
+  Added sections: None
+  Removed sections: None
+  Templates requiring updates:
+    - .specify/templates/plan-template.md — ✅ aligned
+    - .specify/templates/spec-template.md — ✅ aligned
+    - .specify/templates/tasks-template.md — ✅ aligned
+    - .specify/templates/checklist-template.md — ✅ aligned
+  Follow-up TODOs:
+    - None. `@azure/storage-blob` has been removed from `package.json`
+      and every Azure-specific code path, env var, and test has been
+      replaced. Existing Vercel-stored objects remain reachable
+      through the dual-read fallback until migrated via
+      `scripts/migrate-storage-to-r2.ts`.
+
+  Amendment (2.0.0 → 3.0.0)
+  -------------------------------
   Bump rationale: MAJOR — Principle IV's background-jobs mandate is
     replaced wholesale. The previous rule required QStash via
     `lib/qstash.ts` with service endpoints under `app/api/services/`
@@ -58,9 +91,7 @@
     - Development Workflow & Quality Gates — type check corrected
       to `npx tsc --noEmit -p tsconfig.check.json` (the project's
       actual check config, as run in `.github/workflows/build.yml`),
-      schema-change step extended to refresh
-      `scripts/sql/bootstrap-drizzle-initial.sql`, and a new gate 9
-      added for `npm run docs:check`.
+      and a new gate 9 added for `npm run docs:check`.
   Added sections: None
   Removed sections: None
   Templates requiring updates:
@@ -234,8 +265,10 @@ files to isolate dependency graphs.
 - **Database**: PostgreSQL via Neon Serverless, accessed only
   through Drizzle ORM (`src/lib/db.ts`). Schema changes MUST
   generate a Drizzle migration (`npm run db:generate`) — direct DB
-  modification is prohibited. `npm run db:migrate` applies the
-  full current schema to an empty or partially migrated database.
+  modification is prohibited. `npm run db:migrate` applies pending
+  migrations in timestamp order; `npm run db:push` pushes the
+  schema directly without producing a migration file and MUST NOT
+  be used against a shared or production database.
 - **IDs**: Base62 7-character short IDs via `src/lib/short-id.ts`
   (`varchar(7)` in DB) for products, orders, carts, and related
   entities.
@@ -248,9 +281,16 @@ files to isolate dependency graphs.
   MUST NOT appear in UI code.
 - **Styling**: Tailwind CSS v4 utility classes. Custom CSS MUST be
   limited to `src/app/globals.css` and CSS variables.
-- **Image Storage**: Vercel Blob or Azure Blob Storage for
-  uploaded product images, selected through
-  `src/lib/image-storage.ts`.
+- **Image Storage**: Vercel Blob or Cloudflare R2 (via
+  `@aws-sdk/client-s3`'s S3-compatible API) for uploaded product
+  images, selected through the provider-neutral adapters in
+  `src/lib/storage/` and `STORAGE_PROVIDER`, wrapped for callers by
+  `src/lib/image-storage.ts`. Reads fall back from the active
+  provider to the other one (`resolveStorageUrl`) so a cutover does
+  not require every object to be migrated first. Edge resizing is
+  performed by the `workers/images` Cloudflare Worker (`cf.image`),
+  fronted by the custom `next/image` loader in
+  `src/lib/image-loader.ts`.
 - **Authentication**: NextAuth.js v5 with Google OAuth +
   email/password + phone/password, DrizzleAdapter, and JWT
   sessions (`session.strategy: 'jwt'` in
@@ -331,4 +371,4 @@ project documentation. Amendments require:
 Runtime development guidance is maintained in
 `.github/copilot-instructions.md` and `docs/development.md`.
 
-**Version**: 3.0.0 | **Ratified**: 2026-03-19 | **Last Amended**: 2026-08-07
+**Version**: 3.1.0 | **Ratified**: 2026-03-19 | **Last Amended**: 2026-08-16

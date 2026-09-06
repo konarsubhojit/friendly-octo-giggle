@@ -28,10 +28,26 @@ export async function PATCH(
     const { id } = await params
     const input = await parseJsonBody(request, UpdateCouponSchema)
 
+    if (input.expectedUpdatedAt !== undefined) {
+      const existing = await db.coupons.findById(id)
+      if (!existing) {
+        return apiError('Coupon not found', 404)
+      }
+      if (existing.updatedAt.toISOString() !== input.expectedUpdatedAt) {
+        return apiError(
+          'This coupon was changed by someone else. Reload and try again.',
+          409,
+          { reason: 'stale' }
+        )
+      }
+    }
+
     if (input.code) {
       const [existing] = await db.coupons.findManyByCodes([input.code])
       if (existing && existing.id !== id) {
-        return apiError('A coupon with this code already exists', 409)
+        return apiError('A coupon with this code already exists', 409, {
+          reason: 'duplicate',
+        })
       }
     }
 

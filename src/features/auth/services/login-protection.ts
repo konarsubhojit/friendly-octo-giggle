@@ -1,42 +1,29 @@
-import { Ratelimit } from '@upstash/ratelimit'
-import { getRedisClient } from '@/lib/redis'
+import {
+  createRateLimiter,
+  type RateLimiter,
+} from '@/lib/rate-limiter'
 
-const FAILED_LOGIN_WINDOW = '15 m'
 const MAX_FAILED_LOGIN_ATTEMPTS = 5
 export const ACCOUNT_LOCK_DURATION_MS = 15 * 60 * 1000
 
-let failedByUserLimiter: Ratelimit | null = null
-let failedByIpLimiter: Ratelimit | null = null
+let failedByUserLimiter: RateLimiter | null = null
+let failedByIpLimiter: RateLimiter | null = null
 
-const getFailedByUserLimiter = (): Ratelimit | null => {
-  const redis = getRedisClient()
-  if (!redis) return null
-
-  failedByUserLimiter ??= new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(
-      MAX_FAILED_LOGIN_ATTEMPTS,
-      FAILED_LOGIN_WINDOW
-    ),
+const getFailedByUserLimiter = (): RateLimiter | null => {
+  failedByUserLimiter ??= createRateLimiter({
+    maxRequests: MAX_FAILED_LOGIN_ATTEMPTS,
+    windowSeconds: 15 * 60,
     prefix: 'rl:auth:failed:user',
   })
-
   return failedByUserLimiter
 }
 
-const getFailedByIpLimiter = (): Ratelimit | null => {
-  const redis = getRedisClient()
-  if (!redis) return null
-
-  failedByIpLimiter ??= new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(
-      MAX_FAILED_LOGIN_ATTEMPTS,
-      FAILED_LOGIN_WINDOW
-    ),
+const getFailedByIpLimiter = (): RateLimiter | null => {
+  failedByIpLimiter ??= createRateLimiter({
+    maxRequests: MAX_FAILED_LOGIN_ATTEMPTS,
+    windowSeconds: 15 * 60,
     prefix: 'rl:auth:failed:ip',
   })
-
   return failedByIpLimiter
 }
 

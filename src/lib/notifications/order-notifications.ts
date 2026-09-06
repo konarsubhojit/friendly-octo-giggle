@@ -5,12 +5,14 @@ import {
   deliverOrderConfirmationEmail,
   deliverOrderRefundUpdateEmail,
   deliverOrderStatusUpdateEmail,
+  deliverReturnStatusUpdateEmail,
 } from '@/lib/email'
 import type { EmailDeliveryResult } from '@/lib/email'
 import type {
   OrderConfirmationData,
   OrderRefundUpdateData,
   OrderStatusUpdateData,
+  ReturnStatusUpdateData,
 } from '@/lib/email/templates'
 import {
   isChannelEnabled,
@@ -146,6 +148,23 @@ const buildRefundPush = (data: OrderRefundUpdateData): PushMessage => ({
   tag: `order-${data.orderId}`,
 })
 
+const RETURN_PUSH_TITLES: Record<string, string> = {
+  REQUESTED: 'Return request received',
+  APPROVED: 'Return approved',
+  REJECTED: 'Return not approved',
+  RECEIVED: 'Return received',
+  REFUNDED: 'Refund issued',
+}
+
+const buildReturnPush = (data: ReturnStatusUpdateData): PushMessage => ({
+  title: RETURN_PUSH_TITLES[data.status] ?? 'Return update',
+  body: `Your return for order #${data.orderId.toUpperCase()} has an update.`,
+  url: `/orders/${data.orderId}`,
+  // Shares the order tag so a burst of updates collapses into one
+  // notification rather than stacking.
+  tag: `order-${data.orderId}`,
+})
+
 /** Durable order confirmation: awaits the email so a failure can be retried. */
 export const deliverOrderConfirmationNotification = (
   data: OrderConfirmationData
@@ -177,6 +196,23 @@ export const deliverOrderRefundNotification = (
     orderId: data.orderId,
     deliverEmailFor: () => deliverOrderRefundUpdateEmail(data),
     buildPush: () => buildRefundPush(data),
+  })
+
+/**
+ * Durable return status update.
+ *
+ * Channel gating lives in `deliverNotification`, so a customer who has turned
+ * transactional email off is never mailed here — the delivery reports
+ * `emailSuppressed` rather than failing, because suppression is a success.
+ */
+export const deliverReturnStatusNotification = (
+  data: ReturnStatusUpdateData
+): Promise<NotificationDeliveryResult> =>
+  deliverNotification({
+    to: data.to,
+    orderId: data.orderId,
+    deliverEmailFor: () => deliverReturnStatusUpdateEmail(data),
+    buildPush: () => buildReturnPush(data),
   })
 
 /**

@@ -834,11 +834,25 @@ Failed to upload image
 
 **Solutions:**
 
-1. **Verify Vercel Blob token:**
+1. **Verify the configured provider's credentials**, based on `STORAGE_PROVIDER`
+   (defaults to `vercel` when unset):
 
    ```bash
+   # Vercel Blob (STORAGE_PROVIDER=vercel or unset)
    echo $BLOB_READ_WRITE_TOKEN
+
+   # Generic S3-compatible (STORAGE_PROVIDER=s3)
+   echo $S3_REGION $S3_BUCKET $S3_PUBLIC_BASE_URL
+
+   # Cloudflare R2 preset/alias (STORAGE_PROVIDER=r2)
+   echo $R2_ACCOUNT_ID $R2_BUCKET $R2_PUBLIC_BASE_URL
    ```
+
+   If uploads work but images 404 shortly after a `STORAGE_PROVIDER` switch,
+   check the `storage_dual_read_fallback` / `storage_dual_read_miss` log
+   events — reads fall back only across configured providers, so a
+   `_miss` means the object is unavailable in every configured provider (see
+   [Image storage](./deployment.md#image-storage) for the migration script).
 
 2. **Check file size limits** (Vercel Blob: 4.5MB):
 

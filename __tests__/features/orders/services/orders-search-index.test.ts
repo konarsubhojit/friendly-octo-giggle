@@ -1,40 +1,38 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const {
-  mockGetRedisClient,
-  mockIsRedisAvailable,
   mockLogError,
   mockDrizzleDbQuery,
 } = vi.hoisted(() => ({
-  mockGetRedisClient: vi.fn(),
-  mockIsRedisAvailable: vi.fn(),
   mockLogError: vi.fn(),
   mockDrizzleDbQuery: {
     orders: { findMany: vi.fn() },
   },
 }))
 
-const mockPipeline = {
+const mockSearchIndex = vi.hoisted(() => ({
+  describe: vi.fn(),
+}))
+
+const mockPipelineInstance = vi.hoisted(() => ({
   hset: vi.fn().mockReturnThis(),
   sadd: vi.fn().mockReturnThis(),
   exec: vi.fn().mockResolvedValue([]),
-}
+}))
 
-const mockSearchIndex = {
-  describe: vi.fn(),
-}
-
-const mockRedisClient = {
-  pipeline: vi.fn(() => mockPipeline),
+const mockRedisClient = vi.hoisted(() => ({
+  pipeline: vi.fn(() => mockPipelineInstance),
   search: {
     index: vi.fn(() => mockSearchIndex),
     createIndex: vi.fn().mockResolvedValue(undefined),
   },
-}
+}))
 
-vi.mock('@/lib/redis', () => ({
-  getRedisClient: mockGetRedisClient,
-  isRedisAvailable: mockIsRedisAvailable,
+const mockPipeline = mockPipelineInstance
+
+vi.mock('@/lib/search/redis', () => ({
+  getSearchRedisClient: vi.fn(() => mockRedisClient),
+  isSearchRedisAvailable: vi.fn(() => true),
 }))
 
 vi.mock('@/lib/logger', () => ({
@@ -80,18 +78,22 @@ import {
 describe('orders-search-index', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockGetRedisClient.mockReturnValue(mockRedisClient)
   })
 
   describe('areOrdersSearchControlsAvailable', () => {
     it('returns true when Redis is available', () => {
-      mockIsRedisAvailable.mockReturnValue(true)
+      // env is mocked with Upstash credentials
       expect(areOrdersSearchControlsAvailable()).toBe(true)
     })
 
-    it('returns false when Redis is not available', () => {
-      mockIsRedisAvailable.mockReturnValue(false)
-      expect(areOrdersSearchControlsAvailable()).toBe(false)
+    it('returns false when Redis is not available', async () => {
+      vi.doMock('@/lib/search/redis', () => ({
+        getSearchRedisClient: vi.fn(() => null),
+        isSearchRedisAvailable: vi.fn(() => false),
+      }))
+      vi.resetModules()
+      const mod = await import('@/features/orders/services/orders-search-index')
+      expect(mod.areOrdersSearchControlsAvailable()).toBe(false)
     })
   })
 
@@ -124,9 +126,13 @@ describe('orders-search-index', () => {
     })
 
     it('throws when Redis is not configured', async () => {
-      mockGetRedisClient.mockReturnValue(null)
-
-      await expect(ensureOrdersSearchIndex()).rejects.toThrow(
+      vi.doMock('@/lib/search/redis', () => ({
+        getSearchRedisClient: vi.fn(() => null),
+        isSearchRedisAvailable: vi.fn(() => false),
+      }))
+      vi.resetModules()
+      const mod = await import('@/features/orders/services/orders-search-index')
+      await expect(mod.ensureOrdersSearchIndex()).rejects.toThrow(
         'Redis Search is not configured'
       )
     })
@@ -176,9 +182,13 @@ describe('orders-search-index', () => {
     })
 
     it('throws when Redis is not configured', async () => {
-      mockGetRedisClient.mockReturnValue(null)
-
-      await expect(backfillOrdersSearchIndex()).rejects.toThrow(
+      vi.doMock('@/lib/search/redis', () => ({
+        getSearchRedisClient: vi.fn(() => null),
+        isSearchRedisAvailable: vi.fn(() => false),
+      }))
+      vi.resetModules()
+      const mod = await import('@/features/orders/services/orders-search-index')
+      await expect(mod.backfillOrdersSearchIndex()).rejects.toThrow(
         'Redis Search is not configured'
       )
     })
@@ -298,9 +308,13 @@ describe('orders-search-index', () => {
     })
 
     it('logs and rethrows errors', async () => {
-      mockGetRedisClient.mockReturnValue(null)
+      mockSearchIndex.describe.mockRejectedValueOnce(
+        new Error('connection failed')
+      )
 
-      await expect(createOrRefreshOrdersSearchIndex()).rejects.toThrow()
+      await expect(createOrRefreshOrdersSearchIndex()).rejects.toThrow(
+        'connection failed'
+      )
       expect(mockLogError).toHaveBeenCalledWith(
         expect.objectContaining({ context: 'orders_search_index' })
       )

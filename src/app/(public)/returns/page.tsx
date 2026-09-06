@@ -5,7 +5,7 @@ import {
   SUPPORT_EMAIL,
   type CheckoutPolicySection,
 } from '@/lib/constants/checkout-policies'
-import { withStoreName } from '@/lib/constants/store'
+import { INSTAGRAM_HANDLE, withStoreName } from '@/lib/constants/store'
 
 export const metadata = {
   title: withStoreName('Returns & Refunds'),
@@ -56,11 +56,12 @@ function ReturnPolicySection() {
 }
 
 const RETURN_STEPS = [
-  `Email ${SUPPORT_EMAIL} with detailed photos, a short video, and a description of the issue.`,
-  'Wait for our team to review the damage claim and respond with next steps.',
-  'If approved, send the damaged product back using a shipment you arrange and pay for.',
-  'After the returned item is received and reviewed, we will send a replacement product.',
-  'We do not charge shipping for sending the replacement product to you.',
+  'Open the order in your account within 7 days of delivery and start a return.',
+  'Attach clear photos of the damage, then submit the claim.',
+  `If we ask for a short video, send it to @${INSTAGRAM_HANDLE} on Instagram quoting your return ID, or email ${SUPPORT_EMAIL}.`,
+  'Wait for our team to review the claim. You will be emailed the decision and the reason for it.',
+  'If approved, send the product back using a shipment you arrange and pay for.',
+  'Once the item is received we send a replacement, or refund you where a replacement is unavailable.',
 ] as const
 
 function ReturnStepsSection() {
@@ -90,8 +91,9 @@ function NonReturnableSection() {
         Important Reminder
       </h2>
       <p className="text-[var(--text-secondary)] mb-4">
-        Orders are not returnable unless the product arrives damaged. Refunds
-        are not issued.
+        Orders are not returnable unless the product arrives damaged, defective,
+        or incorrect. Approved claims are normally resolved by replacement; a
+        refund is issued only where a replacement is unavailable.
       </p>
       <p className="mt-6 text-[var(--text-secondary)] text-sm">
         Questions?{' '}

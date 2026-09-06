@@ -88,11 +88,11 @@ const {
   }
 })
 
-vi.mock('@neondatabase/serverless', () => ({
+vi.mock('pg', () => ({
   Pool: vi.fn(),
 }))
 
-vi.mock('drizzle-orm/neon-serverless', () => ({
+vi.mock('drizzle-orm/node-postgres', () => ({
   drizzle: vi.fn(() => ({
     query: {
       products: {
@@ -134,6 +134,8 @@ vi.mock('@/lib/schema', () => ({
   orderStatusEnum: {},
   userRoleEnum: {},
   accounts: {},
+  adminAuditLogs: {},
+  adminSavedViews: {},
   cartItems: {},
   carts: {},
   categories: {},
@@ -181,12 +183,19 @@ vi.mock('@/lib/schema', () => ({
     productId: 'productId',
   },
   accountsRelations: {},
+  adminSavedViewsRelations: {},
   cartsRelations: {},
   cartItemsRelations: {},
   categoriesRelations: {},
   checkoutRequestsRelations: {},
   refunds: {},
   refundsRelations: {},
+  returnRequests: {},
+  returnRequestsRelations: {},
+  returnItems: {},
+  returnItemsRelations: {},
+  returnEvidence: {},
+  returnEvidenceRelations: {},
   stockReservations: {},
   stockReservationsRelations: {},
   stockReservationStatusEnum: {},

@@ -1,37 +1,27 @@
-import { Ratelimit } from '@upstash/ratelimit'
 import type { NextRequest } from 'next/server'
-import { getRedisClient } from './redis'
+import {
+  createRateLimiter,
+  type RateLimiter,
+  type RateLimitResult,
+} from './rate-limiter'
 
-type RateLimitResult = {
-  success: boolean
-  limit: number
-  remaining: number
-  reset: number
-}
-
-let generalLimiter: Ratelimit | null = null
-let strictLimiter: Ratelimit | null = null
+let generalLimiter: RateLimiter | null = null
+let strictLimiter: RateLimiter | null = null
 
 export const GENERAL_RATE_LIMIT_MAX_REQUESTS = 60
 export const STRICT_RATE_LIMIT_MAX_REQUESTS = 10
 
-export const getGeneralLimiter = (): Ratelimit | null => {
-  const redis = getRedisClient()
-  if (!redis) return null
-  generalLimiter ??= new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(GENERAL_RATE_LIMIT_MAX_REQUESTS, '60 s'),
+export const getGeneralLimiter = (): RateLimiter | null => {
+  generalLimiter ??= createRateLimiter({
+    maxRequests: GENERAL_RATE_LIMIT_MAX_REQUESTS,
     prefix: 'rl:general',
   })
   return generalLimiter
 }
 
-export const getStrictLimiter = (): Ratelimit | null => {
-  const redis = getRedisClient()
-  if (!redis) return null
-  strictLimiter ??= new Ratelimit({
-    redis,
-    limiter: Ratelimit.slidingWindow(STRICT_RATE_LIMIT_MAX_REQUESTS, '60 s'),
+export const getStrictLimiter = (): RateLimiter | null => {
+  strictLimiter ??= createRateLimiter({
+    maxRequests: STRICT_RATE_LIMIT_MAX_REQUESTS,
     prefix: 'rl:strict',
   })
   return strictLimiter

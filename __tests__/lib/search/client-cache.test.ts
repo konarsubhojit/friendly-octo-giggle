@@ -38,11 +38,13 @@ vi.mock('@/lib/redis', () => ({
 
 import { logError, logCacheOperation } from '@/lib/logger'
 import {
+  __resetCatalogSearchClientForTests,
   getIndexInfo,
   removeProduct,
   resetIndex,
   searchProducts,
 } from '@/lib/search'
+import { __resetProviderResolutionForTests } from '@/lib/providers/resolution'
 
 const SEARCH_HIT = {
   id: 'p1',
@@ -56,6 +58,9 @@ describe('lib/search/client caching and failure paths', () => {
     vi.clearAllMocks()
     process.env.UPSTASH_SEARCH_REST_URL = 'https://test.upstash.io'
     process.env.UPSTASH_SEARCH_REST_TOKEN = 'test-token'
+    process.env.SEARCH_PROVIDER = 'upstash'
+    __resetProviderResolutionForTests()
+    __resetCatalogSearchClientForTests()
     mockRedis.get.mockResolvedValue(null)
     mockRedis.setex.mockResolvedValue('OK')
     mockSearch.mockResolvedValue([])
@@ -124,6 +129,19 @@ describe('lib/search/client caching and failure paths', () => {
       expect.objectContaining({
         additionalInfo: expect.objectContaining({
           operation: 'searchProducts:cacheSet',
+        }),
+      })
+    )
+  })
+
+  it('returns no results when Upstash search fails', async () => {
+    mockSearch.mockRejectedValue(new Error('Upstash unavailable'))
+
+    await expect(searchProducts('shirt')).resolves.toEqual([])
+    expect(logError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        additionalInfo: expect.objectContaining({
+          operation: 'searchProducts',
         }),
       })
     )

@@ -407,6 +407,47 @@ export const MOCK_USERS = [
   },
 ]
 
+// ─── Activity log (admin console revamp, T051) ────────────────────────────────
+
+export const MOCK_ACTIVITY_ENTRIES = [
+  {
+    id: 'act0001',
+    entity: 'order',
+    entityId: 'ord0001',
+    action: 'status_change',
+    actor: { userId: 'dev-copilot-admin', role: 'ADMIN' },
+    changes: [{ field: 'status', before: 'PROCESSING', after: 'SHIPPED' }],
+    createdAt: '2026-03-02T09:00:00.000Z',
+  },
+  {
+    id: 'act0002',
+    entity: 'order',
+    entityId: 'ord0002',
+    action: 'refund',
+    actor: { userId: 'dev-copilot-admin', role: 'ADMIN' },
+    changes: [{ field: 'refundStatus', before: 'NONE', after: 'REFUNDED' }],
+    createdAt: '2026-03-02T10:00:00.000Z',
+  },
+  {
+    id: 'act0003',
+    entity: 'product',
+    entityId: 'prd0001',
+    action: 'update',
+    actor: { userId: 'dev-copilot-admin', role: 'ADMIN' },
+    changes: [{ field: 'stock', before: '10', after: '8' }],
+    createdAt: '2026-03-02T11:00:00.000Z',
+  },
+  {
+    id: 'act0004',
+    entity: 'user',
+    entityId: 'usr0001',
+    action: 'role_change',
+    actor: { userId: 'dev-copilot-admin', role: 'ADMIN' },
+    changes: [{ field: 'role', before: 'CUSTOMER', after: 'SUPPORT' }],
+    createdAt: '2026-03-02T12:00:00.000Z',
+  },
+]
+
 // ─── Cart ─────────────────────────────────────────────────────────────────────
 
 export const MOCK_CART_ITEM_1 = {

@@ -61,6 +61,7 @@ vi.mock('drizzle-orm', () => ({
 }))
 
 import {
+  __resetCatalogSearchClientForTests,
   isSearchAvailable,
   indexProduct,
   indexProducts,
@@ -69,6 +70,7 @@ import {
   resetIndex,
   getIndexInfo,
 } from '@/lib/search'
+import { __resetProviderResolutionForTests } from '@/lib/providers/resolution'
 
 describe('lib/search', () => {
   let origUrl: string | undefined
@@ -93,6 +95,9 @@ describe('lib/search', () => {
     // Default: search is available
     process.env.UPSTASH_SEARCH_REST_URL = 'https://test.upstash.io'
     process.env.UPSTASH_SEARCH_REST_TOKEN = 'test-token'
+    process.env.SEARCH_PROVIDER = 'upstash'
+    __resetProviderResolutionForTests()
+    __resetCatalogSearchClientForTests()
   })
 
   afterEach(() => {

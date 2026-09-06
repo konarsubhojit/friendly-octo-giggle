@@ -26,7 +26,7 @@ const RecommendationsAdminPage = async () => {
       ]}
       eyebrow="Discovery"
       title="Recommendations"
-      description="Product affinity scores powering the recommendation rails."
+      description="Reporting view for the recommendation scoring job: product affinity scores powering the recommendation rails, and when the job last ran."
       metrics={[
         {
           label: 'Scored pairs',

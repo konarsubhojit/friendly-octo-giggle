@@ -32,13 +32,87 @@ The core storefront requires PostgreSQL and NextAuth configuration. Enable newer
 - AI provider credentials: product assistant generation; guest requests use a hashed network identity and authenticated users receive persisted history.
 - Inngest: durable checkout processing, transactional email, order side-effects, and scheduled jobs.
 - An email provider: transactional email delivery.
-- Vercel Blob: admin image upload.
+- Vercel Blob or S3-compatible storage: admin image upload. See [Image storage](#image-storage).
 - Web Push (VAPID) credentials: browser push notifications for order-status changes. See [Web push setup](#web-push-setup).
 - Sentry: server, edge, and browser tracing/error capture.
 - Edge Config: maintenance, sale, and shipping feature settings.
 - Cron authorization: exchange-rate refresh and failed-email retry jobs.
 
 Unset optional integrations must be treated as disabled capabilities, not as reasons for the core application to fail startup.
+
+### Provider selection
+
+Every capability names its backend with one selector variable, and all of them
+resolve through a single path (`src/lib/providers/resolution.ts`). Nothing else
+in the application reads a provider variable or infers a backend from a
+hostname, so the table below is the whole contract:
+
+| Capability | Selector              | Values                           | Inference when unset (credentials present) | Default       |
+| ---------- | --------------------- | -------------------------------- | ------------------------------------------ | ------------- |
+| Database   | `DATABASE_DRIVER`     | `postgres`, `neon`               | —                                          | `postgres`    |
+| Cache      | `CACHE_PROVIDER`      | `redis`, `upstash`, `none`       | Upstash → Redis                            | `none`        |
+| Search     | `SEARCH_PROVIDER`     | `postgres`, `algolia`, `upstash` | Upstash → Algolia                          | `postgres`    |
+| Storage    | `STORAGE_PROVIDER`    | `s3`, `vercel`, `r2`             | —                                          | `vercel`      |
+| Rate limit | `RATE_LIMIT_PROVIDER` | `redis`, `upstash`, `memory`     | Upstash → Redis                            | `memory`      |
+| Config     | `CONFIG_PROVIDER`     | `environment`, `edge-config`     | Edge Config                                | `environment` |
+| Jobs       | `JOBS_PROVIDER`       | `inngest`, `inline`              | Inngest                                    | `inline`      |
+
+Precedence is: explicit selector, then inference from _which credentials are
+present_, then the default. Inference is what keeps a deployment that predates
+the selectors on the backend it already uses — existing `DATABASE_URL`,
+`READ_DATABASE_URL`, Upstash, R2, and Vercel Blob variables all remain accepted
+unchanged.
+
+An **explicit** selection must be complete: `SEARCH_PROVIDER=algolia` without
+`ALGOLIA_ADMIN_API_KEY`, or `CACHE_PROVIDER=redis` without `REDIS_URL`, is rejected at
+startup with an error naming the missing variable. An inferred or defaulted
+provider is never rejected, because it is by construction one the deployment can
+already reach. Like the production-key checks, these are deferred during
+`next build`, where a build machine legitimately holds no runtime credentials.
+
+For database connections, `postgres` is the default and uses the standard
+PostgreSQL wire protocol through `pg.Pool`. It works with local PostgreSQL,
+PgBouncer, RDS, Cloud SQL, Azure Database for PostgreSQL, Supabase, Railway,
+Render, Neon standard endpoints, and any provider exposing a standard
+PostgreSQL URL. Set `DATABASE_DRIVER=neon` only when the deployment benefits
+from Neon's specialized serverless adapter, such as Vercel-style runtimes using
+Neon's HTTP/WebSocket optimized connection layer.
+
+Database pool behavior can be tuned with `DATABASE_POOL_MAX`,
+`DATABASE_POOL_IDLE_TIMEOUT_MS`, and
+`DATABASE_POOL_CONNECTION_TIMEOUT_MS`. Defaults are 10 connections, 20 seconds
+idle timeout, and 5 seconds connection timeout. `READ_DATABASE_URL` remains
+optional and falls back to `DATABASE_URL`.
+
+For self-hosted deployments, the generic protocols — `postgres`, `redis`, and
+`s3` — are the recommended selections; managed values (`neon`, `upstash`,
+`vercel`, `edge-config`) remain available for deployments that need their
+specialized adapters.
+
+`summarizeProviders()` renders the resolved selection, how each was chosen, and
+whether its credentials are complete, for startup or health diagnostics. It
+carries no URLs, tokens, or other credential-bearing values, and it lists any
+deprecated variable alias in use by name only. Provider availability changes are
+reported as the structured `provider_unavailable`, `provider_fallback`,
+`provider_degraded`, and `provider_recovered` log events.
+
+#### Catalog-search migration
+
+Catalog search reads use one selected provider while product writes may safely
+continue when optional indexing fails. `postgres` is the baseline and queries
+the product database with the existing `ILIKE` fallback; it does not provide
+hosted typo tolerance, facets, highlighting, or suggestions. `algolia` uses
+`ALGOLIA_APP_ID`, `ALGOLIA_ADMIN_API_KEY`, and an environment-specific
+`ALGOLIA_PRODUCTS_INDEX`; the admin key is server-only. The optional
+`ALGOLIA_SEARCH_API_KEY` is not used by the application because searches are
+server-mediated. Existing `ALGOLIA_API_KEY` and `ALGOLIA_INDEX_NAME` values are
+accepted as compatibility aliases.
+
+For a cutover, configure the target provider, rebuild products from Admin →
+Search Index Management, compare result counts and relevance, then set
+`SEARCH_PROVIDER` to switch reads. Roll back by setting it to the prior
+provider; PostgreSQL requires no reindex. Order search remains separate and
+does not export order or customer data to Algolia.
 
 ### Web push setup
 
@@ -78,6 +152,84 @@ Operational notes:
   service returns `404`/`410`.
 - Subscriptions are per browser/device, so a customer opting in on a phone does
   not receive push on their laptop until they opt in there too.
+
+### Image storage
+
+Uploaded images (product photos, return evidence) are written through the
+provider-neutral adapters in `src/lib/storage/`, selected by
+`STORAGE_PROVIDER`:
+
+- **`vercel`** (default when unset): uses Vercel Blob. Requires
+  `BLOB_READ_WRITE_TOKEN`.
+- **`s3`**: generic S3-compatible adapter (`@aws-sdk/client-s3`) that works
+  with AWS S3, MinIO, Cloudflare R2, DigitalOcean Spaces, Backblaze B2,
+  Wasabi, and similar providers. Requires `S3_REGION`, `S3_BUCKET`,
+  `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, and `S3_PUBLIC_BASE_URL`.
+  Optional: `S3_ENDPOINT`, `S3_FORCE_PATH_STYLE`, and
+  `S3_CA_CERT_PEM` (for local/self-hosted TLS endpoints that use a private CA).
+- **`r2`**: backward-compatible Cloudflare preset over the same S3 adapter.
+  Existing `R2_*` variables remain accepted as migration aliases.
+
+Reads fall back from the active provider to other **configured** providers
+(`resolveStorageUrl` in `src/lib/storage/index.ts`), with structured
+`storage_dual_read_fallback` / `storage_dual_read_miss` log events — so
+switching `STORAGE_PROVIDER` is safe before every historical object has been
+copied over. Unconfigured providers are never probed on fallback reads. To
+backfill existing objects, run the idempotent, resumable migration script:
+
+```bash
+# Report what would be copied, without writing anything
+npm run migrate:storage
+
+# Perform the copy to the active STORAGE_PROVIDER (verifies each object after
+# writing; never deletes the source)
+npm run migrate:storage -- --apply
+
+# Explicit source/destination (useful for roll-forward/rollback drills)
+npm run migrate:storage -- --apply --from=vercel --to=s3
+npm run migrate:storage -- --apply --from=s3 --to=vercel
+```
+
+The script writes a resumable checkpoint to
+`.storage-migration-checkpoint.json` (git-ignored) so an interrupted run
+picks back up instead of restarting; pass `--checkpoint=<path>` to override
+its location, `--limit=<n>` to cap objects per run, or `--prefix=<prefix>`
+to scope it to a subset of keys. `--from` / `--to` accept `vercel`, `s3`,
+and `r2`.
+
+Fallback provider order is configurable:
+
+- `STORAGE_FALLBACK_PROVIDERS` — global comma-separated fallback order.
+- `STORAGE_FALLBACK_VERCEL`, `STORAGE_FALLBACK_R2`, `STORAGE_FALLBACK_S3` —
+  per-primary overrides.
+
+If unset, defaults remain migration-friendly (`vercel → r2,s3`, `r2 → vercel,s3`, `s3 → r2,vercel`).
+
+Public object serving can use a native provider URL (for example an S3 virtual
+hosted endpoint) or a custom `S3_PUBLIC_BASE_URL`/`R2_PUBLIC_BASE_URL` routed
+through Nginx, MinIO gateway, CDN, or similar edge proxy.
+
+#### Image resizing Worker
+
+Product images are served through a Cloudflare Worker
+(`workers/images/`) that validates the request, resizes via Cloudflare's
+Image Resizing (`cf.image`), and serves the result with an immutable
+`Cache-Control`. `next/image` is pointed at it through the custom loader in
+`src/lib/image-loader.ts` and the `NEXT_PUBLIC_IMAGE_WORKER_URL` environment
+variable — when that variable is unset, the loader falls back to the
+original (unoptimized) source URL, so image rendering never depends on the
+Worker being deployed.
+
+Deployment is automated by
+[`.github/workflows/deploy-images-worker.yml`](../.github/workflows/deploy-images-worker.yml)
+on pushes to `develop` touching `workers/images/**`, using the
+`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repository secrets. The
+destination Cloudflare zone must have Image Resizing enabled. See
+[`workers/images/README.md`](../workers/images/README.md) for the request
+contract, local development (`npx wrangler dev`), and the hostname
+allow-list (`ALLOWED_HOSTNAMES` in `workers/images/wrangler.toml`) that
+replaces `next.config.ts`'s `images.remotePatterns` (which cannot coexist
+with a custom `images.loader`).
 
 ## Platform-Specific Instructions
 
@@ -135,9 +287,15 @@ INNGEST_SIGNING_KEY=...
 ```
 
 - Register the app at `https://your-domain.com/api/inngest` in the Inngest dashboard.
-- Scheduled work (failed-email retries, exchange-rate refresh, abandoned-cart
-  scan) is declared as `cron` triggers on Inngest functions, so no platform cron
-  configuration is required.
+- Scheduled work is declared as `cron` triggers on Inngest functions, so no
+  platform cron configuration is required: failed-email retries run daily at
+  02:30 UTC, exchange rates daily at 03:00 UTC, abandoned-cart scans daily at
+  10:00 UTC, stock-reservation expiry hourly, affinity scoring daily at 04:00
+  UTC, and activity retention monthly at 04:00 UTC on day one.
+- Failed-email retry rows are queued in groups of ten. Each child run processes
+  at most five rows concurrently under the existing function-level concurrency
+  and provider throttle, reducing `/api/inngest` fan-out while keeping bounded
+  failure isolation.
 - If `INNGEST_EVENT_KEY` is unset, checkout still completes: the API route
   processes the request inline via `waitUntil` as a last-resort safety net. That
   path has no durability or retries, so treat an unset key as an outage, not a

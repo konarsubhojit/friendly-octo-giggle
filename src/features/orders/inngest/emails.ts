@@ -3,17 +3,12 @@ import {
   orderCreated,
   orderRefunded,
   orderStatusChanged,
+  returnStatusChanged,
 } from '@/features/orders/inngest/events'
-import {
-  deliverOrderConfirmationNotification,
-  deliverOrderRefundNotification,
-  deliverOrderStatusNotification,
-  type NotificationDeliveryResult,
-} from '@/lib/notifications/order-notifications'
+import type { NotificationDeliveryResult } from '@/lib/notifications/order-notifications'
 import { getShippingMethodLabel } from '@/lib/shipping/methods'
 import { formatPriceForCurrency, type CurrencyCode } from '@/lib/currency'
-import { saveFailedEmail, type EmailType } from '@/lib/email/failed-emails'
-import { logError, logger } from '@/lib/logger'
+import type { EmailType } from '@/lib/email/failed-emails'
 import type { ScoringStep } from '@/lib/inngest/scores'
 import { scoreEmailDelivery } from '@/lib/inngest/scores'
 
@@ -50,6 +45,10 @@ const recordEmailFailure = async ({
   error: unknown
 }): Promise<void> => {
   const message = error instanceof Error ? error.message : String(error)
+  const [{ saveFailedEmail }, { logError }] = await Promise.all([
+    import('@/lib/email/failed-emails'),
+    import('@/lib/logger'),
+  ])
 
   logError({
     error,
@@ -100,6 +99,7 @@ const finishEmailRun = async (
 ) => {
   await scoreEmailDelivery(step, result)
 
+  const { logger } = await import('@/lib/logger')
   logger.info(
     {
       emailType,
@@ -145,8 +145,10 @@ export const sendOrderConfirmationEmailFunction = inngest.createFunction(
     const data = event.data
     const currency = data.currencyCode
 
-    const result = await step.run('deliver-confirmation', () =>
-      deliverOrderConfirmationNotification({
+    const result = await step.run('deliver-confirmation', async () => {
+      const { deliverOrderConfirmationNotification } =
+        await import('@/lib/notifications/order-notifications')
+      return deliverOrderConfirmationNotification({
         to: data.customerEmail,
         customerName: data.customerName,
         orderId: data.orderId,
@@ -169,7 +171,7 @@ export const sendOrderConfirmationEmailFunction = inngest.createFunction(
           variant: null,
         })),
       })
-    )
+    })
 
     return finishEmailRun(step, 'order_confirmation', data.orderId, result)
   }
@@ -199,8 +201,10 @@ export const sendOrderStatusEmailFunction = inngest.createFunction(
   async ({ event, step }) => {
     const data = event.data
 
-    const result = await step.run('deliver-status-update', () =>
-      deliverOrderStatusNotification({
+    const result = await step.run('deliver-status-update', async () => {
+      const { deliverOrderStatusNotification } =
+        await import('@/lib/notifications/order-notifications')
+      return deliverOrderStatusNotification({
         to: data.customerEmail,
         customerName: data.customerName,
         orderId: data.orderId,
@@ -208,7 +212,7 @@ export const sendOrderStatusEmailFunction = inngest.createFunction(
         trackingNumber: data.trackingNumber,
         shippingProvider: data.shippingProvider,
       })
-    )
+    })
 
     return finishEmailRun(step, 'order_status_update', data.orderId, result)
   }
@@ -240,8 +244,10 @@ export const sendOrderRefundEmailFunction = inngest.createFunction(
     const data = event.data
     const currency = data.currencyCode
 
-    const result = await step.run('deliver-refund-update', () =>
-      deliverOrderRefundNotification({
+    const result = await step.run('deliver-refund-update', async () => {
+      const { deliverOrderRefundNotification } =
+        await import('@/lib/notifications/order-notifications')
+      return deliverOrderRefundNotification({
         to: data.customerEmail,
         customerName: data.customerName,
         orderId: data.orderId,
@@ -250,8 +256,56 @@ export const sendOrderRefundEmailFunction = inngest.createFunction(
         isPartial: data.isPartial,
         reason: data.reason ?? null,
       })
-    )
+    })
 
     return finishEmailRun(step, 'order_refund_update', data.orderId, result)
+  }
+)
+
+/**
+ * Return status update email.
+ *
+ * Keyed on the return id **and** its status: a claim passes through several
+ * states, each warranting its own message, but a replayed event for a state
+ * already announced must not send twice.
+ */
+export const sendReturnStatusEmailFunction = inngest.createFunction(
+  {
+    id: 'send-return-status-email',
+    name: 'Send return status email',
+    triggers: [returnStatusChanged],
+    retries: EMAIL_FUNCTION_RETRIES,
+    idempotency: 'event.data.returnId + "-" + event.data.status',
+    onFailure: ({ event, error }) =>
+      recordEmailFailure({
+        recipientEmail: event.data.event.data.customerEmail,
+        emailType: 'return_status_update',
+        referenceId: event.data.event.data.returnId,
+        error,
+      }),
+  },
+  async ({ event, step }) => {
+    const data = event.data
+
+    const result = await step.run('deliver-return-status', async () => {
+      const { deliverReturnStatusNotification } =
+        await import('@/lib/notifications/order-notifications')
+      return deliverReturnStatusNotification({
+        to: data.customerEmail,
+        customerName: data.customerName,
+        orderId: data.orderId,
+        returnId: data.returnId,
+        status: data.status,
+        decisionReason: data.decisionReason,
+        // Formatted here rather than in the template so the currency the
+        // customer actually paid in is preserved; templates take strings.
+        refundAmount:
+          data.refundAmount === null || data.refundAmount === undefined
+            ? null
+            : formatPriceForCurrency(data.refundAmount, 'INR'),
+      })
+    })
+
+    return finishEmailRun(step, 'return_status_update', data.returnId, result)
   }
 )

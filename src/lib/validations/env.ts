@@ -1,5 +1,15 @@
 import { z } from 'zod'
 import { PAYMENT_PROVIDERS } from '@/lib/payments/providers'
+import { resolveProviders } from '@/lib/providers/resolution'
+import {
+  CACHE_PROVIDERS,
+  CONFIG_PROVIDERS,
+  DATABASE_DRIVERS,
+  JOBS_PROVIDERS,
+  RATE_LIMIT_PROVIDERS,
+  SEARCH_PROVIDERS,
+  STORAGE_PROVIDERS,
+} from '@/lib/providers/types'
 
 // Keys that must be present in production (outside of the build phase).
 const PRODUCTION_REQUIRED_KEYS = ['NEXT_PUBLIC_APP_URL'] as const
@@ -34,62 +44,28 @@ const validateProductionKeys = (data: EnvData, ctx: z.RefinementCtx) => {
   })
 }
 
-const parseAzureAccounts = (raw: string): unknown[] | null => {
-  try {
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed : null
-  } catch {
-    return null
-  }
-}
+/**
+ * Reject provider selections whose credentials are incomplete.
+ *
+ * The selection itself, and the required-key list behind it, come from the one
+ * resolution path in `@/lib/providers/resolution` — this refinement only
+ * translates its issues into field-scoped Zod errors, so code, tests, and
+ * documentation share a single precedence table.
+ *
+ * Deferred during `next build` for the same reason the production-key checks
+ * are: a build machine legitimately has no runtime credentials.
+ */
+const validateProviders = (data: EnvData, ctx: z.RefinementCtx) => {
+  const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build'
+  if (isBuildPhase) return
 
-const validateAzureBlob = (data: EnvData, ctx: z.RefinementCtx) => {
-  if (data.IMAGE_UPLOAD_PROVIDER !== 'azure') return
-
-  if (!data.AZURE_BLOB_ACCOUNTS_JSON) {
+  resolveProviders(data).issues.forEach((issue) => {
     ctx.addIssue({
       code: 'custom',
-      path: ['AZURE_BLOB_ACCOUNTS_JSON'],
-      message:
-        "AZURE_BLOB_ACCOUNTS_JSON must be set when IMAGE_UPLOAD_PROVIDER='azure'",
+      path: [issue.field],
+      message: issue.message,
     })
-    return
-  }
-
-  // The field-level .refine already surfaces a parse error; nothing to add here.
-  const parsed = parseAzureAccounts(data.AZURE_BLOB_ACCOUNTS_JSON)
-  if (parsed === null) return
-
-  if (parsed.length === 0) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['AZURE_BLOB_ACCOUNTS_JSON'],
-      message:
-        "AZURE_BLOB_ACCOUNTS_JSON must contain at least one account when IMAGE_UPLOAD_PROVIDER='azure'",
-    })
-    return
-  }
-
-  if (!data.AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS) return
-
-  const aliases = parsed
-    .map((item) =>
-      typeof item === 'object' &&
-      item !== null &&
-      typeof (item as Record<string, unknown>).alias === 'string'
-        ? ((item as Record<string, unknown>).alias as string)
-        : null
-    )
-    .filter((alias): alias is string => alias !== null)
-
-  if (!aliases.includes(data.AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS)) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS'],
-      message:
-        'AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS must match an alias in AZURE_BLOB_ACCOUNTS_JSON',
-    })
-  }
+  })
 }
 
 const RAZORPAY_REQUIRED_KEYS = [
@@ -160,42 +136,45 @@ const BaseEnvSchema = z.object({
   VAPID_PUBLIC_KEY: z.string().optional(),
   VAPID_PRIVATE_KEY: z.string().optional(),
   VAPID_SUBJECT: z.string().optional(),
-  IMAGE_UPLOAD_PROVIDER: z.enum(['vercel', 'azure']).optional(),
-  AZURE_BLOB_ACCOUNTS_JSON: z
-    .string()
-    .optional()
-    .refine(
-      (value) => {
-        if (value === undefined || value === '') return true
-        let parsed: unknown
-        try {
-          parsed = JSON.parse(value)
-        } catch {
-          return false
-        }
-        if (!Array.isArray(parsed)) return false
-        return parsed.every(
-          (item) =>
-            typeof item === 'object' &&
-            item !== null &&
-            typeof (item as Record<string, unknown>).alias === 'string' &&
-            typeof (item as Record<string, unknown>).connectionString ===
-              'string' &&
-            typeof (item as Record<string, unknown>).container === 'string'
-        )
-      },
-      {
-        message:
-          'AZURE_BLOB_ACCOUNTS_JSON must be a JSON array of objects with string alias, connectionString, and container properties.',
-      }
-    ),
-  AZURE_BLOB_DEFAULT_ACCOUNT_ALIAS: z.string().optional(),
-  AZURE_BLOB_AUTO_CREATE_CONTAINER: z.enum(['true', 'false']).optional(),
+  DATABASE_POOL_MAX: z.string().optional(),
+  DATABASE_POOL_IDLE_TIMEOUT_MS: z.string().optional(),
+  DATABASE_POOL_CONNECTION_TIMEOUT_MS: z.string().optional(),
+  DATABASE_DRIVER: z.enum(DATABASE_DRIVERS).optional(),
+  CACHE_PROVIDER: z.enum(CACHE_PROVIDERS).optional(),
+  SEARCH_PROVIDER: z.enum(SEARCH_PROVIDERS).optional(),
+  RATE_LIMIT_PROVIDER: z.enum(RATE_LIMIT_PROVIDERS).optional(),
+  CONFIG_PROVIDER: z.enum(CONFIG_PROVIDERS).optional(),
+  JOBS_PROVIDER: z.enum(JOBS_PROVIDERS).optional(),
+  EDGE_CONFIG: z.string().optional(),
+  ALGOLIA_APP_ID: z.string().optional(),
+  ALGOLIA_ADMIN_API_KEY: z.string().optional(),
+  ALGOLIA_SEARCH_API_KEY: z.string().optional(),
+  ALGOLIA_PRODUCTS_INDEX: z.string().optional(),
+  ALGOLIA_API_KEY: z.string().optional(),
+  ALGOLIA_INDEX_NAME: z.string().optional(),
+  STORAGE_PROVIDER: z.enum(STORAGE_PROVIDERS).optional(),
+  STORAGE_FALLBACK_PROVIDERS: z.string().optional(),
+  STORAGE_FALLBACK_VERCEL: z.string().optional(),
+  STORAGE_FALLBACK_R2: z.string().optional(),
+  STORAGE_FALLBACK_S3: z.string().optional(),
+  S3_REGION: z.string().optional(),
+  S3_BUCKET: z.string().optional(),
+  S3_ACCESS_KEY_ID: z.string().optional(),
+  S3_SECRET_ACCESS_KEY: z.string().optional(),
+  S3_PUBLIC_BASE_URL: z.string().optional(),
+  S3_ENDPOINT: z.string().optional(),
+  S3_FORCE_PATH_STYLE: z.enum(['true', 'false']).optional(),
+  S3_CA_CERT_PEM: z.string().optional(),
+  R2_ACCOUNT_ID: z.string().optional(),
+  R2_ACCESS_KEY_ID: z.string().optional(),
+  R2_SECRET_ACCESS_KEY: z.string().optional(),
+  R2_BUCKET: z.string().optional(),
+  R2_PUBLIC_BASE_URL: z.string().optional(),
 })
 
 export const EnvSchema = BaseEnvSchema.superRefine((data, ctx) => {
   validateProductionKeys(data, ctx)
-  validateAzureBlob(data, ctx)
+  validateProviders(data, ctx)
   validateRazorpay(data, ctx)
   validateInngest(data, ctx)
 })

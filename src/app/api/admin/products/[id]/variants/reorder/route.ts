@@ -10,6 +10,7 @@ import {
   parseJsonBody,
 } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
+import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 import { invalidateProductCaches } from '@/lib/cache'
 
 export const PATCH = async (
@@ -38,6 +39,15 @@ export const PATCH = async (
     })
 
     await invalidateProductCaches(productId)
+
+    await recordAdminAuditLog({
+      userId: authCheck.userId,
+      role: authCheck.role,
+      entity: 'variant',
+      entityId: items.map((item) => item.id).join(','),
+      action: 'reorder',
+      diff: { productId, items },
+    })
 
     return apiSuccess({ reordered: true })
   } catch (error) {

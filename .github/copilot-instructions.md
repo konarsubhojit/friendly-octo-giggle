@@ -55,7 +55,7 @@ Versions below are the ranges declared in `package.json`. When they and
 - **Error monitoring**: Sentry 10 (`sentry.*.config.ts`, `src/instrumentation.ts`)
 - **Testing**: Vitest 4.1 with jsdom + React Testing Library 16.3 + @testing-library/jest-dom
 - **E2E Testing**: Playwright 1.62 with axe-core accessibility testing
-- **Image Storage**: Vercel Blob 2.5 or Azure Blob Storage 12.33, selected in `src/lib/image-storage.ts`
+- **Image Storage**: provider-neutral adapters in `src/lib/storage/` — Vercel Blob 2.7 or Cloudflare R2 (via `@aws-sdk/client-s3` 3.1111, S3-compatible API), selected by `STORAGE_PROVIDER` and read-side dual-fallback in `resolveStorageUrl`. `src/lib/image-storage.ts` wraps this for `uploadImage()` callers. Edge resizing is handled by the `workers/images` Cloudflare Worker (`cf.image`), fronted by the custom Next.js loader in `src/lib/image-loader.ts`.
 - **Edge Config**: Vercel Edge Config 1.4 for feature flags and shipping config (`src/lib/edge-config.ts`)
 - **Analytics**: Vercel Analytics
 - **API Client**: `src/lib/api-client.ts` — typed HTTP abstraction for Redux thunks (DIP pattern)
@@ -280,7 +280,9 @@ src/
     store.ts              # Redux store assembly
     currency.ts, money.ts # INR-based pricing and formatting
     edge-config.ts        # Vercel Edge Config (feature flags, shipping config)
-    image-storage.ts      # Vercel Blob / Azure Blob provider selection
+    image-storage.ts      # uploadImage() — thin wrapper over storage/ (provider selection, object key)
+    storage/              # Provider-neutral storage: types, vercel.ts, r2.ts, index.ts (dual-read fallback)
+    image-loader.ts       # Custom next/image loader — routes through workers/images
     rate-limit.ts, ownership.ts, serializers.ts, types.ts
     validations/          # Zod schemas: index, api, env, payment, primitives
     inngest/              # Durable background work

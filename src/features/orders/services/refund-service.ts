@@ -1,6 +1,6 @@
 import { and, eq, ne } from 'drizzle-orm'
 import { db, primaryDrizzleDb } from '@/lib/db'
-import { orderItems, orders, refunds } from '@/lib/schema'
+import { orderItems, orders, refunds, returnRequests } from '@/lib/schema'
 import {
   getPaymentGateway,
   PaymentConfigurationError,
@@ -54,6 +54,13 @@ export interface RefundOrderInput {
   readonly actor?: RefundActor | null
   /** Audit action recorded for the refund (defaults to `refund`). */
   readonly auditAction?: string
+  /**
+   * Return that caused this refund, when one did. Recorded on the refund row
+   * so refund-side reporting can attribute the money to a claim; the return
+   * side additionally holds a UNIQUE `refundId` that guards against issuing
+   * twice for the same claim.
+   */
+  readonly returnRequestId?: string | null
 }
 
 export interface RefundRecord {
@@ -147,6 +154,7 @@ const prepareRefund = async ({
   amount,
   reason,
   actor,
+  returnRequestId,
 }: RefundOrderInput): Promise<PreparedRefund> =>
   primaryDrizzleDb.transaction(async (tx) => {
     const [order] = await tx
@@ -189,6 +197,31 @@ const prepareRefund = async ({
         and(eq(refunds.orderId, orderId), ne(refunds.status, 'FAILED' as const))
       )
 
+    // One live refund per return, enforced here and by the partial unique
+    // index on Refund(returnRequestId). Without this, a crash between the
+    // gateway commit and the ReturnRequest.refundId write would leave the
+    // return retryable with refundId still null — and the retry would pay the
+    // customer a second time for the same goods.
+    if (returnRequestId) {
+      const [claimed] = await tx
+        .select({ id: refunds.id })
+        .from(refunds)
+        .where(
+          and(
+            eq(refunds.returnRequestId, returnRequestId),
+            ne(refunds.status, 'FAILED' as const)
+          )
+        )
+        .limit(1)
+
+      if (claimed) {
+        throw new RefundRequestError(
+          'A refund has already been issued for this return',
+          409
+        )
+      }
+    }
+
     const refundedTotal = sumMoney(reserved.map((row) => row.amount))
     const refundable = roundMoney(order.amountPaid - refundedTotal)
 
@@ -204,6 +237,7 @@ const prepareRefund = async ({
         orderId,
         provider: order.paymentProvider,
         paymentTransactionId: order.paymentTransactionId,
+        returnRequestId: returnRequestId ?? null,
         amount: refundAmount,
         status: 'PENDING',
         reason: reason ?? null,
@@ -499,6 +533,99 @@ interface RefundWebhookOutcome {
   restocked: boolean
 }
 
+type RefundTransaction = Parameters<
+  Parameters<typeof primaryDrizzleDb.transaction>[0]
+>[0]
+
+/**
+ * Return a claim to `RECEIVED` when its refund is reported failed.
+ *
+ * The gateway can accept a refund as `PENDING` and reject it later, by which
+ * point the return is already closed as `REFUNDED`. That state is a dead end:
+ * `settle` requires a `PENDING` refund row, `refund` is not permitted from
+ * `REFUNDED`, and the customer is shown "processing" indefinitely — with the
+ * goods already restocked. Reopening restores the retry path so the claim can
+ * actually be paid.
+ */
+const reopenFailedReturn = async (
+  tx: RefundTransaction,
+  refundId: string
+): Promise<void> => {
+  await tx
+    .update(returnRequests)
+    .set({ status: 'RECEIVED', refundId: null, updatedAt: new Date() })
+    .where(eq(returnRequests.refundId, refundId))
+}
+
+/**
+ * Bring the local refund row in line with the gateway's report.
+ *
+ * A refund issued from the gateway's own dashboard has no local row, so one is
+ * created; refunds we issued are matched on the unique `gatewayRefundId`.
+ */
+const upsertWebhookRefund = async (
+  tx: RefundTransaction,
+  {
+    input,
+    orderId,
+    existing,
+  }: {
+    input: RefundWebhookInput
+    orderId: string
+    existing: { id: string; amount: number } | undefined
+  }
+): Promise<{ refundId: string; amount: number }> => {
+  const processedAt = input.status === 'PROCESSED' ? new Date() : null
+
+  if (existing) {
+    await tx
+      .update(refunds)
+      .set({
+        status: input.status,
+        processedAt,
+        errorMessage:
+          input.status === 'FAILED'
+            ? 'The payment gateway reported the refund as failed'
+            : null,
+        updatedAt: new Date(),
+      })
+      .where(eq(refunds.id, existing.id))
+
+    if (input.status === 'FAILED') {
+      await reopenFailedReturn(tx, existing.id)
+    }
+
+    return { refundId: existing.id, amount: existing.amount }
+  }
+
+  const webhookAmount =
+    input.amountInMinorUnits === null
+      ? null
+      : fromMinorUnits(input.amountInMinorUnits)
+
+  if (webhookAmount === null || webhookAmount <= 0) {
+    throw new PaymentVerificationError(
+      'Invalid refund amount in webhook payload'
+    )
+  }
+
+  const [created] = await tx
+    .insert(refunds)
+    .values({
+      orderId,
+      provider: input.provider,
+      paymentTransactionId: input.paymentTransactionId,
+      gatewayRefundId: input.gatewayRefundId,
+      amount: webhookAmount,
+      status: input.status,
+      reason: 'Refund reported by payment gateway',
+      processedAt,
+    })
+    .returning({ id: refunds.id })
+
+  return { refundId: created.id, amount: webhookAmount }
+}
+
 /**
  * Apply a `refund.processed` / `refund.failed` delivery to the refund ledger.
  *
@@ -546,51 +673,11 @@ export const reconcileRefundWebhook = async (
         return null
       }
 
-      const webhookAmount =
-        input.amountInMinorUnits === null
-          ? null
-          : fromMinorUnits(input.amountInMinorUnits)
-
-      let refundId: string
-      let amount: number
-
-      if (existing) {
-        refundId = existing.id
-        amount = existing.amount
-        await tx
-          .update(refunds)
-          .set({
-            status: input.status,
-            processedAt: input.status === 'PROCESSED' ? new Date() : null,
-            errorMessage:
-              input.status === 'FAILED'
-                ? 'The payment gateway reported the refund as failed'
-                : null,
-            updatedAt: new Date(),
-          })
-          .where(eq(refunds.id, existing.id))
-      } else {
-        if (webhookAmount === null || webhookAmount <= 0) {
-          throw new PaymentVerificationError(
-            'Invalid refund amount in webhook payload'
-          )
-        }
-        amount = webhookAmount
-        const [created] = await tx
-          .insert(refunds)
-          .values({
-            orderId: order.id,
-            provider: input.provider,
-            paymentTransactionId: input.paymentTransactionId,
-            gatewayRefundId: input.gatewayRefundId,
-            amount,
-            status: input.status,
-            reason: 'Refund reported by payment gateway',
-            processedAt: input.status === 'PROCESSED' ? new Date() : null,
-          })
-          .returning({ id: refunds.id })
-        refundId = created.id
-      }
+      const { refundId, amount } = await upsertWebhookRefund(tx, {
+        input,
+        orderId: order.id,
+        existing,
+      })
 
       const reserved = await tx
         .select({ amount: refunds.amount })

@@ -113,7 +113,13 @@ const applyCouponRules = (value: CouponRuleInput, ctx: z.RefinementCtx) => {
 
 export const CreateCouponSchema = CouponBaseSchema.superRefine(applyCouponRules)
 export const UpdateCouponSchema = z
-  .object(couponFields)
+  .object({
+    ...couponFields,
+    // FR-B07/FR-B08 (T069): when supplied, must match the coupon's current
+    // `updatedAt` or the request is rejected as stale — distinct from the
+    // duplicate-code validation conflict.
+    expectedUpdatedAt: z.string().datetime().optional(),
+  })
   .partial()
   .superRefine(applyCouponRules)
 

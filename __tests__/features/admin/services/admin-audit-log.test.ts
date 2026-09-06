@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockValues = vi.hoisted(() => vi.fn().mockResolvedValue(undefined))
 const mockInsert = vi.hoisted(() => vi.fn(() => ({ values: mockValues })))
+const mockLoggerError = vi.hoisted(() => vi.fn())
 
 vi.mock('@/lib/db', () => ({
   drizzleDb: { insert: mockInsert },
@@ -9,13 +10,21 @@ vi.mock('@/lib/db', () => ({
 vi.mock('@/lib/schema', () => ({
   adminAuditLogs: { __table: 'admin_audit_logs' },
 }))
+vi.mock('@/lib/logger', () => ({
+  logError: mockLoggerError,
+}))
 
-import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
+import {
+  recordAdminAuditLog,
+  sanitizeAuditDiff,
+} from '@/features/admin/services/admin-audit-log'
 
 describe('recordAdminAuditLog', () => {
   beforeEach(() => {
     mockInsert.mockClear()
     mockValues.mockClear()
+    mockLoggerError.mockClear()
+    mockValues.mockResolvedValue(undefined)
   })
 
   it('inserts the audit row with provided diff and acting role', async () => {
@@ -77,4 +86,94 @@ describe('recordAdminAuditLog', () => {
       expect(mockInsert).not.toHaveBeenCalled()
     }
   )
+
+  it('sanitizes sensitive keys recursively before insert', async () => {
+    await recordAdminAuditLog({
+      userId: 'admin-1',
+      role: 'ADMIN',
+      entity: 'saved_view',
+      entityId: 'view-1',
+      action: 'create',
+      diff: {
+        name: 'Ops triage',
+        password: 'super-secret',
+        nested: {
+          paymentId: 'pay_123',
+          filters: [{ token: 'abc' }, { visible: true }],
+        },
+      },
+    })
+
+    expect(mockValues).toHaveBeenCalledWith(
+      expect.objectContaining({
+        diff: {
+          name: 'Ops triage',
+          password: '[REDACTED]',
+          nested: {
+            paymentId: '[REDACTED]',
+            filters: [{ token: '[REDACTED]' }, { visible: true }],
+          },
+        },
+      })
+    )
+  })
+
+  it('logs and swallows insert failures', async () => {
+    const error = new Error('insert failed')
+    mockValues.mockRejectedValueOnce(error)
+
+    await expect(
+      recordAdminAuditLog({
+        userId: 'admin-1',
+        role: 'ADMIN',
+        entity: 'product',
+        entityId: 'p1',
+        action: 'update',
+        diff: { price: 100 },
+      })
+    ).resolves.toBeUndefined()
+
+    expect(mockLoggerError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error,
+        context: 'admin_audit_log_failure',
+        userId: 'admin-1',
+        additionalInfo: expect.objectContaining({
+          entity: 'product',
+          entityId: 'p1',
+          action: 'update',
+        }),
+      })
+    )
+  })
+})
+
+describe('sanitizeAuditDiff', () => {
+  it('redacts denylisted keys and preserves non-sensitive values', () => {
+    expect(
+      sanitizeAuditDiff({
+        currentPassword: 'old-pass',
+        sort: { field: 'createdAt', direction: 'desc' },
+        criteria: {
+          token: 'abc123',
+          signature: 'sig',
+          nested: {
+            cvc: '123',
+            visible: 'keep-me',
+          },
+        },
+      })
+    ).toEqual({
+      currentPassword: '[REDACTED]',
+      sort: { field: 'createdAt', direction: 'desc' },
+      criteria: {
+        token: '[REDACTED]',
+        signature: '[REDACTED]',
+        nested: {
+          cvc: '[REDACTED]',
+          visible: 'keep-me',
+        },
+      },
+    })
+  })
 })

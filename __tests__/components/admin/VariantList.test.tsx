@@ -17,24 +17,31 @@ vi.mock('next/image', () => ({
   ),
 }))
 
-vi.mock('@/features/admin/components/DeleteConfirmModal', () => ({
+vi.mock('@/features/admin/components/AdminConfirmDialog', () => ({
   default: ({
+    open,
+    onClose,
+    confirmLabel,
     onConfirm,
-    onCancel,
-    loading,
   }: {
-    onConfirm: () => void
-    onCancel: () => void
-    loading: boolean
-  }) => (
-    <div data-testid="delete-modal">
-      <p>Are you sure?</p>
-      <button onClick={onConfirm} disabled={loading}>
-        Confirm Delete
-      </button>
-      <button onClick={onCancel}>Cancel</button>
-    </div>
-  ),
+    open: boolean
+    onClose: () => void
+    confirmLabel?: string
+    onConfirm: () => Promise<{ status: string; reason?: string }>
+  }) => {
+    if (!open) {
+      return null
+    }
+    return (
+      <div data-testid="delete-modal">
+        <p>Are you sure?</p>
+        <button onClick={() => void onConfirm()}>
+          {confirmLabel ?? 'Confirm'}
+        </button>
+        <button onClick={onClose}>Cancel</button>
+      </div>
+    )
+  },
 }))
 
 vi.mock('@/features/admin/components/VariantFormModal', () => ({
@@ -311,10 +318,10 @@ describe('VariantList', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete RED-LG' }))
 
     await waitFor(() => {
-      expect(screen.getByText('Confirm Delete')).toBeInTheDocument()
+      expect(screen.getByText('Delete variant')).toBeInTheDocument()
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm Delete' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete variant' }))
 
     await waitFor(() => {
       expect(mockToast.default.error).toHaveBeenCalledWith(

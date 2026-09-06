@@ -28,6 +28,7 @@ Key current-state points:
 - Redis, Upstash Search, MailerSend, Google SMTP, and Vercel Edge Config are all optional integrations; the codebase degrades gracefully when those environment variables are absent.
 - Email delivery is asynchronous and event-driven, with failed-email persistence plus retry cron jobs.
 - Exchange rates are refreshed on a schedule and cached by UTC date.
+- Storefront AI now has two entry points — product-anchored and catalog-wide — backed by one shared tool-calling engine so quota, cache, history, and privacy guardrails stay identical across both surfaces.
 
 ---
 
@@ -64,7 +65,8 @@ The architecture is a serverless-first e-commerce system built around a small nu
 │  • Optional Upstash Search index                             │
 │  • Inngest durable workflows for all background work         │
 │  • Optional Vercel Edge Config for feature/shipping config   │
-│  • Vercel Blob for product images                            │
+│  • Vercel Blob or S3-compatible storage for product images    │
+│    (STORAGE_PROVIDER, dual-read fallback)                    │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -91,25 +93,28 @@ The dominant design principles in the current code are:
 
 ### Backend and Domain Services
 
-| Technology      | Version       | Purpose                                               |
-| --------------- | ------------- | ----------------------------------------------------- |
-| NextAuth        | 5.0.0-beta.30 | Authentication and session management                 |
-| Drizzle ORM     | 0.45.1        | Type-safe PostgreSQL access                           |
-| Neon Serverless | 0.10.0        | PostgreSQL connection pools for Vercel-style runtimes |
-| Zod             | 4.3.6         | Runtime validation for inputs and env                 |
-| Pino            | 10.3.1        | Structured logging and event tracing                  |
+| Technology      | Version       | Purpose                                                   |
+| --------------- | ------------- | --------------------------------------------------------- |
+| NextAuth        | 5.0.0-beta.30 | Authentication and session management                     |
+| Drizzle ORM     | 0.45.1        | Type-safe PostgreSQL access                               |
+| pg              | 8.23.0        | Default PostgreSQL connection pools for standard URLs     |
+| Neon Serverless | 1.1.0         | Optional Neon-optimized adapter for Vercel-style runtimes |
+| Zod             | 4.3.6         | Runtime validation for inputs and env                     |
+| Pino            | 10.3.1        | Structured logging and event tracing                      |
 
 ### Edge and Supporting Services
 
-| Service                           | Purpose                                                 |
-| --------------------------------- | ------------------------------------------------------- |
-| Upstash Redis                     | Cache, stale-while-revalidate, lightweight shared state |
-| Upstash Search                    | Product search index with DB fallback                   |
-| Inngest                           | Durable, step-checkpointed background workflows         |
-| Vercel Blob                       | Hosted media storage                                    |
-| Vercel Edge Config                | Feature flags and shipping configuration                |
-| Vercel Analytics / Speed Insights | Runtime telemetry                                       |
-| MailerSend / Google SMTP          | Email delivery backends                                 |
+| Service                           | Purpose                                                                                              |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Upstash Redis                     | Cache, stale-while-revalidate, lightweight shared state                                              |
+| Upstash Search                    | Product search index with DB fallback                                                                |
+| Inngest                           | Durable, step-checkpointed background workflows                                                      |
+| Vercel Blob                       | Hosted media storage (default provider)                                                              |
+| S3-compatible storage (`s3`/`r2`) | Generic adapter for AWS S3, MinIO, R2, Spaces, B2, Wasabi (with `r2` as a preset alias)              |
+| Cloudflare Workers                | `workers/images` — edge image resizing via `cf.image`, served through the custom `next/image` loader |
+| Vercel Edge Config                | Feature flags and shipping configuration                                                             |
+| Vercel Analytics / Speed Insights | Runtime telemetry                                                                                    |
+| MailerSend / Google SMTP          | Email delivery backends                                                                              |
 
 ---
 
@@ -121,7 +126,7 @@ The codebase uses three Drizzle exports from `lib/db.ts`:
 
 | Export             | Backing connection                 | Current role                                  |
 | ------------------ | ---------------------------------- | --------------------------------------------- |
-| `primaryDrizzleDb` | Primary Neon connection            | Writes, auth, and consistency-sensitive reads |
+| `primaryDrizzleDb` | Primary selected-driver connection | Writes, auth, and consistency-sensitive reads |
 | `readDrizzleDb`    | Optional read replica              | Replica-only reads                            |
 | `drizzleDb`        | `withReplicas(primary, [replica])` | Default read path for most queries            |
 
@@ -237,6 +242,23 @@ Authenticated order routes are dynamic and session-aware:
 3. `POST /api/orders` validates the caller and delegates to `lib/order-service`.
 4. Service code handles validation, pricing, stock checks, persistence, cache invalidation, and downstream events.
 
+### Storefront AI flow
+
+The AI assistant now runs through one shared orchestration layer in
+`src/features/ai/services/chat-engine.ts`:
+
+1. `POST /api/ai/products/[id]/chat` or `POST /api/ai/assistant/chat` parses the chat request, resolves the server-side identity, and derives a surface key (`product:{id}` or `catalog`).
+2. The engine loads persisted history only for authenticated callers, enforces the shared daily request/token/advanced-intent quotas, and checks the shared single-turn response cache under `ai:response:{surface}:{currency}:{normalizedQuestion}`.
+3. The model receives a bounded set of function declarations from `chat-tools.ts`: `search_catalog`, `get_product_details`, `compare_products`, and `get_order_status`.
+4. Tool calls execute server-side with Zod-validated arguments. `get_order_status` is dispatcher-enforced: guests still see the tool advertised so the model can ask for it, but the tool refuses with “Sign in to check your orders” and never queries the database unless `ctx.identity.isAuthenticated` is true.
+5. The tool loop is capped (`MAX_TOOL_CALLS_PER_TURN`, overridable from Edge Config as `aiConfig.maxToolCallsPerTurn`). Once the cap is hit the engine disables further function calling and asks the model for a best-effort final answer from the gathered results.
+6. Tool output is sanitized as untrusted retrieval context before it is wrapped back into `FunctionResponse` parts, so injected instructions inside product names, descriptions, or reviews cannot modify assistant behavior.
+
+This preserves the feature’s ordered fallback chain:
+
+- catalog retrieval: cached Upstash Search → uncached Upstash Search → Drizzle SQL search
+- whole-assistant availability: when the AI provider is disabled, both chat routes return `503` and the conventional `/shop` search UI remains the discovery path
+
 ### Cart Model
 
 The current cart architecture still supports two ownership modes:
@@ -288,6 +310,12 @@ In a serverless deployment the two layers also differ in durability: the Cache
 Components store is per-instance and does not survive a deployment, whereas
 Redis is shared across instances. Redis remains the mechanism for cross-instance
 reuse; Cache Components is what puts catalog markup into the initial HTML.
+
+The AI assistant adds two more Redis-backed keys that are intentionally scoped by
+identity rather than by route:
+
+- `ai:chat:usage:{userId}:{utc-date}` and `ai:chat:advanced:{userId}:{utc-date}` share the same quota budget across both the anchored and catalog-wide chat surfaces.
+- `ai:chat:history:{userId}:{surface}:{threadId}` persists only authenticated history and keeps the `catalog` and `product:{id}` conversations disjoint.
 
 ### Cache Components model
 
@@ -456,8 +484,8 @@ Every transition is claim-shaped, so replays are harmless:
   decrement, `HELD → CONSUMED` and `reservedStock` drops by the consumed units.
 - **Release** — on terminal checkout failure and on retry exhaustion, best
   effort: a failed release is logged and never masks the original failure.
-- **Expire** — `expire-stock-reservations` runs every five minutes, claims at
-  most 500 rows whose `expiresAt` has passed **by the database clock**, and
+- **Expire** — `expire-stock-reservations` runs hourly, claims at most 1,000
+  rows whose `expiresAt` has passed **by the database clock**, and
   returns their units. The 30-minute TTL is far longer than the pipeline's
   worst observed latency, so expiry only ever reclaims abandoned holds.
 
@@ -570,13 +598,14 @@ Scheduled work is declared as `cron` triggers on Inngest functions, so there is
 no separate cron endpoint to authenticate:
 
 - `retry-failed-emails` daily at 02:30 UTC
-- `refresh-exchange-rates` every 6 hours
+- `refresh-exchange-rates` daily at 03:00 UTC
 - `scan-abandoned-carts` daily at 10:00 UTC
-- `expire-stock-reservations` every 5 minutes
+- `expire-stock-reservations` hourly
 
-Each scan fans out one event per item rather than looping in a single
-invocation, so a slow provider cannot stall the batch and every item retries
-independently.
+Abandoned-cart scans fan out one event per cart to preserve experiment
+attribution and per-cart idempotency. Failed-email retries fan out bounded
+groups of ten; each group uses at most five concurrent sends in one checkpoint,
+retaining bounded failure isolation without one child run per row.
 
 ### Exchange Rate Refresh
 

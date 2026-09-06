@@ -11,6 +11,8 @@ import useProductForm, {
   MAX_IMAGES,
 } from '@/features/admin/hooks/useProductForm'
 import { TextInput, TextArea, SelectInput, FileInput } from 'zenput'
+import FormErrorSummary from '@/features/admin/components/FormErrorSummary'
+import { useUnsavedChangesGuard } from '@/features/admin/hooks/useUnsavedChangesGuard'
 
 interface ProductFormModalProps {
   readonly editingProduct: Product | null
@@ -106,6 +108,8 @@ const ProductFormModal = ({
   const {
     formData,
     setFormData,
+    dirty,
+    stale,
     imageFile,
     additionalFiles,
     slotIds,
@@ -123,6 +127,8 @@ const ProductFormModal = ({
     handleSubmit,
   } = useProductForm(editingProduct, onClose, onSuccess)
   const isPageLayout = layout === 'page'
+  const { guardClose } = useUnsavedChangesGuard(dirty)
+  const handleClose = () => guardClose(onClose)
 
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
 
@@ -146,6 +152,16 @@ const ProductFormModal = ({
       </h3>
 
       <form noValidate onSubmit={handleSubmit}>
+        {stale && (
+          <p
+            role="alert"
+            className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200"
+          >
+            This product was changed by someone else since this form opened.
+            Reload and try again.
+          </p>
+        )}
+        <FormErrorSummary fieldErrors={fieldErrors} />
         <div className="space-y-4">
           <TextInput
             label="Name"
@@ -265,19 +281,19 @@ const ProductFormModal = ({
           </div>
         </div>
 
-        <div className="flex gap-3 mt-6">
+        <div className="mt-6 flex justify-end gap-2">
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             disabled={saving || uploading}
-            className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 disabled:bg-gray-100 dark:disabled:bg-gray-800 transition"
+            className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 disabled:bg-gray-100 dark:disabled:bg-gray-800 transition"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={saving || uploading}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition"
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition"
           >
             {submitButtonText}
           </button>

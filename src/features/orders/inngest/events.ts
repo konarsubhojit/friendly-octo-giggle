@@ -1,6 +1,7 @@
-import { eventType } from 'inngest'
+import { eventType, invoke } from 'inngest'
 import { z } from 'zod'
 import { SHIPPING_METHODS } from '@/lib/shipping/methods'
+import { RETURN_STATUSES } from '@/lib/constants/returns'
 
 const CurrencyCodeSchema = z.enum(['INR', 'USD', 'EUR', 'GBP'])
 
@@ -81,6 +82,28 @@ export const orderRefunded = eventType('order/refunded', {
 })
 
 /**
+ * A damaged-item return claim moved to a new state.
+ *
+ * `returnId` plus `status` form the idempotency key: a return passes through
+ * several states, and each one warrants its own notification, but a replayed
+ * event for a state already announced must not send twice.
+ */
+export const returnStatusChanged = eventType('order/return.status.changed', {
+  schema: z.object({
+    returnId: z.string().min(1),
+    orderId: z.string().min(1),
+    userId: z.string().min(1).nullish(),
+    customerEmail: z.email(),
+    customerName: z.string().min(1),
+    status: z.enum(RETURN_STATUSES),
+    /** Admin-authored copy shown to the customer on approve and reject. */
+    decisionReason: z.string().nullish(),
+    /** Present once money has been committed to the claim. */
+    refundAmount: z.number().nonnegative().nullish(),
+  }),
+})
+
+/**
  * Ask for an order to be (re)written into the Redis search mirror.
  *
  * Id-only on purpose: the indexer re-reads the row, so a retry that lands
@@ -106,4 +129,25 @@ export const orderCacheInvalidateRequested = eventType(
       productIds: z.array(z.string().min(1)),
     }),
   }
+)
+
+/**
+ * Payload a direct invocation of the search-index function must carry.
+ *
+ * An invoke names the order to mirror and nothing else, matching the id-only
+ * shape of `search/order.index.requested`.
+ */
+export const orderSearchIndexInvoke = invoke(
+  z.object({
+    orderId: z.string().min(1),
+  })
+)
+
+/** Payload a direct invocation of the cache-invalidation function must carry. */
+export const orderCacheInvalidateInvoke = invoke(
+  z.object({
+    orderId: z.string().min(1),
+    userId: z.string().min(1).nullish(),
+    productIds: z.array(z.string().min(1)),
+  })
 )

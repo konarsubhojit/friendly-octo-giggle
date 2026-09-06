@@ -19,6 +19,7 @@ import {
   createOrRefreshOrdersSearchIndex,
 } from '@/features/orders/services/orders-search-index'
 import { z } from 'zod'
+import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 
 const reindexRequestSchema = z
   .object({
@@ -50,6 +51,19 @@ export async function POST(request: Request) {
 
       const result = await createOrRefreshOrdersSearchIndex()
 
+      await recordAdminAuditLog({
+        userId: authCheck.userId,
+        role: authCheck.role,
+        entity: 'search_index',
+        entityId: 'orders',
+        action: 'reindex',
+        diff: {
+          target: 'orders',
+          reindexed: result.indexedOrders,
+          indexCreated: result.indexCreated,
+        },
+      })
+
       return apiSuccess({
         reindexed: { orders: result.indexedOrders },
         details: { ordersIndexCreated: result.indexCreated },
@@ -80,6 +94,15 @@ export async function POST(request: Request) {
     if (allProducts.length > 0) {
       await getIndexInfo('products')
     }
+
+    await recordAdminAuditLog({
+      userId: authCheck.userId,
+      role: authCheck.role,
+      entity: 'search_index',
+      entityId: 'products',
+      action: 'reindex',
+      diff: { target: 'products', reindexed: allProducts.length },
+    })
 
     return apiSuccess({ reindexed: { products: allProducts.length } })
   } catch (error) {

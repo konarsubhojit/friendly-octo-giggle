@@ -1,5 +1,5 @@
 import { logBusinessEvent } from '@/lib/logger'
-import type { ChatMessage, DailyUsage } from './chat-types'
+import type { AssistantSurface, ChatMessage, DailyUsage } from './chat-types'
 import {
   estimateTokens,
   sanitizeAssistantOutput,
@@ -9,7 +9,7 @@ import { persistMessages } from './chat-history'
 import { recordDailyUsage } from './chat-usage'
 
 export type CachedAnswerContext = {
-  productId: string
+  surface: AssistantSurface
   userId: string
   trimmed: ChatMessage[]
   estimatedInputTokens: number
@@ -34,7 +34,7 @@ export const finalizeCachedAnswer = async (
   logBusinessEvent({
     event: 'ai_chat_request',
     details: {
-      productId: ctx.productId,
+      surface: ctx.surface,
       chatModel: ctx.chatModel,
       messageCount: ctx.trimmed.length,
       cached: true,
@@ -45,7 +45,7 @@ export const finalizeCachedAnswer = async (
     event: 'ai_chat_usage',
     userId: ctx.userId,
     details: {
-      productId: ctx.productId,
+      surface: ctx.surface,
       cached: true,
       inputTokens: ctx.estimatedInputTokens,
       outputTokens,
@@ -65,7 +65,7 @@ export const finalizeCachedAnswer = async (
     )
     await persistMessages(
       ctx.userId,
-      ctx.productId,
+      ctx.surface,
       ctx.threadId,
       historyToPersist
     )

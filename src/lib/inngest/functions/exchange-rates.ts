@@ -1,9 +1,7 @@
 import { cron } from 'inngest'
 import { inngest } from '@/lib/inngest/client'
-import { getCachedData } from '@/lib/redis'
 import { CACHE_KEYS } from '@/lib/cache'
 import { SCORE_NAMES } from '@/lib/inngest/scores'
-import { logBusinessEvent } from '@/lib/logger'
 
 type ExchangeRateApiResponse = {
   result: string
@@ -87,20 +85,22 @@ export const refreshExchangeRatesFunction = inngest.createFunction(
 
     const date = getUtcDateString()
 
-    const rates = await step.run('fetch-exchange-rates', () =>
-      getCachedData(
+    const rates = await step.run('fetch-exchange-rates', async () => {
+      const { getCachedData } = await import('@/lib/redis')
+      return getCachedData(
         CACHE_KEYS.EXCHANGE_RATES_BY_DATE(date),
         secondsUntilMidnightUtc(),
         fetchAndNormaliseRates,
         300
       )
-    )
+    })
 
     await step.score('score-rates-refreshed', {
       name: SCORE_NAMES.exchangeRatesRefreshed,
       value: Object.keys(rates).length > 1,
     })
 
+    const { logBusinessEvent } = await import('@/lib/logger')
     logBusinessEvent({
       event: 'cron_exchange_rates_refreshed',
       details: { currencies: Object.keys(rates), date },

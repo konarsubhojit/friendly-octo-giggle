@@ -10,38 +10,6 @@ vi.mock('@/components/ui/LoadingSpinner', () => ({
   ),
 }))
 
-vi.mock('@/components/ui/ConfirmDialog', () => ({
-  default: ({
-    isOpen,
-    title,
-    message,
-    confirmLabel,
-    variant,
-    loading,
-    onConfirm,
-    onCancel,
-  }: {
-    isOpen: boolean
-    title: string
-    message: string
-    confirmLabel: string
-    variant: string
-    loading: boolean
-    onConfirm: () => void
-    onCancel: () => void
-  }) =>
-    isOpen ? (
-      <div data-testid="confirm-dialog" data-variant={variant}>
-        <h2>{title}</h2>
-        <p>{message}</p>
-        <button onClick={onConfirm} disabled={loading}>
-          {confirmLabel}
-        </button>
-        <button onClick={onCancel}>Cancel</button>
-      </div>
-    ) : null,
-}))
-
 describe('RoleAction', () => {
   const mockOnRoleChange = vi.fn()
 
@@ -96,10 +64,10 @@ describe('RoleAction', () => {
     const select = screen.getByRole('combobox')
     fireEvent.change(select, { target: { value: 'ADMIN' } })
 
-    expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(screen.getByText('Change User Role')).toBeInTheDocument()
     expect(
-      screen.getByText(/Change John Doe's role from "CUSTOMER" to "ADMIN"/)
+      screen.getByText(/Change John Doe's role from "Customer" to "Admin"/)
     ).toBeInTheDocument()
   })
 
@@ -118,12 +86,12 @@ describe('RoleAction', () => {
 
     expect(
       screen.getByText(
-        /Change john@example.com's role from "CUSTOMER" to "ADMIN"/
+        /Change john@example.com's role from "Customer" to "Admin"/
       )
     ).toBeInTheDocument()
   })
 
-  it('calls onRoleChange when confirming role change', () => {
+  it('calls onRoleChange when confirming role change with typed confirmation', () => {
     render(
       <RoleAction
         user={mockUser}
@@ -135,7 +103,12 @@ describe('RoleAction', () => {
     const select = screen.getByRole('combobox')
     fireEvent.change(select, { target: { value: 'ADMIN' } })
 
-    const confirmButton = screen.getByText('Yes, change role')
+    // AdminConfirmDialog requires typing the confirmation phrase
+    const input = screen.getByRole('textbox')
+    fireEvent.change(input, { target: { value: 'CHANGE ROLE' } })
+
+    const confirmButton = screen.getByRole('button', { name: 'Confirm' })
+    expect(confirmButton).not.toBeDisabled()
     fireEvent.click(confirmButton)
 
     expect(mockOnRoleChange).toHaveBeenCalledWith('user123', 'ADMIN')
@@ -153,12 +126,12 @@ describe('RoleAction', () => {
     const select = screen.getByRole('combobox')
     fireEvent.change(select, { target: { value: 'ADMIN' } })
 
-    expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
 
-    const cancelButton = screen.getByText('Cancel')
+    const cancelButton = screen.getByRole('button', { name: 'Cancel' })
     fireEvent.click(cancelButton)
 
-    expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('does not show dialog when selecting the same role', () => {
@@ -173,7 +146,7 @@ describe('RoleAction', () => {
     const select = screen.getByRole('combobox')
     fireEvent.change(select, { target: { value: 'CUSTOMER' } })
 
-    expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('handles ADMIN user changing to CUSTOMER', () => {
@@ -192,10 +165,14 @@ describe('RoleAction', () => {
     fireEvent.change(select, { target: { value: 'CUSTOMER' } })
 
     expect(
-      screen.getByText(/Change John Doe's role from "ADMIN" to "CUSTOMER"/)
+      screen.getByText(/Change John Doe's role from "Admin" to "Customer"/)
     ).toBeInTheDocument()
 
-    const confirmButton = screen.getByText('Yes, change role')
+    // Type confirmation and confirm
+    const input = screen.getByRole('textbox')
+    fireEvent.change(input, { target: { value: 'CHANGE ROLE' } })
+
+    const confirmButton = screen.getByRole('button', { name: 'Confirm' })
     fireEvent.click(confirmButton)
 
     expect(mockOnRoleChange).toHaveBeenCalledWith('user123', 'CUSTOMER')

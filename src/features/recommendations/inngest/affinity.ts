@@ -1,21 +1,9 @@
 import { cron } from 'inngest'
 import { inngest } from '@/lib/inngest/client'
 import { SCORE_NAMES } from '@/lib/inngest/scores'
-import { logBusinessEvent, logError } from '@/lib/logger'
-import { invalidateCache } from '@/lib/redis'
 import { CACHE_KEYS } from '@/lib/cache'
 import { AFFINITY_WINDOW_DAYS } from '@/features/recommendations/constants'
-import {
-  batchAnchors,
-  collectPurchasePairs,
-  collectSharePairs,
-  collectWishlistPairs,
-  mergeSignals,
-  resolveWindowStart,
-  truncateByAnchor,
-  writeAffinityBatch,
-  type ScoredPair,
-} from '@/features/recommendations/services/scoring'
+import type { ScoredPair } from '@/features/recommendations/services/scoring'
 
 /** Event name shared by the admin trigger and this function's declaration. */
 export const AFFINITY_RECOMPUTE_EVENT = 'recommendations/affinity.recompute'
@@ -50,6 +38,16 @@ export const computeProductAffinityFunction = inngest.createFunction(
     retries: AFFINITY_RETRIES,
   },
   async ({ event, step }) => {
+    const {
+      batchAnchors,
+      collectPurchasePairs,
+      collectSharePairs,
+      collectWishlistPairs,
+      mergeSignals,
+      resolveWindowStart,
+      truncateByAnchor,
+      writeAffinityBatch,
+    } = await import('@/features/recommendations/services/scoring')
     const startedAt = Date.now()
     // The cron trigger and the admin event trigger carry different payload
     // shapes, so the union has no shared members; read them as unknown values.
@@ -102,11 +100,13 @@ export const computeProductAffinityFunction = inngest.createFunction(
 
     await step.run('invalidate-cache', async () => {
       try {
+        const { invalidateCache } = await import('@/lib/redis')
         await invalidateCache(CACHE_KEYS.RECOMMENDATIONS_PATTERN)
       } catch (error) {
         // Cache invalidation is best effort: stale entries expire inside
         // CACHE_TTL.RECOMMENDATIONS anyway, and failing the run here would
         // discard scores that were written successfully.
+        const { logError } = await import('@/lib/logger')
         logError({ error, context: 'affinity_cache_invalidation' })
       }
       return null
@@ -117,6 +117,7 @@ export const computeProductAffinityFunction = inngest.createFunction(
       value: pairCount > 0,
     })
 
+    const { logBusinessEvent } = await import('@/lib/logger')
     logBusinessEvent({
       event: 'recommendation_scores_computed',
       details: {

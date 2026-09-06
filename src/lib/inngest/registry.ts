@@ -21,6 +21,7 @@ import {
   sendOrderConfirmationEmailFunction,
   sendOrderRefundEmailFunction,
   sendOrderStatusEmailFunction,
+  sendReturnStatusEmailFunction,
 } from '@/features/orders/inngest/emails'
 import {
   indexOrderForSearchFunction,
@@ -32,6 +33,7 @@ import {
   retryFailedEmailsFunction,
   retrySingleEmailFunction,
 } from '@/lib/inngest/functions/email-retry'
+import { activityRetentionFunction } from '@/lib/inngest/functions/activity-retention'
 import { refreshExchangeRatesFunction } from '@/lib/inngest/functions/exchange-rates'
 import { expireStockReservationsFunction } from '@/lib/inngest/functions/stock-reservations'
 
@@ -40,7 +42,9 @@ export const inngestFunctions = [
   sendOrderConfirmationEmailFunction,
   sendOrderStatusEmailFunction,
   sendOrderRefundEmailFunction,
+  sendReturnStatusEmailFunction,
   sendAuthEmailFunction,
+  activityRetentionFunction,
   indexOrderForSearchFunction,
   invalidateOrderCachesFunction,
   retryFailedEmailsFunction,

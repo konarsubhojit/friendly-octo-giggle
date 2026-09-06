@@ -10,6 +10,7 @@ export type EmailType =
   | 'order_confirmation'
   | 'order_status_update'
   | 'order_refund_update'
+  | 'return_status_update'
   | 'abandoned_cart_reminder'
 export type FailedEmailStatus = 'pending' | 'failed' | 'sent'
 

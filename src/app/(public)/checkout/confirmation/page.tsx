@@ -2,13 +2,13 @@
 
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { CheckoutProgress } from '@/features/cart/components/CheckoutProgress'
 import { GradientHeading } from '@/components/ui/GradientHeading'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import type { Order } from '@/lib/types'
 
-export default function CheckoutConfirmationPage() {
+function CheckoutConfirmationContent() {
   const searchParams = useSearchParams()
   const orderId = searchParams.get('orderId')
   const [order, setOrder] = useState<Order | null>(null)
@@ -111,5 +111,31 @@ export default function CheckoutConfirmationPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+function CheckoutConfirmationFallback() {
+  return (
+    <div className="min-h-screen bg-warm-gradient">
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-16">
+        <CheckoutProgress currentStep="confirmation" />
+        <GradientHeading className="mb-2">Order Confirmed</GradientHeading>
+        <div className="flex items-center justify-center py-20">
+          <LoadingSpinner />
+        </div>
+      </main>
+    </div>
+  )
+}
+
+/**
+ * `useSearchParams` reads request data, so its consumer must sit inside a
+ * `Suspense` boundary for the route to prerender under `cacheComponents`.
+ */
+export default function CheckoutConfirmationPage() {
+  return (
+    <Suspense fallback={<CheckoutConfirmationFallback />}>
+      <CheckoutConfirmationContent />
+    </Suspense>
   )
 }

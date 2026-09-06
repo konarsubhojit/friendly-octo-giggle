@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import ConfirmDialog from '@/components/ui/ConfirmDialog'
+import { AdminConfirmDialog } from '@/features/admin/components/AdminConfirmDialog'
 import {
   ASSIGNABLE_USER_ROLES,
   isUserRole,
@@ -42,24 +42,25 @@ export function RoleAction({
     }
   }
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (pendingRole) {
       onRoleChange(user.id, pendingRole)
       setPendingRole(null)
+      return { status: 'success' as const }
     }
+    return { status: 'failure' as const, reason: 'No pending role change' }
   }
 
   return (
     <>
-      <ConfirmDialog
-        isOpen={pendingRole !== null}
+      <AdminConfirmDialog
+        open={pendingRole !== null}
+        onClose={() => setPendingRole(null)}
         title="Change User Role"
-        message={`Change ${user.name || user.email}'s role from "${user.role}" to "${pendingRole ?? ''}"?`}
-        confirmLabel="Yes, change role"
-        variant="warning"
-        loading={isUpdating}
+        description={`Change ${user.name || user.email}'s role from "${ROLE_LABELS[user.role as UserRole] ?? user.role}" to "${pendingRole ? ROLE_LABELS[pendingRole] : ''}"?`}
+        reversible={true}
+        typedConfirmationValue="CHANGE ROLE"
         onConfirm={handleConfirm}
-        onCancel={() => setPendingRole(null)}
       />
       <select
         value={user.role}

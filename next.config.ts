@@ -41,22 +41,31 @@ const nextConfig: NextConfig = {
     taxonomy: { stale: 300, revalidate: 3600, expire: 86400 },
   },
   images: {
-    formats: ['image/avif', 'image/webp'],
-    remotePatterns: [
+    // A custom loader takes full ownership of image URL construction, so
+    // Next.js forbids combining `loaderFile` with `remotePatterns`/`domains`
+    // (it would throw at startup). The allow-list that `remotePatterns` used
+    // to enforce (images.unsplash.com, the Vercel Blob storage subdomain,
+    // Google's avatar CDN, plus our own R2 public bucket) now lives in the
+    // Worker's `ALLOWED_HOSTNAMES` config (`workers/images/wrangler.toml`)
+    // and is enforced by `workers/images/src/validation.ts` before any
+    // origin fetch — see `src/lib/image-loader.ts` for the loader itself.
+    loader: 'custom',
+    loaderFile: './src/lib/image-loader.ts',
+  },
+  // `/` is an alias for the storefront listing. This is issued at the routing
+  // layer as a real 308 rather than by a `redirect()` inside a page component:
+  // under `cacheComponents: true` a render-time redirect on an otherwise
+  // static route prerenders an empty shell and expresses the redirect only in
+  // the RSC payload, so a cold document load renders a blank page instead of
+  // navigating. A config redirect never reaches the renderer.
+  async redirects() {
+    return [
       {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
+        source: '/',
+        destination: '/shop',
+        permanent: true,
       },
-      {
-        // ** matches multi-level subdomains in Next.js remotePatterns
-        protocol: 'https',
-        hostname: '**.public.blob.vercel-storage.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'lh3.googleusercontent.com',
-      },
-    ],
+    ]
   },
   async headers() {
     return [

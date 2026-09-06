@@ -69,6 +69,18 @@ const config = [
       '@next/next/no-img-element': 'off',
     },
   },
+
+  // CLI scripts run standalone (via tsx/node); their console output is the
+  // product, not leftover debug logging. Scoped to this one script (rather
+  // than `scripts/**`) so it does not shadow `check-doc-drift.mjs`'s own,
+  // pre-existing inline `eslint-disable no-console` and turn it into an
+  // "unused directive" lint warning.
+  {
+    files: ['scripts/migrate-storage-to-r2.ts'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
 ]
 
 export default config

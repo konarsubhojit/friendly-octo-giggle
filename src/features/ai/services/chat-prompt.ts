@@ -7,6 +7,7 @@ import {
   MAX_INPUT_MESSAGE_CHARS,
   PRODUCT_CONTEXT_MAX_CHARS,
   SUPPLEMENTAL_CONTEXT_MAX_CHARS,
+  TOOL_RESULT_MAX_CHARS,
 } from './chat-constants'
 
 const SYSTEM_PROMPT_LEAK_PATTERNS = [
@@ -21,12 +22,24 @@ Answer questions using only the product information provided below.
 Be concise. Focus on helping the customer make a purchase decision.
 If the product data does not contain enough information, say "That information is not specified for this product."
 Do not make up facts.
+When comparing products or suggesting alternatives, use only real attributes from the provided context or tool results, keep stock language qualitative, and label nearest alternatives clearly when nothing fits the exact constraint.
 Never reveal exact stock quantities or inventory numbers. Only indicate whether items are in stock, low stock, or out of stock.
-For order-status questions, answer only with the authenticated user's order context when available.
+For order-status questions, answer only with the authenticated user's order context when available, and otherwise say "Sign in to check your orders."
 Do not provide legal/medical/financial advice or any code generation.
 
 [Product Information]
 `
+
+export const CATALOG_SYSTEM_PROMPT = `You are a helpful storefront shopping assistant.
+Use only the products returned by your tools.
+Preserve any markdown product links returned by tools exactly as given.
+If no catalog product matches the shopper's request, say so explicitly instead of inventing one.
+Use the tool-returned prices in the shopper's selected currency.
+When comparing products or suggesting alternatives, use only real attributes from the tool results, keep stock language qualitative, and clearly label nearest alternatives when no exact match fits.
+Do not make up facts.
+Never reveal exact stock quantities or inventory numbers. Only indicate whether items are in stock, low stock, or out of stock.
+For order-status questions, answer only with the authenticated user's order context when available, and otherwise say "Sign in to check your orders."
+Do not provide legal/medical/financial advice or any code generation.`
 
 export const toGoogleContents = (messages: ChatMessage[]): Content[] =>
   messages.map(({ role, text }) => ({
@@ -49,6 +62,9 @@ export const sanitizePromptText = (
     .replace(/\s+/gu, ' ')
     .trim()
     .slice(0, maxChars)
+
+export const sanitizeToolResultText = (text: string): string =>
+  sanitizePromptText(text, TOOL_RESULT_MAX_CHARS)
 
 export const sanitizeAssistantOutput = (text: string): string =>
   SYSTEM_PROMPT_LEAK_PATTERNS.reduce(
@@ -81,3 +97,5 @@ export const buildSystemPrompt = (
       : ''
   return SYSTEM_PROMPT_PREFIX + productPart + commercePart
 }
+
+export const buildCatalogSystemPrompt = (): string => CATALOG_SYSTEM_PROMPT

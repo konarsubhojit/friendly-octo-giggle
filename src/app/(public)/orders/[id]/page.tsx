@@ -22,6 +22,7 @@ import type { OrdersDispatch } from '@/lib/store'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { AuthRequiredState } from '@/components/ui/AuthRequiredState'
 import { Card } from '@/components/ui/Card'
+import { OrderReturnsSection } from '@/features/orders/components/OrderReturnsSection'
 
 interface CancelOrderDialogProps {
   readonly dialogRef: React.RefObject<HTMLDialogElement | null>
@@ -552,6 +553,9 @@ export default function OrderDetailPage({ params }: OrderDetailPageProps) {
             />
           </div>
         </Card>
+
+        {/* Returns: renders only once the order is delivered */}
+        <OrderReturnsSection orderId={order.id} orderStatus={order.status} />
 
         {/* Order Items */}
         <Card className="p-8 mb-6">

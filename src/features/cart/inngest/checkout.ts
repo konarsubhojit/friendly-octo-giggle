@@ -2,22 +2,12 @@ import { NonRetriableError } from 'inngest'
 import { inngest } from '@/lib/inngest/client'
 import { CheckoutQueueMessageSchema } from '@/features/cart/validations'
 import { checkoutRequestCreated } from '@/features/cart/inngest/events'
-import {
-  claimCheckoutRequest,
-  createOrderForCheckoutRequest,
-  preflightCheckoutRequest,
-  recordCheckoutProcessingFailure,
-  recoverCheckoutRequestAfterRetryExhaustion,
-  resolveCheckoutSettlement,
-  type CheckoutSkipReason,
-} from '@/features/cart/services/checkout-service'
-import { logError } from '@/lib/logger'
+import type { CheckoutSkipReason } from '@/features/cart/services/checkout-service'
 import {
   CHECKOUT_SLO_MS,
   SCORE_NAMES,
   type ScoringStep,
 } from '@/lib/inngest/scores'
-import { isOrderRequestError } from '@/features/orders/services/order-service'
 
 /**
  * Retries after the first attempt. Five total attempts keeps parity with the
@@ -43,8 +33,19 @@ export interface CheckoutStepRunner extends ScoringStep {
  * and "payment settled" is too wide, which is a product decision rather than a
  * bug to chase in the run logs.
  */
-const isStockConflict = (error: unknown): boolean =>
-  isOrderRequestError(error) && error.status === 409
+const isStockConflict = async (error: unknown): Promise<boolean> => {
+  const { isOrderRequestError } =
+    await import('@/features/orders/services/order-service')
+  return isOrderRequestError(error) && error.status === 409
+}
+
+const logCheckoutError = async (
+  error: unknown,
+  context: string
+): Promise<void> => {
+  const { logError } = await import('@/lib/logger')
+  logError({ error, context })
+}
 
 /** Outcome of a durable run, returned for run history and tests. */
 export type CheckoutRunResult =
@@ -90,6 +91,8 @@ export const runCheckoutRequestSteps = async ({
   // Step 1 — idempotency guard. Returns a narrow, JSON-safe projection so the
   // checkpointed value never carries non-serializable row fields.
   const preflight = await step.run('preflight-checkout-request', async () => {
+    const { preflightCheckoutRequest } =
+      await import('@/features/cart/services/checkout-service')
     const result = await preflightCheckoutRequest(checkoutRequestId)
     return result.action === 'process'
       ? { action: 'process' as const }
@@ -111,6 +114,8 @@ export const runCheckoutRequestSteps = async ({
   // Step 2 — compare-and-swap claim. Memoized, so a retry of a later step
   // never re-claims and never depends on the stale-claim window.
   const claim = await step.run('claim-checkout-request', async () => {
+    const { claimCheckoutRequest, resolveCheckoutSettlement } =
+      await import('@/features/cart/services/checkout-service')
     if (await claimCheckoutRequest(checkoutRequestId)) {
       return { claimed: true as const }
     }
@@ -145,6 +150,8 @@ export const runCheckoutRequestSteps = async ({
 
   // Step 3 — verify payment and persist the order atomically.
   const orderId = await step.run('create-order', async () => {
+    const { createOrderForCheckoutRequest, recordCheckoutProcessingFailure } =
+      await import('@/features/cart/services/checkout-service')
     try {
       return await createOrderForCheckoutRequest(checkoutRequestId)
     } catch (error) {
@@ -158,12 +165,12 @@ export const runCheckoutRequestSteps = async ({
       // reached. Written from inside the step so it lands on that step's
       // trace, and swallowed on failure so telemetry can never be the reason
       // a checkout error is reported as something else.
-      if (isStockConflict(error)) {
+      if (await isStockConflict(error)) {
         await inngest
           .score({ name: SCORE_NAMES.stockConflict, value: true })
-          .catch((scoreError: unknown) => {
-            logError({ error: scoreError, context: 'checkout_score_failed' })
-          })
+          .catch((scoreError: unknown) =>
+            logCheckoutError(scoreError, 'checkout_score_failed')
+          )
       }
 
       if (terminal) {
@@ -227,13 +234,12 @@ export const handleCheckoutRequestFailure = async ({
   const parsed = CheckoutQueueMessageSchema.safeParse(originalEventData)
 
   if (!parsed.success) {
-    logError({
-      error,
-      context: 'inngest_checkout_failure_without_request_id',
-    })
+    await logCheckoutError(error, 'inngest_checkout_failure_without_request_id')
     return
   }
 
+  const { recoverCheckoutRequestAfterRetryExhaustion } =
+    await import('@/features/cart/services/checkout-service')
   await recoverCheckoutRequestAfterRetryExhaustion({
     checkoutRequestId: parsed.data.checkoutRequestId,
     deliveryCount: CHECKOUT_FUNCTION_RETRIES + 1,

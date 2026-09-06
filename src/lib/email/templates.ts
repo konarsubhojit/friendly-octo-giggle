@@ -6,6 +6,7 @@
 
 // ─── Data Types ─────────────────────────────────────────
 import { STORE_NAME } from '@/lib/constants/store'
+import type { ReturnStatus } from '@/lib/constants/returns'
 
 export interface OrderEmailItem {
   name: string
@@ -532,5 +533,115 @@ export const abandonedCartReminderTemplate = (
     subject: copy.subject,
     html: emailWrapper(bodyHtml),
     text: `Hi ${data.customerName},\n\n${copy.textIntro}\n\nItems:\n${itemLines}\n\nReturn to your cart: ${data.cartUrl}\n\nThank you for shopping with ${STORE_NAME}!`,
+  }
+}
+
+export interface ReturnStatusUpdateData {
+  to: string
+  customerName: string
+  orderId: string
+  returnId: string
+  status: ReturnStatus
+  /** Admin-authored copy, shown verbatim on approve and reject. */
+  decisionReason?: string | null
+  /** Pre-formatted amount; present once money has been committed. */
+  refundAmount?: string | null
+}
+
+interface ReturnStatusCopy {
+  readonly emoji: string
+  readonly headline: string
+  readonly nextStep: string
+  readonly color: string
+}
+
+/**
+ * What each state means to the customer, and what happens next.
+ *
+ * `next step` matters as much as the status itself: return-status opacity is
+ * the thing that drives people to contact support, which is what this feature
+ * exists to prevent.
+ */
+const RETURN_STATUS_COPY: Record<ReturnStatus, ReturnStatusCopy> = {
+  REQUESTED: {
+    emoji: '📩',
+    headline: 'We have your return request',
+    nextStep:
+      'Our team will review your photos and respond with next steps. No action is needed from you right now.',
+    color: '#7a5543',
+  },
+  APPROVED: {
+    emoji: '✅',
+    headline: 'Your return has been approved',
+    nextStep:
+      'Please send the item back to us. Return shipping is arranged and paid by you, as set out in our policy.',
+    color: '#2f855a',
+  },
+  REJECTED: {
+    emoji: '❌',
+    headline: 'We could not approve this return',
+    nextStep:
+      'If you think this is a mistake, reply to this email and we will take another look.',
+    color: '#c53030',
+  },
+  RECEIVED: {
+    emoji: '📦',
+    headline: 'We have received your return',
+    nextStep:
+      'Your refund is being prepared. We will email you again as soon as it has been issued.',
+    color: '#2b6cb0',
+  },
+  REFUNDED: {
+    emoji: '💸',
+    headline: 'Your refund has been issued',
+    nextStep:
+      'Depending on your bank, the money can take a few working days to appear on your statement.',
+    color: '#2f855a',
+  },
+}
+
+export const returnStatusUpdateTemplate = (data: ReturnStatusUpdateData) => {
+  const copy = RETURN_STATUS_COPY[data.status]
+
+  const reasonHtml = data.decisionReason
+    ? `<p style="margin:8px 0 0;color:#5C4A44;font-size:14px;"><strong>Reason:</strong> ${escapeHtml(data.decisionReason)}</p>`
+    : ''
+
+  const refundHtml = data.refundAmount
+    ? `<p style="margin:8px 0 0;color:#5C4A44;font-size:14px;"><strong>Refund amount:</strong> <span style="color:#b83060;font-weight:600;">${escapeHtml(data.refundAmount)}</span></p>`
+    : ''
+
+  const bodyHtml = `
+    <h2 style="color:#5C4A44;margin:0 0 8px;font-size:22px;">
+      ${copy.emoji} ${escapeHtml(copy.headline)}
+    </h2>
+    <p style="color:#7a5543;margin:0 0 24px;font-size:15px;">
+      Hi ${escapeHtml(data.customerName)}, here is an update on your return.
+    </p>
+    <div style="background:#F9F0EB;border-radius:12px;padding:16px 20px;margin-bottom:20px;">
+      <p style="margin:0 0 8px;color:#5C4A44;font-size:14px;">
+        <strong>${labels.order}:</strong> <span style="font-family:monospace;color:#b83060;">#${escapeHtml(data.orderId.toUpperCase())}</span>
+      </p>
+      <p style="margin:0 0 8px;color:#5C4A44;font-size:14px;">
+        <strong>Return reference:</strong> <span style="font-family:monospace;color:#b83060;">${escapeHtml(data.returnId)}</span>
+      </p>
+      ${refundHtml}
+      ${reasonHtml}
+    </div>
+    <p style="color:#7a5543;font-size:14px;margin-top:24px;">
+      ${escapeHtml(copy.nextStep)}
+    </p>`
+
+  const reasonLine = data.decisionReason
+    ? `\nReason: ${data.decisionReason}`
+    : ''
+  const refundLine = data.refundAmount
+    ? `\nRefund amount: ${data.refundAmount}`
+    : ''
+
+  return {
+    subject: `${copy.headline} — Order #${data.orderId.toUpperCase()} ${copy.emoji}`,
+    html: emailWrapper(bodyHtml),
+    text: `Hi ${data.customerName},\n\n${copy.headline}.\n\nOrder: #${data.orderId.toUpperCase()}\nReturn reference: ${data.returnId}${refundLine}${reasonLine}\n\n${copy.nextStep}\n\nThank you for shopping with ${STORE_NAME}!`,
   }
 }

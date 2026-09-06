@@ -38,6 +38,9 @@ yarn-error.log*
 
 /lib/generated/prisma
 
+# Storage migration script resumability checkpoint (local run state, not source)
+.storage-migration-checkpoint.json
+
 # Documentation - only keep README.md and CONTRIBUTING.md in root, all other docs in /docs folder
 /*.md
 !README.md
@@ -66,3 +69,8 @@ vitest-report.json
 
 # Sentry Config File
 .env.sentry-build-plugin
+scripts/sql/catalog-data.sql
+
+# Local dev/debug logs and captured cookies (never commit — may contain
+# session tokens); scratch space for local Playwright/dev-server iteration.
+.devlogs/

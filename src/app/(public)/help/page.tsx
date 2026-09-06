@@ -36,7 +36,7 @@ const faqs = [
   },
   {
     question: 'What is your return policy?',
-    answer: `Orders cannot be returned unless the product arrives damaged. Email ${SUPPORT_EMAIL} with detailed photos, a short video, and a description of the issue for review.`,
+    answer: `Orders cannot be returned unless the product arrives damaged, defective, or incorrect. Open the order in your account within 7 days of delivery, start a return, and attach photos of the problem — no email to support is needed. If we ask for a short video you can send it on Instagram or email ${SUPPORT_EMAIL}.`,
   },
   {
     question: 'How do I reset my password?',

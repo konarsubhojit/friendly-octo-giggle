@@ -1,5 +1,6 @@
 import { auth } from '@/lib/auth'
 import {
+  getRolePermissions,
   hasPermission,
   isStaffRole,
   type AdminPermission,
@@ -13,6 +14,9 @@ type AdminAuthSuccess = {
 }
 type AdminAuthFailure = { authorized: false; error: string; status: 401 | 403 }
 export type AdminAuthResult = AdminAuthSuccess | AdminAuthFailure
+export type AdminSessionAuthResult =
+  | (AdminAuthSuccess & { permissions: readonly AdminPermission[] })
+  | AdminAuthFailure
 
 /**
  * Guard an admin route by the permission it needs rather than by role.
@@ -40,3 +44,27 @@ export const checkAdminAuth = async (
   }
   return { authorized: true, userId: session.user.id ?? '', role }
 }
+
+export const checkAdminSessionAuth =
+  async (): Promise<AdminSessionAuthResult> => {
+    const session = await auth()
+    if (!session?.user) {
+      return { authorized: false, error: 'Not authenticated', status: 401 }
+    }
+
+    const role = session.user.role
+    if (!isStaffRole(role)) {
+      return {
+        authorized: false,
+        error: 'Not authorized - Admin access required',
+        status: 403,
+      }
+    }
+
+    return {
+      authorized: true,
+      userId: session.user.id ?? '',
+      role,
+      permissions: getRolePermissions(role),
+    }
+  }

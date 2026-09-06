@@ -3,12 +3,11 @@ import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 import React from 'react'
 
-vi.mock('next/font/google', () => ({
-  Nunito: () => ({ className: 'nunito' }),
-  Playfair_Display: () => ({
-    className: 'playfair',
-    variable: '--font-display',
-  }),
+vi.mock('next/font/local', () => ({
+  default: vi.fn((options: { variable?: string }) => ({
+    className: 'nunito',
+    variable: options?.variable,
+  })),
 }))
 
 vi.mock('@/components/layout/HeaderWrapper', () => ({

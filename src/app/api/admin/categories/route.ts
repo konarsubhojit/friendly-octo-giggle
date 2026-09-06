@@ -5,6 +5,7 @@ import {
   parseJsonBody,
 } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
+import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 import { drizzleDb } from '@/lib/db'
 import { categories } from '@/lib/schema'
 import { isNull, asc, eq, max } from 'drizzle-orm'
@@ -82,6 +83,15 @@ export async function POST(request: Request) {
 
         revalidateCacheTags([categoriesTag()], 'admin_category_reactivate')
 
+        await recordAdminAuditLog({
+          userId: authCheck.userId,
+          role: authCheck.role,
+          entity: 'category',
+          entityId: reactivated.id,
+          action: 'reactivate',
+          diff: { name: reactivated.name, sortOrder: reactivated.sortOrder },
+        })
+
         return apiSuccess(
           {
             category: {
@@ -103,6 +113,15 @@ export async function POST(request: Request) {
       .returning()
 
     revalidateCacheTags([categoriesTag()], 'admin_category_create')
+
+    await recordAdminAuditLog({
+      userId: authCheck.userId,
+      role: authCheck.role,
+      entity: 'category',
+      entityId: created.id,
+      action: 'create',
+      diff: { name: created.name, sortOrder: created.sortOrder },
+    })
 
     return apiSuccess(
       {

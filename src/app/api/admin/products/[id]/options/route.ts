@@ -10,6 +10,7 @@ import {
   parseJsonBody,
 } from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
+import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 import { invalidateProductCaches } from '@/lib/cache'
 
 const MAX_OPTIONS_PER_PRODUCT = 5
@@ -178,6 +179,15 @@ export async function POST(
         createdAt: val.createdAt.toISOString(),
       })),
     }
+
+    await recordAdminAuditLog({
+      userId: authCheck.userId,
+      role: authCheck.role,
+      entity: 'product_option',
+      entityId: option.id,
+      action: 'create',
+      diff: { productId: id, name, sortOrder, values },
+    })
 
     return apiSuccess({ option: serialized }, 201)
   } catch (error) {

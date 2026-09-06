@@ -9,7 +9,9 @@
 - Search suggestions, zero-result recovery, trending discovery, click analytics, and database fallback when hosted search is unavailable.
 - Product details with image galleries, multidimensional option selection, variant-specific price/stock/media, reviews and voting, sharing links, recently viewed products, and bestsellers.
 - Personalized recommendation rails on the product page, the cart, the `/shop` landing page, and the zero-result search state. Affinity scores are recomputed nightly at 04:00 UTC from three server-side signals over a rolling 180-day window: order co-purchase (weight 1.0), wishlist co-occurrence (0.5), and share co-occurrence (0.25). Associations backed by fewer than three distinct orders or shoppers are discarded during aggregation, which suppresses both statistical noise and any inference of an individual basket. On a representative volume of 2 000 products and 5 000 orders the full scoring run completes in about 6.4 seconds and produces roughly 3 700 associations. Every surface falls back to category-scoped bestsellers when scores are absent, fully filtered out, or Redis is unavailable, so a rail is never empty and a cache outage never breaks a page. Recommendation responses expose an availability boolean only — never an inventory or sales count. Recently viewed products act as client-supplied anchor seeds at selection time and are never persisted server-side, so a guest leaves no profile behind.
-- AI product assistant for guests and authenticated customers. Guest identity is one-way hashed, history is persisted only for signed-in users, and exact stock counts are not disclosed.
+- Two storefront AI surfaces: the product-page assistant and a global catalog-wide assistant. Both share the same guarded engine, the same `/api/ai` rate-limit bucket, one-way-hashed guest identity, authenticated-only history persistence, and qualitative-only stock language.
+- The storefront assistant’s tool set is read-only and server-defined: `search_catalog`, `get_product_details`, `compare_products`, and `get_order_status`. Order lookups are available to authenticated shoppers only and always run under the server-side session identity, never a user identifier supplied in chat text or tool arguments.
+- Catalog discovery keeps the existing fallback chain: semantic/hosted Upstash Search → direct Upstash search → Drizzle SQL search → the conventional `/shop` UI when the AI provider itself is unavailable. AI answers use grounded markdown product links built from product IDs returned by tools, not from free-form model text.
 
 ## Cart, checkout, and orders
 
@@ -17,9 +19,10 @@
 - Address capture and Indian pincode lookup, shipping pricing, order-policy acknowledgment, and recoverable validation/errors.
 - Staged shipping, payment, review, and confirmation pages.
 - Idempotent checkout requests persisted before Inngest processing, with a pushed completion status (Realtime → SSE) and duplicate-order protection.
-- Inventory reservations taken atomically at checkout acceptance, consumed with the order, released on failure, and expired by a five-minute sweep, so queued requests cannot oversell the shelf.
+- Inventory reservations taken atomically at checkout acceptance, consumed with the order, released on failure, and expired by an hourly sweep, so queued requests cannot oversell the shelf.
 - Pluggable payment gateways behind a single `PaymentGateway` interface: Razorpay (online capture with signed verification and webhook reconciliation) and Cash on Delivery (order stays `PENDING` and settles to `PAID` when delivery is confirmed).
 - Authenticated order history, hybrid order search, compact item summaries, detail/status tracking, and transactional emails.
+- Self-service damaged-item returns: a customer opens a claim from the delivered order within the per-category window, attaches photos in product, and tracks the claim through approval, receipt, and refund without contacting support. A short video, when asked for, is sent over Instagram DM quoting the return ID — the handle is never stored against the account. Approved receipts restock the originating variant exactly once; the refund is a separate, separately permissioned action so a gateway rejection can be retried without re-restocking. Cash on Delivery never reaches the gateway: the obligation is recorded as a pending manual settlement an operator confirms by hand.
 
 ## Identity and personalization
 
@@ -43,12 +46,13 @@
 - Product option generation, variant reorder, category drag/reorder, soft deletion, image upload, and stock management.
 - Bulk product/order actions, product CSV import, CSV exports for products/orders/users/reviews, and sales export.
 - Order status/tracking controls, user role changes, review moderation, search reindexing, queue visibility, and audit logging.
+- Returns triage queue gated on `orders:returns`, with order context, evidence thumbnails, a mandatory decision reason recorded on every approval and rejection, a CSV export, and an audit row per decision. Actions that move money require `orders:refund` instead.
 - Reservation visibility on checkout requests and variants (on-hand/reserved/available), audited manual release of a stuck hold, and rejection of stock edits below reserved quantity.
 
 ## Platform operations
 
 - PostgreSQL with Drizzle, short public IDs, transactions, primary/read-replica routing, migrations, and idempotent bootstrap support.
-- Redis caching and order search, Upstash Search with SQL fallback, Vercel Blob, Inngest durable workflows, async email delivery, provider retries, and failed-email persistence.
+- Redis caching and order search, Upstash Search with SQL fallback, dual-provider image storage (Vercel Blob or S3-compatible providers, dual-read fallback across configured adapters) with edge resizing via a Cloudflare Worker, Inngest durable workflows, async email delivery, provider retries, and failed-email persistence.
 - Pino request logging with correlation IDs, Sentry instrumentation, Prometheus metrics, a `GET /api/health` liveness endpoint, scheduled exchange-rate refresh, product-affinity scoring, and failed-email retry jobs.
 - Zod request/environment validation, rate limiting, ownership checks, signed guest identifiers, secure webhook/worker verification, and cache invalidation after writes.
 
