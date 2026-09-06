@@ -1,23 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const { mockCheckAdminAuth, mockWithItemsAndEvidence, mockSelectLimit, mockSelectWhere, mockSelect } =
-  vi.hoisted(() => {
-    const mockSelectLimit = vi.fn()
-    const mockSelectOrderBy = vi.fn(() => ({ limit: mockSelectLimit }))
-    const mockSelectWhere = vi.fn(() => ({ orderBy: mockSelectOrderBy }))
-    const mockSelectInnerJoin = vi.fn(() => ({ where: mockSelectWhere }))
-    const mockSelectFrom = vi.fn(() => ({ innerJoin: mockSelectInnerJoin }))
-    const mockSelect = vi.fn(() => ({ from: mockSelectFrom }))
+const {
+  mockCheckAdminAuth,
+  mockWithItemsAndEvidence,
+  mockSelectLimit,
+  mockSelectWhere,
+  mockSelect,
+} = vi.hoisted(() => {
+  const mockSelectLimit = vi.fn()
+  const mockSelectOrderBy = vi.fn(() => ({ limit: mockSelectLimit }))
+  const mockSelectWhere = vi.fn(() => ({ orderBy: mockSelectOrderBy }))
+  const mockSelectInnerJoin = vi.fn(() => ({ where: mockSelectWhere }))
+  const mockSelectFrom = vi.fn(() => ({ innerJoin: mockSelectInnerJoin }))
+  const mockSelect = vi.fn(() => ({ from: mockSelectFrom }))
 
-    return {
-      mockCheckAdminAuth: vi.fn(),
-      mockWithItemsAndEvidence: vi.fn(),
-      mockSelectLimit,
-      mockSelectWhere,
-      mockSelect,
-    }
-  })
+  return {
+    mockCheckAdminAuth: vi.fn(),
+    mockWithItemsAndEvidence: vi.fn(),
+    mockSelectLimit,
+    mockSelectWhere,
+    mockSelect,
+  }
+})
 
 vi.mock('@/features/admin/services/admin-auth', () => ({
   checkAdminAuth: mockCheckAdminAuth,
