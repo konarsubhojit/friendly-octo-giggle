@@ -91,9 +91,7 @@ describe('GET /api/admin/export/reviews', () => {
     const csv = await readStream(response)
 
     expect(response.status).toBe(200)
-    expect(response.headers.get('content-disposition')).toContain(
-      'reviews.csv'
-    )
+    expect(response.headers.get('content-disposition')).toContain('reviews.csv')
 
     const lines = csv.trim().split('\n')
     expect(lines[0]).toBe(

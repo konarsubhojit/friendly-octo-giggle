@@ -33,10 +33,7 @@ const baseReturnRequest = {
   status: 'REQUESTED',
   reason: 'DAMAGED',
   decisionReason: null,
-  items: [
-    { quantity: 2 },
-    { quantity: 1 },
-  ],
+  items: [{ quantity: 2 }, { quantity: 1 }],
   order: { customerEmail: 'jane@example.com' },
   refund: null,
   refundAmount: 1000,
@@ -102,9 +99,7 @@ describe('GET /api/admin/export/returns', () => {
     const csv = await readStream(response)
 
     expect(response.status).toBe(200)
-    expect(response.headers.get('content-disposition')).toContain(
-      'returns-'
-    )
+    expect(response.headers.get('content-disposition')).toContain('returns-')
 
     const lines = csv.trim().split('\n')
     expect(lines[0]).toBe(

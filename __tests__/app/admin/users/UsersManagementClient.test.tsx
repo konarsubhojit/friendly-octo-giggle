@@ -128,9 +128,7 @@ vi.mock('@/features/admin/components/RoleAction', () => ({
     user: { id: string }
     onRoleChange: (userId: string, role: 'ADMIN') => void
   }) => (
-    <button onClick={() => onRoleChange(user.id, 'ADMIN')}>
-      Change role
-    </button>
+    <button onClick={() => onRoleChange(user.id, 'ADMIN')}>Change role</button>
   ),
 }))
 
