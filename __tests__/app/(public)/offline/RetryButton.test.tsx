@@ -5,17 +5,21 @@ import { RetryButton } from '@/app/(public)/offline/RetryButton'
 
 describe('RetryButton', () => {
   const reload = vi.fn()
+  const originalLocation = window.location
 
   beforeEach(() => {
     reload.mockReset()
-    vi.stubGlobal('window', {
-      ...globalThis.window,
-      location: { ...globalThis.window.location, reload },
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...originalLocation, reload },
     })
   })
 
   afterEach(() => {
-    vi.unstubAllGlobals()
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: originalLocation,
+    })
   })
 
   it('renders a "Try Again" button', () => {
