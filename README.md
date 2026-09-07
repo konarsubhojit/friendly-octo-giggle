@@ -34,6 +34,7 @@ Complete documentation is available in the [`/docs`](./docs) folder:
 - **[Development](./docs/development.md)** - Development workflows and best practices
 - **[API Reference](./docs/api-reference.md)** - Complete API documentation
 - **[Deployment](./docs/deployment.md)** - Platform-specific deployment guides
+- **[Self-Hosting](./docs/self-hosting.md)** - Self-hosted Postgres + PgBouncer stack, gotchas, and runbook
 - **[Troubleshooting](./docs/troubleshooting.md)** - Common issues and solutions
 
 ## ✨ Key Features
