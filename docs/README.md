@@ -38,7 +38,6 @@ Welcome to the comprehensive documentation for the e-commerce platform built wit
 ### Operations
 
 - **[Self-Hosting Runbook](./self-hosting.md#operations-runbook)** - Pool health, fail2ban, backups
-
 - **[Troubleshooting](./troubleshooting.md)** - Common issues and solutions
 - **[Monitoring](./troubleshooting.md#monitoring)** - Performance monitoring and logging
 - **[Security](./troubleshooting.md#security)** - Security best practices

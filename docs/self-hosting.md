@@ -130,6 +130,10 @@ volumes:
 
 Notes that are easy to get wrong:
 
+- **`edoburu/pgbouncer:latest` is unpinned.** That is what the box currently
+  runs, but a rebuild can pull a different version with different environment
+  variable semantics. Pin a specific tag or digest when you next touch it, as
+  `postgres:18-alpine` already is.
 - **Volume mount.** Postgres 18+ expects a single mount at
   `/var/lib/postgresql`; the image places the cluster in a version-named
   subdirectory beneath it. Pre-18 images mounted `/var/lib/postgresql/data`
@@ -193,7 +197,8 @@ OUT="$BACKUP_DIR/octo-$STAMP.dump"
 
 mkdir -p "$BACKUP_DIR"
 
-# Dump through loopback Postgres, never through PgBouncer (see gotcha 5).
+# Dump against the Postgres container directly, never through PgBouncer
+# (see gotcha 5).
 docker compose -f "$HOME/docker/docker-compose.db.yml" exec -T postgres \
   pg_dump -U octo -d octo -Fc > "$OUT"
 
@@ -243,7 +248,8 @@ traverses. It looks like it works and drops nothing.
 
 ```bash
 sudo iptables -L f2b-pgbouncer -n          # rules must be present and populated
-# From a banned host, the connection is refused rather than an auth error:
+# From a banned host, the connection never reaches authentication — it is
+# dropped (hangs until timeout) or refused, depending on the fail2ban blocktype:
 psql "postgres://octo:<password>@db.kiyon.store:6432/octo?sslmode=verify-full"
 ```
 
@@ -477,15 +483,15 @@ denormalised counter, and want investigating.
 
 > **This has not been done yet. Do it.** An unverified backup is not a backup.
 
-Restore the most recent dump into a scratch database, through loopback (gotcha
-5), resetting the schema first (gotcha 6):
+Restore the most recent dump into a fresh scratch database, against Postgres
+directly rather than through the pooler (gotcha 5). A newly created database is
+already empty, so the schema reset from gotcha 6 is not needed here — it only
+matters when restoring over an existing, populated database.
 
 ```bash
 CID=$(docker compose -f ~/docker/docker-compose.db.yml ps -q postgres)
 
 docker exec -i "$CID" psql -U octo -d postgres -c 'CREATE DATABASE octo_restore_test;'
-docker exec -i "$CID" psql -U octo -d octo_restore_test \
-  -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'
 
 docker exec -i "$CID" pg_restore -U octo -d octo_restore_test --no-owner \
   < ~/backups/octo-<stamp>.dump
