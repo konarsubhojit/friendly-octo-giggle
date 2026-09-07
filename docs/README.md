@@ -33,8 +33,11 @@ Welcome to the comprehensive documentation for the e-commerce platform built wit
 - **[Deployment Guide](./deployment.md)** - Platform-specific deployment instructions
 - **[Environment Variables](./deployment.md#environment-variables)** - Configuration reference
 - **[Production Checklist](./deployment.md#production-checklist)** - Pre-launch verification
+- **[Self-Hosting](./self-hosting.md)** - Self-hosted Postgres 18 + PgBouncer on an OCI VM
 
 ### Operations
+
+- **[Self-Hosting Runbook](./self-hosting.md#operations-runbook)** - Pool health, fail2ban, backups
 
 - **[Troubleshooting](./troubleshooting.md)** - Common issues and solutions
 - **[Monitoring](./troubleshooting.md#monitoring)** - Performance monitoring and logging
