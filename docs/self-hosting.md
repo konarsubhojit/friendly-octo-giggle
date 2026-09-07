@@ -212,6 +212,10 @@ Cron entry (`crontab -e`):
 15 3 * * * /home/<user>/bin/pg-backup.sh >> /home/<user>/backups/backup.log 2>&1
 ```
 
+Create `~/backups/` before installing the cron entry. The shell opens the log
+file before running the script, so on a fresh box with no backup directory the
+redirection fails and the job silently never runs.
+
 ---
 
 ## Gotchas
@@ -285,7 +289,7 @@ parsers silently take the last one, others error.
 docker compose -f ~/docker/docker-compose.db.yml config
 ```
 
-### 5. Restore through loopback `:5432`, never through the pooler
+### 5. Restore against Postgres directly, never through the pooler
 
 **Symptom.** `pg_restore` fails partway with errors about prepared statements or
 lost session state.
@@ -294,7 +298,8 @@ lost session state.
 session state, prepared statements, and multi-statement transactions do not
 survive that.
 
-**Fix.** Restore against Postgres directly on `127.0.0.1:5432` from the VM.
+**Fix.** Restore from the VM against the Postgres container itself — either
+`docker exec` into it, or connect to `127.0.0.1:5432` — bypassing port 6432.
 
 ### 6. Use `DROP SCHEMA public CASCADE` rather than `pg_restore --clean`
 
