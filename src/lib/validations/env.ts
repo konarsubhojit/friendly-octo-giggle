@@ -139,6 +139,7 @@ const BaseEnvSchema = z.object({
   DATABASE_POOL_MAX: z.string().optional(),
   DATABASE_POOL_IDLE_TIMEOUT_MS: z.string().optional(),
   DATABASE_POOL_CONNECTION_TIMEOUT_MS: z.string().optional(),
+  DATABASE_POOL_MAX_LIFETIME_SECONDS: z.string().optional(),
   DATABASE_DRIVER: z.enum(DATABASE_DRIVERS).optional(),
   CACHE_PROVIDER: z.enum(CACHE_PROVIDERS).optional(),
   SEARCH_PROVIDER: z.enum(SEARCH_PROVIDERS).optional(),

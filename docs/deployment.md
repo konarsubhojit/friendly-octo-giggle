@@ -79,10 +79,19 @@ from Neon's specialized serverless adapter, such as Vercel-style runtimes using
 Neon's HTTP/WebSocket optimized connection layer.
 
 Database pool behavior can be tuned with `DATABASE_POOL_MAX`,
-`DATABASE_POOL_IDLE_TIMEOUT_MS`, and
-`DATABASE_POOL_CONNECTION_TIMEOUT_MS`. Defaults are 10 connections, 20 seconds
-idle timeout, and 5 seconds connection timeout. `READ_DATABASE_URL` remains
-optional and falls back to `DATABASE_URL`.
+`DATABASE_POOL_IDLE_TIMEOUT_MS`, `DATABASE_POOL_CONNECTION_TIMEOUT_MS`, and
+`DATABASE_POOL_MAX_LIFETIME_SECONDS`. Defaults are 10 connections, 20 seconds
+idle timeout, 5 seconds connection timeout, and a 300 second socket lifetime.
+`READ_DATABASE_URL` remains optional and falls back to `DATABASE_URL`.
+
+`DATABASE_POOL_MAX_LIFETIME_SECONDS` retires a pooled socket once it reaches
+that age, regardless of how recently it was used. The idle timeout alone cannot
+do this on a serverless platform: it is enforced by a timer, and timers do not
+fire while the container is frozen between invocations. A socket parked across
+a freeze therefore still looks fresh by idle accounting long after PgBouncer or
+the database closed its own end, and the next query on it fails with
+`Connection terminated unexpectedly`. Keep this below the pooler's
+`server_idle_timeout` so the client discards the socket first.
 
 For self-hosted deployments, the generic protocols — `postgres`, `redis`, and
 `s3` — are the recommended selections; managed values (`neon`, `upstash`,

@@ -16,6 +16,7 @@ export const createNeonConnection = <TSchema extends Record<string, unknown>>(
     max: poolConfig.max,
     idleTimeoutMillis: poolConfig.idleTimeoutMillis,
     connectionTimeoutMillis: poolConfig.connectionTimeoutMillis,
+    maxLifetimeSeconds: poolConfig.maxLifetimeSeconds,
   })
 
   return {
