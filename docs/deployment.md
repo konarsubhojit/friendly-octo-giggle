@@ -582,13 +582,15 @@ railway run npm run db:migrate
 `deploy-production`. A deploy is blocked if its migration job fails.
 
 `.github/workflows/build-self-hosted.yml` defines the same migration and deploy
-jobs on the same triggers, so a push to `develop` or `master` currently runs
-each of them twice — once on a GitHub-hosted runner and once on the self-hosted
-pool. `drizzle-kit migrate` is idempotent, so the second run applies nothing,
-but the two runs are not serialised against each other and both deploy. Decide
-which pool owns the deployment path and remove the migration and deploy jobs
-from the other workflow; until then, treat a double preview deployment on a
-single push as expected rather than as a symptom.
+jobs on the same triggers, and the two workflows have separate `concurrency`
+groups, so a push to `develop` or `master` currently runs each of them twice —
+once on a GitHub-hosted runner and once on the self-hosted pool — with nothing
+serialising the two. Sequentially, `db:migrate` is idempotent and the second run
+applies nothing; concurrently, both runs can read the same set of unapplied
+migrations before either records one. Decide which pool owns the deployment
+path and remove the migration and deploy jobs from the other workflow. Until
+then, treat a double preview deployment on a single push as expected rather
+than as a symptom.
 
 Running migrations after the deploy would leave the new code serving live
 traffic against the old schema for the whole duration of the migration job:

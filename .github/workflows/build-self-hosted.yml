@@ -4,16 +4,19 @@ name: Build Self Hosted
 # self-hosted Linux VMs, and it is tuned for that pool rather than for a
 # throwaway GitHub-hosted runner. Four assumptions drive every difference:
 #
-#   1. The pool is wide (six runners), so the gates run as independent jobs
-#      instead of as one serial script. A run now reports lint, the type check,
-#      the test suite and the build at the same time and independently, rather
-#      than aborting at the first failing gate and hiding the rest until the
-#      next push.
+#   1. The pool is wide enough to run the gates side by side. Lint, the type
+#      check, the test suite and the build are four independent jobs that all
+#      start at once, so a run reports all four verdicts instead of aborting at
+#      the first failing gate and hiding the rest until the next push. The
+#      widest point of the graph is six concurrent jobs — lint, the type check
+#      and the build still running while the three coverage consumers start on
+#      the finished test job — and a narrower pool degrades to queueing, never
+#      to failing.
 #   2. The VMs are persistent, so `~/.npm` survives between jobs.
 #      `actions/setup-node`'s `cache: npm` would round-trip a compressed copy
-#      of that same directory through the GitHub Actions cache service on every
-#      job — six downloads and six uploads per run to re-fetch what is already
-#      on local disk — so it is deliberately not enabled here.
+#      of that same directory through the GitHub Actions cache service in every
+#      job that installs dependencies, re-fetching what is already on local
+#      disk, so it is deliberately not enabled here.
 #      `npm ci --prefer-offline` reads the on-disk cache instead, and
 #      `--no-audit --no-fund` drop two registry round-trips that gate nothing.
 #   3. The runner's `_work` directory is persistent too, which is what lets the
@@ -26,6 +29,14 @@ name: Build Self Hosted
 # Assumptions 2 and 3 are false on ephemeral or containerised runners. If the
 # pool is ever moved to those, restore `cache: npm` and use `actions/cache` for
 # `.next/cache`, because neither local-disk assumption holds any more.
+#
+# One security note that is a property of the pool rather than of this file: a
+# self-hosted runner is a long-lived machine, and this workflow triggers on
+# `pull_request`. If this repository is public, a pull request from a fork runs
+# fork-authored code on that machine, with `id-token: write` in scope, and
+# anything it leaves behind on disk — including the caches above — outlives the
+# job. Keep "Require approval for all external contributors" enabled under
+# Settings → Actions → General, or restrict this workflow to non-fork events.
 on:
   push:
     branches:
