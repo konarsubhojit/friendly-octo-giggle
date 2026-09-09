@@ -170,9 +170,9 @@ describe('database connection factory', () => {
   })
 
   it('rejects invalid pool settings during startup', () => {
-    expect(() =>
-      createDatabasePoolConfig({ DATABASE_POOL_MAX: '0' })
-    ).toThrow('DATABASE_POOL_MAX must be a positive integer')
+    expect(() => createDatabasePoolConfig({ DATABASE_POOL_MAX: '0' })).toThrow(
+      'DATABASE_POOL_MAX must be a positive integer'
+    )
 
     expect(() =>
       createDatabasePoolConfig({

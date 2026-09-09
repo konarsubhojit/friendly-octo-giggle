@@ -57,9 +57,9 @@ describe('isConnectionError', () => {
     )
 
     expect(isConnectionError(drizzleWrapped(constraint))).toBe(false)
-    expect(isConnectionError(new Error('syntax error at or near "slect"'))).toBe(
-      false
-    )
+    expect(
+      isConnectionError(new Error('syntax error at or near "slect"'))
+    ).toBe(false)
     expect(isConnectionError(undefined)).toBe(false)
     expect(isConnectionError('not an error')).toBe(false)
   })
@@ -84,9 +84,9 @@ describe('withDatabaseRetry', () => {
   it('returns the first successful result without retrying', async () => {
     const read = vi.fn().mockResolvedValue(['row'])
 
-    await expect(withDatabaseRetry(read, { context: 'test' })).resolves.toEqual([
-      'row',
-    ])
+    await expect(withDatabaseRetry(read, { context: 'test' })).resolves.toEqual(
+      ['row']
+    )
     expect(read).toHaveBeenCalledTimes(1)
     expect(mockLogError).not.toHaveBeenCalled()
   })

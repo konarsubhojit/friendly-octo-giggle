@@ -40,11 +40,8 @@ vi.mock('@/lib/db', async () => {
   return { drizzleDb: db, primaryDrizzleDb: db, readDrizzleDb: db }
 })
 
-const {
-  collectPurchasePairs,
-  collectSharePairs,
-  collectWishlistPairs,
-} = await import('@/features/recommendations/services/scoring')
+const { collectPurchasePairs, collectSharePairs, collectWishlistPairs } =
+  await import('@/features/recommendations/services/scoring')
 
 const windowStart = new Date('2026-01-01T00:00:00.000Z')
 
