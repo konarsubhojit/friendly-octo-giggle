@@ -9,7 +9,13 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Superseded pull request runs are safe to discard, but a push run to develop
+  # or master applies database migrations and then deploys. Cancelling one of
+  # those mid-flight can abort `db:migrate` partway through and leave the schema
+  # in a state neither the old nor the new revision expects, or kill the deploy
+  # that was supposed to follow it. deploy-images-worker.yml disables
+  # cancellation for the same reason.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
