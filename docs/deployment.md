@@ -581,6 +581,15 @@ railway run npm run db:migrate
 `database-migrations-production` **before** `deploy-preview` /
 `deploy-production`. A deploy is blocked if its migration job fails.
 
+`.github/workflows/build-self-hosted.yml` defines the same migration and deploy
+jobs on the same triggers, so a push to `develop` or `master` currently runs
+each of them twice — once on a GitHub-hosted runner and once on the self-hosted
+pool. `drizzle-kit migrate` is idempotent, so the second run applies nothing,
+but the two runs are not serialised against each other and both deploy. Decide
+which pool owns the deployment path and remove the migration and deploy jobs
+from the other workflow; until then, treat a double preview deployment on a
+single push as expected rather than as a symptom.
+
 Running migrations after the deploy would leave the new code serving live
 traffic against the old schema for the whole duration of the migration job:
 additive-column releases throw runtime errors during that window, and releases

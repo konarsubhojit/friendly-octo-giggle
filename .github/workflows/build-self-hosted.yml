@@ -1,4 +1,31 @@
 name: Build Self Hosted
+
+# This is the `build.yml` pipeline retargeted at a pool of persistent
+# self-hosted Linux VMs, and it is tuned for that pool rather than for a
+# throwaway GitHub-hosted runner. Four assumptions drive every difference:
+#
+#   1. The pool is wide (six runners), so the gates run as independent jobs
+#      instead of as one serial script. A run now reports lint, the type check,
+#      the test suite and the build at the same time and independently, rather
+#      than aborting at the first failing gate and hiding the rest until the
+#      next push.
+#   2. The VMs are persistent, so `~/.npm` survives between jobs.
+#      `actions/setup-node`'s `cache: npm` would round-trip a compressed copy
+#      of that same directory through the GitHub Actions cache service on every
+#      job — six downloads and six uploads per run to re-fetch what is already
+#      on local disk — so it is deliberately not enabled here.
+#      `npm ci --prefer-offline` reads the on-disk cache instead, and
+#      `--no-audit --no-fund` drop two registry round-trips that gate nothing.
+#   3. The runner's `_work` directory is persistent too, which is what lets the
+#      Next.js build cache live on local disk instead of in the Actions cache
+#      service — see the `build` job.
+#   4. Runners are a fixed resource. A hung job holds one for the six-hour
+#      default timeout while every queued job waits behind it, so each job
+#      declares a `timeout-minutes` sized to its own work.
+#
+# Assumptions 2 and 3 are false on ephemeral or containerised runners. If the
+# pool is ever moved to those, restore `cache: npm` and use `actions/cache` for
+# `.next/cache`, because neither local-disk assumption holds any more.
 on:
   push:
     branches:
@@ -23,9 +50,10 @@ permissions:
   id-token: write
 
 jobs:
-  test:
-    name: Lint, Type Check and Test
+  lint:
+    name: Lint and Docs Drift
     runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -33,10 +61,9 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 24
-          cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --no-fund
 
       - name: Lint
         run: npm run lint
@@ -44,53 +71,90 @@ jobs:
       - name: Documentation drift check
         run: npm run docs:check
 
-      - name: Type check
-        run: npx tsc --noEmit -p tsconfig.check.json
-
-      - name: Run tests with coverage
-        run: npm run test:coverage
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v7
-        with:
-          name: coverage-report
-          path: coverage/
-          retention-days: 1
-
-  build:
-    name: Build
+  typecheck:
+    name: Type Check
     runs-on: [self-hosted, linux, x64]
-    needs: [test]
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
           node-version: 24
-          cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --no-fund
 
-      # Key on the inputs that actually invalidate compilation — the lockfile
-      # and the Next.js config. Hashing every source file made the key change
-      # on every commit, so the exact-match restore never hit and a fresh
-      # ~350 MB entry was saved on every run; `restore-keys` supplies the
-      # prefix fallback. `.next/cache` covers `.next/cache/turbopack`.
-      # Turbopack validates its own entries and falls back to a cold build when
-      # they are incompatible, which is what makes a looser key safe.
-      # The save step below must use this exact key or restore can never hit.
-      - name: Restore Next.js build cache
-        id: restore-nextjs-cache
-        uses: actions/cache/restore@v6
+      - name: Type check
+        run: npx tsc --noEmit -p tsconfig.check.json
+
+  test:
+    name: Test and Coverage
+    runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
         with:
-          path: .next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json', 'next.config.ts') }}
-          restore-keys: |
-            ${{ runner.os }}-nextjs-
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      # Only `lcov.info` is published. Istanbul's `lcov` reporter is a
+      # composite of `lcovonly` and `html`, so `coverage/` also holds an
+      # `lcov-report/` tree of one HTML page per source file. No consumer below
+      # reads it — SonarQube, DeepSource and Codecov all take `lcov.info` — and
+      # uploading it once and downloading it three times costs far more than
+      # the single file it wraps.
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report
+          path: coverage/lcov.info
+          retention-days: 1
+
+  build:
+    name: Build
+    runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 45
+    # `${{ github.workspace }}/..` is the runner's own `_work/<repo>`
+    # directory. It sits outside the checkout, so `actions/checkout`'s
+    # `git clean -ffdx` cannot delete it the way it deletes an in-workspace
+    # `.next/cache`, and it belongs to exactly one runner, which executes one
+    # job at a time — so nothing else can be writing to it concurrently.
+    # Keeping the Next.js build cache there turns a ~350 MB download plus a
+    # ~350 MB upload through the Actions cache service into a local disk copy.
+    # The trade is freshness: each runner keeps its own store, so on a
+    # six-runner pool a store is typically a few runs old. Turbopack validates
+    # its own entries and recompiles whatever no longer matches, which is what
+    # makes a partially stale store both safe and still much cheaper than a
+    # cold build.
+    env:
+      NEXT_BUILD_CACHE_STORE: ${{ github.workspace }}/../.next-build-cache
+    steps:
+      # No `fetch-depth: 0`: nothing in `next build` reads git history. Only
+      # the SonarQube job below needs the full history, for new-code detection.
+      - uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Restore the Next.js build cache from this runner's store
+        run: |
+          mkdir -p "$NEXT_BUILD_CACHE_STORE" .next/cache
+          cp -a "$NEXT_BUILD_CACHE_STORE/." .next/cache/
 
       - name: Build
         run: npm run build
@@ -100,19 +164,29 @@ jobs:
           NEXTAUTH_URL: http://localhost:3000
           NEXT_TELEMETRY_DISABLED: 1
 
-      - name: Save Next.js build cache
-        if: always() && hashFiles('.next/cache/**') != ''
-        uses: actions/cache/save@v6
-        with:
-          path: .next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json', 'next.config.ts') }}
+      # Replaces the store wholesale rather than merging into it, so it cannot
+      # grow without bound. It runs on failure too, because a build that failed
+      # late still produced compilation work the next run can reuse.
+      - name: Save the Next.js build cache to this runner's store
+        if: always()
+        run: |
+          if [ -d .next/cache ]; then
+            rm -rf "$NEXT_BUILD_CACHE_STORE"
+            mv .next/cache "$NEXT_BUILD_CACHE_STORE"
+          fi
 
+  # Depends on `test` alone, for the coverage artifact. It deliberately does
+  # not wait on `build`: SonarQube analyses sources, not build output, and its
+  # quality gate wait below can take minutes, so starting it as soon as
+  # coverage exists keeps it off the critical path.
   sonarqube:
     name: SonarQube Scan
     runs-on: [self-hosted, linux, x64]
-    needs: [build]
+    timeout-minutes: 30
+    needs: [test]
     if: github.ref == 'refs/heads/develop' || github.base_ref == 'develop'
     steps:
+      # New-code detection and blame need the full history here.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
@@ -126,7 +200,7 @@ jobs:
       - name: Verify coverage report is present
         run: |
           if [ ! -s coverage/lcov.info ]; then
-            echo "::error::coverage/lcov.info is missing or empty. The 'Lint, Type Check and Test' job must publish the coverage-report artifact before SonarQube can report accurate new-code coverage."
+            echo "::error::coverage/lcov.info is missing or empty. The 'Test and Coverage' job must publish the coverage-report artifact before SonarQube can report accurate new-code coverage."
             exit 1
           fi
 
@@ -151,6 +225,7 @@ jobs:
   deepsource:
     name: DeepSource Analysis
     runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 20
     needs: [test]
     if: github.event_name == 'push' || github.event_name == 'pull_request'
     steps:
@@ -172,6 +247,7 @@ jobs:
   codecov:
     name: Codecov Upload
     runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 20
     needs: [test]
     if: github.event_name == 'push' || github.event_name == 'pull_request'
     steps:
@@ -193,10 +269,19 @@ jobs:
           flags: unittests
           fail_ci_if_error: false
 
+  # Migrations must complete before the new code is deployed, otherwise the new
+  # revision serves traffic against the old schema. Migrations must therefore be
+  # written expand/contract style so the currently deployed (old) code keeps
+  # working against the new schema. See docs/deployment.md#database-migrations.
+  #
+  # `needs` names every gate explicitly. The gates run in parallel now, so
+  # `needs: [build]` alone would no longer imply that lint, the type check and
+  # the test suite had passed, and a red run could still migrate the database.
   database-migrations-preview:
     name: Run Database Migrations (Preview)
     runs-on: [self-hosted, linux, x64]
-    needs: [build]
+    timeout-minutes: 20
+    needs: [lint, typecheck, test, build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     steps:
       - uses: actions/checkout@v7
@@ -207,10 +292,9 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 24
-          cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --no-fund
 
       - name: Pull Vercel preview environment and run migrations
         run: |
@@ -224,7 +308,8 @@ jobs:
   database-migrations-production:
     name: Run Database Migrations (Production)
     runs-on: [self-hosted, linux, x64]
-    needs: [build]
+    timeout-minutes: 20
+    needs: [lint, typecheck, test, build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     steps:
       - uses: actions/checkout@v7
@@ -235,10 +320,9 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 24
-          cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --no-fund
 
       - name: Pull Vercel production environment and run migrations
         run: |
@@ -252,6 +336,7 @@ jobs:
   deploy-preview:
     name: Deploy to Vercel Preview
     runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 30
     needs: [database-migrations-preview]
     if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
     steps:
@@ -266,6 +351,7 @@ jobs:
   deploy-production:
     name: Deploy to Vercel Production
     runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 30
     needs: [database-migrations-production]
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     steps:
