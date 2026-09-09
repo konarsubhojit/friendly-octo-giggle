@@ -12,6 +12,46 @@ from scratch after losing it.
 > real values. The only real hostname here is `db.kiyon.store`, which is already
 > public DNS.
 
+This document covers the database tier only. For a **fully self-hosted**
+deployment — Next.js, Nginx, Redis, and MinIO alongside Postgres, all on one
+VM — see [`docs/kamatera-deployment.md`](./kamatera-deployment.md), which
+reuses the Postgres/PgBouncer topology described here.
+
+---
+
+## CI provider matrix
+
+The `provider-matrix` job in `.github/workflows/build.yml` proves the
+self-hosted profile's adapters against real disposable services rather than
+mocks: `postgres:16-alpine` and `redis:7-alpine` run as job `services:`, and
+`minio/minio` is started as a plain container in a step (GitHub Actions
+`services:` cannot override a container's command, and MinIO's image needs
+`server /data` on its command line). The job applies migrations with
+`npm run db:migrate`, then runs three opt-in integration suites that are
+otherwise skipped in the main `test` job:
+
+| Suite                                                                      | Exercises                                                                         |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `__tests__/features/orders/services/stock-reservation.integration.test.ts` | The reservation guarantee against real Postgres (`RESERVATION_TEST_DATABASE_URL`) |
+| `__tests__/lib/cache/redis-integration.test.ts`                            | `NodeRedisCacheClient` against real Redis (`CACHE_TEST_REDIS_URL`)                |
+| `__tests__/lib/storage/s3-integration.test.ts`                             | `createS3StorageAdapter()` against real MinIO (`STORAGE_TEST_S3_*`)               |
+
+These suites are gated on dedicated `*_TEST_*` environment variables — never
+the production `DATABASE_URL`/`REDIS_URL`/`S3_*` names — specifically so a
+contributor's real local or production credentials can never accidentally
+trigger a destructive run. `__tests__/lib/cache/contract.test.ts` and
+`__tests__/lib/storage/contract.test.ts` cover the same adapters' behavioral
+contracts against faked SDKs in the ordinary hermetic unit run, so CI still
+catches contract regressions even when the opt-in variables are unset (for
+example, in a fork's pull request, which does not get the `provider-matrix`
+job's services).
+
+To run the same suites locally: start disposable containers for Postgres,
+Redis, and MinIO (see `docs/kamatera-deployment.md` for compose examples),
+export the `*_TEST_*` variables to point at them, run `npm run db:migrate`
+against the disposable Postgres, then `npm test` (or target the three files
+directly with `npx vitest run <path>...`).
+
 ---
 
 ## Architecture

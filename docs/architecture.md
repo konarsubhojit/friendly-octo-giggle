@@ -77,6 +77,15 @@ The dominant design principles in the current code are:
 - Infra dependencies are treated as optional accelerators, not hard runtime requirements.
 - Shared concerns such as logging, validation, caching, and serialization live in `lib/`.
 
+The diagram above is the deployed "existing specialized stack" profile (Neon,
+Upstash, Vercel Blob/R2, Edge Config, Inngest). Every one of those services is
+swappable through the provider-selection scheme in
+`src/lib/providers/resolution.ts` without changing consumer code — see
+`docs/deployment.md`'s "Provider selection" for the managed-portable profile
+(generic Postgres/Redis, Algolia, S3-compatible storage) and
+`docs/kamatera-deployment.md` for the fully self-hosted profile (Postgres,
+Redis, MinIO, all on one VM).
+
 ---
 
 ## 3. Tech Stack
@@ -377,16 +386,24 @@ Representative cache families include:
 
 ### Search Architecture
 
-Product search is split into two layers:
-
-1. Upstash Search, when configured, provides indexed lookup by query and optional category.
-2. Drizzle/SQL fallback preserves functionality when search infra is missing or degraded.
+Product search resolves through a single provider, selected by
+`SEARCH_PROVIDER` (`postgres` | `algolia` | `upstash`) via
+`src/lib/providers/resolution.ts` — see `docs/deployment.md`'s "Provider
+selection" and "Catalog-search migration" sections for the full precedence
+rules, every environment variable, and the Upstash Search → Algolia migration
+and rollback drill. `postgres` is the baseline (Drizzle/SQL `ILIKE` query,
+requires no external service); `upstash` and `algolia` provide indexed lookup
+with richer relevance/typo-tolerance/facets. Only one provider serves reads at
+a time; product writes fan out to whichever provider is currently selected.
 
 Order search follows a similar hybrid strategy:
 
 - try Redis-backed order search helpers first
 - fall back to direct SQL search against orders, product names, and variant names
 - cache successful DB search results for short periods
+
+Order search is intentionally not provider-selectable and never exports order
+or customer data to a third-party search index.
 
 ### Client State and Providers
 

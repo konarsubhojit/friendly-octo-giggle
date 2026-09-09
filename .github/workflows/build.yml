@@ -51,6 +51,97 @@ jobs:
           path: coverage/
           retention-days: 1
 
+  # Proves the self-hosted provider profile (Postgres, node-redis, S3/MinIO)
+  # against real disposable services instead of mocks -- the opt-in suites
+  # these services activate are skipped in the `test` job above because no
+  # *_TEST_* env vars are set there. See docs/self-hosting.md#ci-provider-matrix.
+  provider-matrix:
+    name: Provider Matrix (Postgres, Redis, MinIO)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: octo
+          POSTGRES_PASSWORD: octo
+          POSTGRES_DB: octo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PG_USER: octo
+      PG_PASSWORD: octo
+      PG_HOST: localhost
+      PG_PORT: "5432"
+      PG_DB: octo
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_BUCKET: provider-matrix-test
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # MinIO's image needs `server /data` on its command line, which the
+      # `services:` block cannot supply (it only starts a container's default
+      # CMD), so it is started as a plain, manually-managed container instead.
+      - name: Start disposable MinIO and create the test bucket
+        run: |
+          docker run -d --name minio-ci -p 9000:9000 \
+            -e MINIO_ROOT_USER="$MINIO_ROOT_USER" \
+            -e MINIO_ROOT_PASSWORD="$MINIO_ROOT_PASSWORD" \
+            minio/minio server /data
+          for i in $(seq 1 30); do
+            curl -fs http://localhost:9000/minio/health/live && break
+            sleep 1
+          done
+          docker run --rm --network host \
+            -e "MC_HOST_ci=http://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@localhost:9000" \
+            minio/mc mb "ci/$MINIO_BUCKET"
+
+      - name: Apply database migrations to the disposable Postgres
+        run: |
+          export DATABASE_URL="postgresql://${PG_USER}:${PG_PASSWORD}@${PG_HOST}:${PG_PORT}/${PG_DB}"
+          npm run db:migrate
+
+      - name: Run opt-in provider integration suites
+        run: |
+          export RESERVATION_TEST_DATABASE_URL="postgresql://${PG_USER}:${PG_PASSWORD}@${PG_HOST}:${PG_PORT}/${PG_DB}"
+          export CACHE_TEST_REDIS_URL="redis://localhost:6379"
+          export STORAGE_TEST_S3_ENDPOINT="http://localhost:9000"
+          export STORAGE_TEST_S3_BUCKET="$MINIO_BUCKET"
+          export STORAGE_TEST_S3_ACCESS_KEY_ID="$MINIO_ROOT_USER"
+          export STORAGE_TEST_S3_SECRET_ACCESS_KEY="$MINIO_ROOT_PASSWORD"
+          export STORAGE_TEST_S3_REGION="us-east-1"
+          export STORAGE_TEST_S3_PUBLIC_BASE_URL="http://localhost:9000/$MINIO_BUCKET"
+          npx vitest run \
+            __tests__/features/orders/services/stock-reservation.integration.test.ts \
+            __tests__/lib/cache/redis-integration.test.ts \
+            __tests__/lib/storage/s3-integration.test.ts
+
+      - name: Stop disposable MinIO
+        if: always()
+        run: docker rm -f minio-ci || true
   build:
     name: Build
     runs-on: ubuntu-latest
