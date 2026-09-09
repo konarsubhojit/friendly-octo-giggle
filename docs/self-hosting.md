@@ -37,16 +37,16 @@ Vercel serverless functions
 └──────────────────────────────────────────────────────────┘
 ```
 
-| Component | Detail |
-| --- | --- |
-| Host | OCI VM, hostname `store` |
-| Database | Native PostgreSQL 18, loopback-only `127.0.0.1:5432` |
-| Pooler | `edoburu/pgbouncer:latest` in Docker with `network_mode: host`, transaction pooling |
-| TLS | Let's Encrypt certificate for `db.kiyon.store`, terminated at PgBouncer |
-| Client | Vercel → `db.kiyon.store:6432`, `sslmode=verify-full` |
-| Intrusion | fail2ban, banning through the `DOCKER-USER` iptables chain |
-| Backups | **None currently.** Install the systemd/OCI Object Storage pattern below. |
-| Roles | `octo`, `postgres`, and `wetalk` |
+| Component | Detail                                                                              |
+| --------- | ----------------------------------------------------------------------------------- |
+| Host      | OCI VM, hostname `store`                                                            |
+| Database  | Native PostgreSQL 18, loopback-only `127.0.0.1:5432`                                |
+| Pooler    | `edoburu/pgbouncer:latest` in Docker with `network_mode: host`, transaction pooling |
+| TLS       | Let's Encrypt certificate for `db.kiyon.store`, terminated at PgBouncer             |
+| Client    | Vercel → `db.kiyon.store:6432`, `sslmode=verify-full`                               |
+| Intrusion | fail2ban, banning through the `DOCKER-USER` iptables chain                          |
+| Backups   | **None currently.** Install the systemd/OCI Object Storage pattern below.           |
+| Roles     | `octo`, `postgres`, and `wetalk`                                                    |
 
 Only port `6432` needs to be open to the internet. Postgres is never publicly
 reachable; it is reached through loopback on the VM, while PgBouncer reaches it
@@ -71,7 +71,7 @@ services:
     network_mode: host
     environment:
       DB_HOST: 127.0.0.1
-      DB_PORT: "5432"
+      DB_PORT: '5432'
       DB_USER: octo
       DB_NAME: octo
       DB_PASSWORD: ${POSTGRES_PASSWORD}
