@@ -151,6 +151,7 @@ describe('database connection factory', () => {
       max: 10,
       idleTimeoutMillis: 20000,
       connectionTimeoutMillis: 5000,
+      maxLifetimeSeconds: 300,
     })
 
     expect(
@@ -158,11 +159,13 @@ describe('database connection factory', () => {
         DATABASE_POOL_MAX: '4',
         DATABASE_POOL_IDLE_TIMEOUT_MS: '30000',
         DATABASE_POOL_CONNECTION_TIMEOUT_MS: '1500',
+        DATABASE_POOL_MAX_LIFETIME_SECONDS: '120',
       })
     ).toEqual({
       max: 4,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 1500,
+      maxLifetimeSeconds: 120,
     })
   })
 
@@ -176,6 +179,34 @@ describe('database connection factory', () => {
         DATABASE_POOL_CONNECTION_TIMEOUT_MS: 'not-a-number',
       })
     ).toThrow('DATABASE_POOL_CONNECTION_TIMEOUT_MS must be a positive integer')
+
+    expect(() =>
+      createDatabasePoolConfig({ DATABASE_POOL_MAX_LIFETIME_SECONDS: '-1' })
+    ).toThrow('DATABASE_POOL_MAX_LIFETIME_SECONDS must be a positive integer')
+  })
+
+  it('retires pooled sockets on age and enables TCP keep-alive', () => {
+    // A socket parked across a serverless freeze outlives the idle timeout
+    // that should have reaped it, so the pool must retire it on age instead.
+    createDatabaseConnections(
+      { DATABASE_URL: 'postgresql://primary.example.com:5432/app' },
+      schema,
+      'postgres'
+    )
+
+    expect(pgPoolMock).toHaveBeenCalledWith(
+      expect.objectContaining({ maxLifetimeSeconds: 300, keepAlive: true })
+    )
+
+    createDatabaseConnections(
+      { DATABASE_URL: 'postgresql://primary.example.com:5432/app' },
+      schema,
+      'neon'
+    )
+
+    expect(neonPoolMock).toHaveBeenCalledWith(
+      expect.objectContaining({ maxLifetimeSeconds: 300 })
+    )
   })
 
   it('closes both primary and read pools for graceful shutdown', async () => {
