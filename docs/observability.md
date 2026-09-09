@@ -74,13 +74,18 @@ body of:
 {
   "status": "ok",
   "providers": [
-    { "capability": "database", "provider": "postgres", "source": "default", "configured": true }
+    {
+      "capability": "database",
+      "provider": "postgres",
+      "source": "default",
+      "configured": true
+    }
   ],
   "deprecatedAliases": []
 }
 ```
 
-`status` is `"degraded"` when a provider was *explicitly* selected (its
+`status` is `"degraded"` when a provider was _explicitly_ selected (its
 selector variable, e.g. `SEARCH_PROVIDER`, is set) without the credentials it
 requires; an inferred or defaulted provider can never produce a degraded
 status, by construction (see `src/lib/providers/resolution.ts`). The body

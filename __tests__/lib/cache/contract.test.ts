@@ -90,7 +90,9 @@ const fakeNodeRedisClient = {
   }),
   del: vi.fn(async (key: string) => {
     const existed =
-      store.strings.delete(key) || store.hashes.delete(key) || store.sets.delete(key)
+      store.strings.delete(key) ||
+      store.hashes.delete(key) ||
+      store.sets.delete(key)
     return existed ? 1 : 0
   }),
   expire: vi.fn(async () => true),
@@ -125,11 +127,17 @@ const fakeUpstashRedis = {
     }
   }),
   set: vi.fn(async (key: string, value: unknown) => {
-    store.strings.set(key, typeof value === 'string' ? value : JSON.stringify(value))
+    store.strings.set(
+      key,
+      typeof value === 'string' ? value : JSON.stringify(value)
+    )
     return 'OK'
   }),
   setex: vi.fn(async (key: string, _seconds: number, value: unknown) => {
-    store.strings.set(key, typeof value === 'string' ? value : JSON.stringify(value))
+    store.strings.set(
+      key,
+      typeof value === 'string' ? value : JSON.stringify(value)
+    )
     return 'OK'
   }),
   hset: vi.fn(async (key: string, fields: Record<string, unknown>) => {
@@ -173,7 +181,9 @@ const fakeUpstashRedis = {
   }),
   del: vi.fn(async (key: string) => {
     const existed =
-      store.strings.delete(key) || store.hashes.delete(key) || store.sets.delete(key)
+      store.strings.delete(key) ||
+      store.hashes.delete(key) ||
+      store.sets.delete(key)
     return existed ? 1 : 0
   }),
   expire: vi.fn(async () => 1),
@@ -260,14 +270,11 @@ describe('CacheClient contract', () => {
     }
   )
 
-  it.each(buildAdapters())(
-    '$name: del removes a key',
-    async ({ client }) => {
-      await client.set('to-delete', 'value')
-      await expect(client.del('to-delete')).resolves.toBe(1)
-      await expect(client.get('to-delete')).resolves.toBeNull()
-    }
-  )
+  it.each(buildAdapters())('$name: del removes a key', async ({ client }) => {
+    await client.set('to-delete', 'value')
+    await expect(client.del('to-delete')).resolves.toBe(1)
+    await expect(client.get('to-delete')).resolves.toBeNull()
+  })
 
   it.each(buildAdapters())(
     '$name: reports isReady true once connected',

@@ -18,61 +18,63 @@ import type { StorageAdapter } from '@/lib/storage/types'
 
 // ── Fake Vercel Blob SDK ─────────────────────────────────────────────────
 
-const { vercelStore, mockVercelPut, mockVercelDel, mockVercelHead, mockVercelList, MockBlobNotFoundError } =
-  vi.hoisted(() => {
-    class MockBlobNotFoundError extends Error {}
+const {
+  vercelStore,
+  mockVercelPut,
+  mockVercelDel,
+  mockVercelHead,
+  mockVercelList,
+  MockBlobNotFoundError,
+} = vi.hoisted(() => {
+  class MockBlobNotFoundError extends Error {}
 
-    const vercelStore = new Map<string, { contentType: string | null }>()
+  const vercelStore = new Map<string, { contentType: string | null }>()
 
-    const mockVercelPut = vi.fn(
-      async (
-        pathname: string,
-        _body: unknown,
-        options?: { contentType?: string }
-      ) => {
-        vercelStore.set(pathname, {
-          contentType: options?.contentType ?? null,
-        })
-        return {
-          url: `https://blob.vercel-storage.com/${pathname}`,
-          pathname,
-          contentType: options?.contentType ?? null,
-        }
+  const mockVercelPut = vi.fn(
+    async (
+      pathname: string,
+      _body: unknown,
+      options?: { contentType?: string }
+    ) => {
+      vercelStore.set(pathname, {
+        contentType: options?.contentType ?? null,
+      })
+      return {
+        url: `https://blob.vercel-storage.com/${pathname}`,
+        pathname,
+        contentType: options?.contentType ?? null,
       }
-    )
-    const mockVercelDel = vi.fn(async (pathname: string) => {
-      vercelStore.delete(pathname)
-    })
-    const mockVercelHead = vi.fn(async (pathname: string) => {
-      if (!vercelStore.has(pathname)) throw new MockBlobNotFoundError()
-      return { url: `https://blob.vercel-storage.com/${pathname}` }
-    })
-    const mockVercelList = vi.fn(
-      async (options?: {
-        prefix?: string
-        limit?: number
-        cursor?: string
-      }) => {
-        const blobs = [...vercelStore.keys()]
-          .filter((key) => !options?.prefix || key.startsWith(options.prefix))
-          .map((pathname) => ({
-            pathname,
-            size: 0,
-            uploadedAt: new Date(),
-          }))
-        return { blobs, cursor: undefined, hasMore: false }
-      }
-    )
-
-    return {
-      vercelStore,
-      mockVercelPut,
-      mockVercelDel,
-      mockVercelHead,
-      mockVercelList,
-      MockBlobNotFoundError,
     }
+  )
+  const mockVercelDel = vi.fn(async (pathname: string) => {
+    vercelStore.delete(pathname)
   })
+  const mockVercelHead = vi.fn(async (pathname: string) => {
+    if (!vercelStore.has(pathname)) throw new MockBlobNotFoundError()
+    return { url: `https://blob.vercel-storage.com/${pathname}` }
+  })
+  const mockVercelList = vi.fn(
+    async (options?: { prefix?: string; limit?: number; cursor?: string }) => {
+      const blobs = [...vercelStore.keys()]
+        .filter((key) => !options?.prefix || key.startsWith(options.prefix))
+        .map((pathname) => ({
+          pathname,
+          size: 0,
+          uploadedAt: new Date(),
+        }))
+      return { blobs, cursor: undefined, hasMore: false }
+    }
+  )
+
+  return {
+    vercelStore,
+    mockVercelPut,
+    mockVercelDel,
+    mockVercelHead,
+    mockVercelList,
+    MockBlobNotFoundError,
+  }
+})
 
 vi.mock('@vercel/blob', () => ({
   put: mockVercelPut,
