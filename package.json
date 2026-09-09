@@ -105,7 +105,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.3",
     "@types/bcryptjs": "^3.0.0",
-    "@types/node": "^25.6.0",
+    "@types/node": "^26.4.1",
     "@types/nodemailer": "^7.0.11",
     "@types/web-push": "^3.6.4",
     "@types/ws": "^8.18.1",
