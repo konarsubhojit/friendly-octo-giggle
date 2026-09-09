@@ -7,7 +7,7 @@ This project uses structured logs, request-level telemetry, and continuous-integ
 - **Logs**: Pino structured logs (`src/lib/logger.ts`)
 - **Tracing / error monitoring**: Sentry Next.js SDK (`src/instrumentation.ts`, `sentry.*.config.ts`)
 - **Metrics endpoint**: Prometheus-formatted metrics at `GET /api/metrics`
-- **Health endpoint**: `GET /api/health` for liveness probing by an external monitor
+- **Health endpoint**: `GET /api/health` for liveness probing by an external monitor, and provider-readiness reporting (see below)
 - **Continuous integration**: `.github/workflows/build.yml`, whose `test`, `build`, `sonarqube`, `deepsource`, and `codecov` jobs run on every pull request and on pushes to `develop` and `master`
 
 > There is no synthetic-uptest workflow in this repository. Uptime checking is
@@ -65,11 +65,40 @@ Configure alerts in your monitoring system (Sentry, Datadog, Prometheus Alertman
 4. `application_checkout_queue_lag_ms_max` breaching queue SLO
 5. `application_order_processing_duration_ms` p99 approaching the 30s `maxDuration` declared on claim-holding routes
 
+## Provider Readiness
+
+`GET /api/health` always returns HTTP 200 — the process itself is up — with a
+body of:
+
+```json
+{
+  "status": "ok",
+  "providers": [
+    {
+      "capability": "database",
+      "provider": "postgres",
+      "source": "default",
+      "configured": true
+    }
+  ],
+  "deprecatedAliases": []
+}
+```
+
+`status` is `"degraded"` when a provider was _explicitly_ selected (its
+selector variable, e.g. `SEARCH_PROVIDER`, is set) without the credentials it
+requires; an inferred or defaulted provider can never produce a degraded
+status, by construction (see `src/lib/providers/resolution.ts`). The body
+never carries a URL, token, or other credential-bearing value — only
+capability/provider names, how each was chosen (`explicit` / `inferred` /
+`default`), and whether it is configured. `deprecatedAliases` lists legacy
+variable names in use, by name only.
+
 ## Synthetic Uptests
 
 `Synthetic Uptests` workflow runs every 15 minutes and validates:
 
-- `/api/health` returns `{"status":"ok"}`
+- `/api/health` responds with `status` of `"ok"` or `"degraded"`
 - `/api/products?limit=1` responds successfully
 - `x-request-id` response header is present on `/api/products`
 
