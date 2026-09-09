@@ -16,7 +16,7 @@ This guide is the "self-hosted" corner of the provider matrix in
 `src/lib/providers/resolution.ts`: every capability below is selected the same
 way in code regardless of host (`DATABASE_DRIVER=postgres`,
 `CACHE_PROVIDER=redis`, `STORAGE_PROVIDER=s3`, `SEARCH_PROVIDER=postgres`) —
-only the environment variables pointing at *this* VM's services differ from
+only the environment variables pointing at _this_ VM's services differ from
 the managed-provider profiles documented in `docs/deployment.md`.
 
 ---
@@ -47,15 +47,15 @@ Internet
 └────────────────────────────────────────────────────────────────────┘
 ```
 
-| Component      | Detail                                                              |
-| -------------- | -------------------------------------------------------------------- |
-| Reverse proxy  | Nginx, terminates TLS, proxies to Next.js on loopback                |
-| App            | Next.js production build (`npm run build && npm run start`)         |
+| Component      | Detail                                                                                            |
+| -------------- | ------------------------------------------------------------------------------------------------- |
+| Reverse proxy  | Nginx, terminates TLS, proxies to Next.js on loopback                                             |
+| App            | Next.js production build (`npm run build && npm run start`)                                       |
 | Database       | `postgres:16-alpine` (or `18-alpine`, matching `docs/self-hosting.md`), bound to `127.0.0.1:5432` |
-| Cache          | `redis:7-alpine`, bound to `127.0.0.1:6379`                          |
-| Object storage | `minio/minio`, bound to `127.0.0.1:9000`, S3 API only reachable through the app |
-| Search         | `SEARCH_PROVIDER=postgres` — no extra service, queries the same database |
-| Process model  | systemd units *or* a single Docker Compose stack — pick one, do not mix |
+| Cache          | `redis:7-alpine`, bound to `127.0.0.1:6379`                                                       |
+| Object storage | `minio/minio`, bound to `127.0.0.1:9000`, S3 API only reachable through the app                   |
+| Search         | `SEARCH_PROVIDER=postgres` — no extra service, queries the same database                          |
+| Process model  | systemd units _or_ a single Docker Compose stack — pick one, do not mix                           |
 
 Every service except Nginx is bound to loopback only (`127.0.0.1:<port>`) —
 **private port bindings**, not published to the VM's public interface. Nginx
@@ -70,12 +70,12 @@ an explicit memory ceiling — an unbounded container competing with the app for
 RAM under load is the most common cause of an OOM-killed Postgres on small
 plans. Minimums for the smallest viable plan (2 vCPU / 4 GB RAM):
 
-| Service    | Memory limit | Notes                                                          |
-| ---------- | ------------ | --------------------------------------------------------------- |
-| postgres   | 1024m        | `shared_buffers` should be ~25% of this, not the VM's total RAM |
-| redis      | 256m         | Set `maxmemory 200mb` and `maxmemory-policy allkeys-lru` — Redis here is cache/mirror data only, never authoritative (see below) |
-| minio      | 512m         | Object bodies stream through, not buffered in full              |
-| Next.js    | remaining    | Size to what's left after the above plus OS overhead            |
+| Service  | Memory limit | Notes                                                                                                                            |
+| -------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| postgres | 1024m        | `shared_buffers` should be ~25% of this, not the VM's total RAM                                                                  |
+| redis    | 256m         | Set `maxmemory 200mb` and `maxmemory-policy allkeys-lru` — Redis here is cache/mirror data only, never authoritative (see below) |
+| minio    | 512m         | Object bodies stream through, not buffered in full                                                                               |
+| Next.js  | remaining    | Size to what's left after the above plus OS overhead                                                                             |
 
 If using Compose, set these as `deploy.resources.limits.memory` (Compose v2)
 or `mem_limit` (classic); if using systemd, set `MemoryMax=` in each unit.
@@ -249,7 +249,7 @@ full precedence rules and every variable name.
 backed up off-VM.** Redis here is configured as cache/mirror data only
 (rate-limit counters, cached query results) — nothing is written to Redis
 that cannot be regenerated from Postgres, so Redis itself is treated as
-disposable and is *not* part of the backup set. If a deployment ever stores
+disposable and is _not_ part of the backup set. If a deployment ever stores
 anything authoritative in Redis (e.g. a queue with no durable source of
 truth), that data must be moved to Postgres or backed up separately before
 this guidance applies to it.
@@ -303,16 +303,16 @@ docker run --rm --network host \
 
 ## Failure drills
 
-| Scenario                             | Expected behavior                                                                                     |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Postgres down at startup              | Next.js starts (there is no startup DB probe), but every request touching the database fails until Postgres is reachable; systemd `Restart=on-failure` only restarts the *app* process, which will not help — resolve Postgres first |
-| Postgres down mid-request             | In-flight requests touching the database fail and surface as 5xx; no credential is present in the error response or logs |
-| Redis down, slow, or recovering       | Reads fall back to the database on a cache miss — no user-facing failure, only latency; see `getCachedData` in `src/lib/redis.ts` |
-| MinIO down during upload              | Admin upload fails with a surfaced error; already-served images remain available if CDN/browser-cached, new uploads must be retried once MinIO recovers |
-| MinIO down during read resolution     | `resolveStorageUrl` cannot resolve new asset URLs; existing pages referencing already-resolved URLs are unaffected until next render |
-| Invalid/partial credentials           | `getProviderSummary()` (surfaced at `/api/health`) reports the capability as `degraded` with a non-secret diagnostic, but only when a provider was *explicitly* selected without the credentials it needs — an inferred/defaulted provider never produces this, see `src/lib/providers/resolution.ts`. `/api/health` is a configuration check, not a live connectivity probe: it does not detect "Postgres is down right now" by itself |
-| Search provider unavailable/failing/rate-limited | `searchProductIds` catches the failure, emits the structured `provider_fallback` event (`src/lib/providers/events.ts`), and returns `null` so the caller falls back to the database `ILIKE` query — no user-facing failure |
-| VM restart                            | systemd unit ordering (`After=`/`Requires=docker.service`) plus Docker's own `restart: unless-stopped` bring services back without manual intervention; verify with `docker compose ps` and `systemctl status octo-app` after every reboot, and confirm named volumes (`pgdata`, `redisdata`, `miniodata`) survived |
+| Scenario                                         | Expected behavior                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Postgres down at startup                         | Next.js starts (there is no startup DB probe), but every request touching the database fails until Postgres is reachable; systemd `Restart=on-failure` only restarts the _app_ process, which will not help — resolve Postgres first                                                                                                                                                                                                    |
+| Postgres down mid-request                        | In-flight requests touching the database fail and surface as 5xx; no credential is present in the error response or logs                                                                                                                                                                                                                                                                                                                |
+| Redis down, slow, or recovering                  | Reads fall back to the database on a cache miss — no user-facing failure, only latency; see `getCachedData` in `src/lib/redis.ts`                                                                                                                                                                                                                                                                                                       |
+| MinIO down during upload                         | Admin upload fails with a surfaced error; already-served images remain available if CDN/browser-cached, new uploads must be retried once MinIO recovers                                                                                                                                                                                                                                                                                 |
+| MinIO down during read resolution                | `resolveStorageUrl` cannot resolve new asset URLs; existing pages referencing already-resolved URLs are unaffected until next render                                                                                                                                                                                                                                                                                                    |
+| Invalid/partial credentials                      | `getProviderSummary()` (surfaced at `/api/health`) reports the capability as `degraded` with a non-secret diagnostic, but only when a provider was _explicitly_ selected without the credentials it needs — an inferred/defaulted provider never produces this, see `src/lib/providers/resolution.ts`. `/api/health` is a configuration check, not a live connectivity probe: it does not detect "Postgres is down right now" by itself |
+| Search provider unavailable/failing/rate-limited | `searchProductIds` catches the failure, emits the structured `provider_fallback` event (`src/lib/providers/events.ts`), and returns `null` so the caller falls back to the database `ILIKE` query — no user-facing failure                                                                                                                                                                                                              |
+| VM restart                                       | systemd unit ordering (`After=`/`Requires=docker.service`) plus Docker's own `restart: unless-stopped` bring services back without manual intervention; verify with `docker compose ps` and `systemctl status octo-app` after every reboot, and confirm named volumes (`pgdata`, `redisdata`, `miniodata`) survived                                                                                                                     |
 
 Run each drill against a disposable or staging Kamatera VM before relying on
 this document for a production incident — this table describes the intended

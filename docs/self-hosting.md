@@ -30,11 +30,11 @@ mocks: `postgres:16-alpine` and `redis:7-alpine` run as job `services:`, and
 `npm run db:migrate`, then runs three opt-in integration suites that are
 otherwise skipped in the main `test` job:
 
-| Suite                                                                 | Exercises                                                    |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Suite                                                                      | Exercises                                                                         |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | `__tests__/features/orders/services/stock-reservation.integration.test.ts` | The reservation guarantee against real Postgres (`RESERVATION_TEST_DATABASE_URL`) |
-| `__tests__/lib/cache/redis-integration.test.ts`                       | `NodeRedisCacheClient` against real Redis (`CACHE_TEST_REDIS_URL`)          |
-| `__tests__/lib/storage/s3-integration.test.ts`                        | `createS3StorageAdapter()` against real MinIO (`STORAGE_TEST_S3_*`)        |
+| `__tests__/lib/cache/redis-integration.test.ts`                            | `NodeRedisCacheClient` against real Redis (`CACHE_TEST_REDIS_URL`)                |
+| `__tests__/lib/storage/s3-integration.test.ts`                             | `createS3StorageAdapter()` against real MinIO (`STORAGE_TEST_S3_*`)               |
 
 These suites are gated on dedicated `*_TEST_*` environment variables — never
 the production `DATABASE_URL`/`REDIS_URL`/`S3_*` names — specifically so a

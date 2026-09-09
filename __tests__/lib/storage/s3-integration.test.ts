@@ -68,9 +68,9 @@ describe.skipIf(!CONFIGURED)(
         { contentType: 'text/plain' }
       )
 
-      await expect(
-        adapter.getUrl('contract-test/object.txt')
-      ).resolves.toEqual(expect.any(String))
+      await expect(adapter.getUrl('contract-test/object.txt')).resolves.toEqual(
+        expect.any(String)
+      )
     })
 
     it('getUrl() returns null for an object that was never written', async () => {

@@ -95,7 +95,7 @@ whether its credentials are complete, for startup or health diagnostics — see
 tokens, or other credential-bearing values, and it lists any deprecated
 variable alias in use by name only. This is a configuration check, not a live
 connectivity probe, so it reports a provider as `degraded` only when it was
-*explicitly* selected without the credentials it requires — it does not by
+_explicitly_ selected without the credentials it requires — it does not by
 itself detect a currently-unreachable database or cache. Runtime provider
 availability changes have a separate, structured event vocabulary
 (`provider_unavailable`, `provider_fallback`, `provider_degraded`,
@@ -167,7 +167,7 @@ moving rows.
    provider search failure) for the first 24–48 hours. A sustained rise
    indicates Algolia is rejecting or timing out requests and reads are
    silently falling back to the PostgreSQL `ILIKE` path. `/api/health`'s
-   `search` entry only reports *configuration* problems (an explicitly
+   `search` entry only reports _configuration_ problems (an explicitly
    selected provider missing required credentials); it does not probe live
    Algolia connectivity, so it will not by itself show a rate-limited or
    momentarily-unreachable Algolia as degraded.
