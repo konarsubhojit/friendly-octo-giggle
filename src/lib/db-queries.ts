@@ -1255,8 +1255,18 @@ export const db = {
       )
     },
 
-    findAll: async () =>
-      drizzleDb.select().from(coupons).orderBy(desc(coupons.createdAt)),
+    // Coupon admin lists run in serverless memory; cap each page at 200 rows
+    // while still allowing callers to request later pages.
+    findAll: async (limit = 200, offset = 0) => {
+      const pageLimit = Math.min(Math.max(1, limit), 200)
+      const pageOffset = Math.max(0, offset)
+      return drizzleDb
+        .select()
+        .from(coupons)
+        .orderBy(desc(coupons.createdAt))
+        .limit(pageLimit)
+        .offset(pageOffset)
+    },
 
     create: async (values: typeof coupons.$inferInsert) => {
       const [created] = await primaryDrizzleDb
@@ -1296,7 +1306,11 @@ export const db = {
     },
 
     /** Per-coupon redemption totals for the admin usage report. */
-    redemptionSummary: async () => {
+    // The aggregate joins redemptions, so cap each page at 200 coupons to
+    // bound result materialization and avoid an unbounded admin report.
+    redemptionSummary: async (limit = 200, offset = 0) => {
+      const pageLimit = Math.min(Math.max(1, limit), 200)
+      const pageOffset = Math.max(0, offset)
       const rows = await drizzleDb
         .select({
           couponId: coupons.id,
@@ -1320,6 +1334,8 @@ export const db = {
           coupons.usageCount
         )
         .orderBy(desc(coupons.createdAt))
+        .limit(pageLimit)
+        .offset(pageOffset)
 
       return rows
     },

@@ -264,6 +264,21 @@ describe('Admin Products API', () => {
       expect(data.success).toBe(true)
     })
 
+    it('rejects offsets beyond the cursor-pagination threshold', async () => {
+      vi.mocked(checkAdminAuth).mockResolvedValue({
+        authorized: true,
+        role: 'ADMIN',
+        userId: 'a1',
+      })
+
+      const response = await GET(makeRequest({ offset: '10001' }))
+      const data = await response.json()
+
+      expect(response.status).toBe(400)
+      expect(data.error).toContain('Offset must not exceed 10000')
+      expect(mockFindMany).not.toHaveBeenCalled()
+    })
+
     it('handles search with empty results', async () => {
       vi.mocked(checkAdminAuth).mockResolvedValue({
         authorized: true,

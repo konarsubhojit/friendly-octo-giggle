@@ -16,6 +16,9 @@ import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { recordAdminAuditLog } from '@/features/admin/services/admin-audit-log'
 
 const PAGE_SIZE = 20
+// Offset pagination makes PostgreSQL scan and discard earlier rows; deep pages
+// must use the cursor path instead so an admin request cannot cause that work.
+const MAX_OFFSET = 10_000
 
 type SearchFilterResult =
   | { type: 'conditions'; condition: SQL }
@@ -86,6 +89,12 @@ export const GET = async (request: NextRequest) => {
     )
 
     const offset = useOffset ? parseOffsetParam(offsetParam) : 0
+    if (offset > MAX_OFFSET) {
+      return apiError(
+        `Offset must not exceed ${MAX_OFFSET}; use cursor pagination for deeper pages`,
+        400
+      )
+    }
 
     const conditions: SQL[] = [isNull(products.deletedAt)]
     const countConditions: SQL[] = [isNull(products.deletedAt)]

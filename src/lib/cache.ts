@@ -444,11 +444,13 @@ export const invalidateAdminOrderCaches = async (
 export const buildAdminUsersCacheKey = (params: {
   search?: string
   cursor?: string | null
+  offset?: number
   limit?: number
 }): string => {
   if (params.search) return ''
   const parts: string[] = [CACHE_KEYS.ADMIN_USERS_ALL]
   if (params.cursor) parts.push(`c:${params.cursor}`)
+  if (params.offset) parts.push(`o:${params.offset}`)
   if (params.limit) parts.push(`l:${params.limit}`)
   return parts.join(':')
 }
