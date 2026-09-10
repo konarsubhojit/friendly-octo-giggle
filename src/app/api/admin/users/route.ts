@@ -5,6 +5,7 @@ import { desc, lt, ilike, and, or, SQL, count, inArray } from 'drizzle-orm'
 import {
   apiSuccess,
   apiError,
+  getAdminOffsetLimitError,
   handleApiError,
   parseOffsetParam,
 } from '@/lib/api-utils'
@@ -12,9 +13,6 @@ import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { cacheAdminUsersList } from '@/lib/cache'
 
 const PAGE_SIZE = 20
-// Offset pagination makes PostgreSQL scan and discard earlier rows; deep pages
-// must use the cursor path instead so an admin request cannot cause that work.
-const MAX_OFFSET = 10_000
 
 const parseLimit = (param: string | null, defaultSize: number): number =>
   Math.min(
@@ -70,11 +68,9 @@ export const GET = async (request: NextRequest) => {
     const limit = parseLimit(searchParams.get('limit'), PAGE_SIZE)
     const offset = useOffset ? parseOffsetParam(offsetParam) : 0
 
-    if (offset > MAX_OFFSET) {
-      return apiError(
-        `Offset must not exceed ${MAX_OFFSET}; use cursor pagination for deeper pages`,
-        400
-      )
+    const offsetError = getAdminOffsetLimitError(offset)
+    if (offsetError) {
+      return apiError(offsetError, 400)
     }
 
     const conditions = buildWhereConditions(cursor, search, useOffset)
@@ -140,7 +136,7 @@ export const GET = async (request: NextRequest) => {
 
     const result = await cacheAdminUsersList(fetcher, {
       search,
-      cursor,
+      cursor: useOffset ? null : cursor,
       offset,
       limit,
     })

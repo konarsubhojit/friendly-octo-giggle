@@ -450,7 +450,9 @@ export const buildAdminUsersCacheKey = (params: {
   if (params.search) return ''
   const parts: string[] = [CACHE_KEYS.ADMIN_USERS_ALL]
   if (params.cursor) parts.push(`c:${params.cursor}`)
-  if (params.offset) parts.push(`o:${params.offset}`)
+  if (params.offset !== undefined && params.offset > 0) {
+    parts.push(`o:${params.offset}`)
+  }
   if (params.limit) parts.push(`l:${params.limit}`)
   return parts.join(':')
 }
