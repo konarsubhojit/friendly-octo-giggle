@@ -240,9 +240,10 @@ jobs:
           curl -fsSL https://cli.deepsource.com/install | BINDIR=./bin sh
           ./bin/deepsource report --analyzer test-coverage --key javascript --value-file coverage/lcov.info --use-oidc
 
-       - name: Upload coverage to Codecov
-         uses: codecov/codecov-action@v7
-         with:
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v7
+        with:
            token: ${{ secrets.CODECOV_TOKEN }}
            files: coverage/lcov.info
            flags: unittests
