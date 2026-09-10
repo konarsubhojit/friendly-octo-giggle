@@ -219,7 +219,7 @@ jobs:
   # trade to make here.
 
   deepsource:
-    name: DeepSource Analysis
+    name: DeepSource & Codecov Analysis
     runs-on: [self-hosted, linux, x64]
     timeout-minutes: 20
     needs: [test]
@@ -240,30 +240,13 @@ jobs:
           curl -fsSL https://cli.deepsource.com/install | BINDIR=./bin sh
           ./bin/deepsource report --analyzer test-coverage --key javascript --value-file coverage/lcov.info --use-oidc
 
-  codecov:
-    name: Codecov Upload
-    runs-on: [self-hosted, linux, x64]
-    timeout-minutes: 20
-    needs: [test]
-    if: github.event_name == 'push' || github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Download coverage report
-        uses: actions/download-artifact@v8.0.1
-        with:
-          name: coverage-report
-          path: coverage
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v7
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage/lcov.info
-          flags: unittests
-          fail_ci_if_error: false
+       - name: Upload coverage to Codecov
+         uses: codecov/codecov-action@v7
+         with:
+           token: ${{ secrets.CODECOV_TOKEN }}
+           files: coverage/lcov.info
+           flags: unittests
+           fail_ci_if_error: false
 
   # Migrations must complete before the new code is deployed, otherwise the new
   # revision serves traffic against the old schema. Migrations must therefore be
