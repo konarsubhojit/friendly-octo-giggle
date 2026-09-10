@@ -150,8 +150,9 @@ jobs:
     env:
       NEXT_BUILD_CACHE_STORE: ${{ github.workspace }}/../.next-build-cache
     steps:
-      # No `fetch-depth: 0`: nothing in `next build` reads git history. Only
-      # the SonarQube job below needs the full history, for new-code detection.
+      # No `fetch-depth: 0`: nothing in `next build` reads git history. The
+      # coverage-reporting jobs below do still take the full history, which
+      # their base-commit detection needs.
       - uses: actions/checkout@v7
 
       - name: Set up Node.js
