@@ -17,9 +17,9 @@ export default defineConfig({
   test: {
     environment: 'node',
     pool: 'threads',
-    maxConcurrency: 8,
+    maxConcurrency: 120,
     globals: true,
-    maxWorkers: 4,
+    maxWorkers: 16,
     fileParallelism: true,
     env: {
       DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
