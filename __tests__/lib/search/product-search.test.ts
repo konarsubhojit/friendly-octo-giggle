@@ -1,11 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { mockIsSearchAvailable, mockSearchProducts, mockGetCachedData } =
-  vi.hoisted(() => ({
-    mockIsSearchAvailable: vi.fn(),
-    mockSearchProducts: vi.fn(),
-    mockGetCachedData: vi.fn(),
-  }))
+const {
+  mockIsSearchAvailable,
+  mockSearchProducts,
+  mockGetCachedData,
+  mockGetProvider,
+  mockLogProviderFallback,
+} = vi.hoisted(() => ({
+  mockIsSearchAvailable: vi.fn(),
+  mockSearchProducts: vi.fn(),
+  mockGetCachedData: vi.fn(),
+  mockGetProvider: vi.fn(),
+  mockLogProviderFallback: vi.fn(),
+}))
 
 vi.mock('@/lib/search/client', () => ({
   isSearchAvailable: mockIsSearchAvailable,
@@ -20,6 +27,28 @@ vi.mock('@/lib/redis', () => ({
   getCachedData: mockGetCachedData,
 }))
 
+vi.mock('@/lib/providers/resolution', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/lib/providers/resolution')>()
+  return {
+    ...actual,
+    // Only override the 'search' capability the module under test actually
+    // calls — other capabilities (e.g. 'database', called by @/lib/db during
+    // module load) must keep resolving for real, or unrelated singletons
+    // elsewhere in the import graph break.
+    getProvider: ((capability: string) =>
+      capability === 'search'
+        ? mockGetProvider()
+        : actual.getProvider(
+            capability as Parameters<typeof actual.getProvider>[0]
+          )) as typeof actual.getProvider,
+  }
+})
+
+vi.mock('@/lib/providers/events', () => ({
+  logProviderFallback: mockLogProviderFallback,
+}))
+
 import { logError } from '@/lib/logger'
 import { searchProductIds, searchProductIdsCached } from '@/lib/search'
 
@@ -28,6 +57,7 @@ describe('lib/search/product-search', () => {
     vi.clearAllMocks()
     mockIsSearchAvailable.mockReturnValue(true)
     mockSearchProducts.mockResolvedValue([])
+    mockGetProvider.mockReturnValue('upstash')
     // Default: execute the fetcher so the caching wrapper is transparent.
     mockGetCachedData.mockImplementation(
       async (_key: string, _ttl: number, fetcher: () => Promise<unknown>) =>
@@ -62,6 +92,12 @@ describe('lib/search/product-search', () => {
       expect(logError).toHaveBeenCalledWith(
         expect.objectContaining({ context: 'search-service' })
       )
+      expect(mockLogProviderFallback).toHaveBeenCalledWith({
+        capability: 'search',
+        provider: 'upstash',
+        fallbackProvider: 'postgres',
+        reason: 'query_failed',
+      })
     })
   })
 

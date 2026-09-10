@@ -1,6 +1,6 @@
 import { and, eq, gte, inArray, ne, sql } from 'drizzle-orm'
-import { alias } from 'drizzle-orm/pg-core'
 import { drizzleDb, primaryDrizzleDb } from '@/lib/db'
+import { withDatabaseRetry } from '@/lib/db/retry'
 import {
   orderItems,
   orders,
@@ -58,6 +58,16 @@ export const resolveWindowStart = (
  * ordered pair (A→B and B→A) is emitted independently. Cancelled orders are
  * excluded: a reversed purchase is not evidence of affinity.
  *
+ * `OrderItem` carries one row per *variant*, so a single order can list the
+ * same `productId` several times. The join operand is therefore the distinct
+ * `(orderId, productId)` basket rather than the raw rows: without that
+ * projection the self-join multiplies by (variants of A) x (variants of B) per
+ * order, and the intermediate result grows super-linearly with catalog depth
+ * until the statement outlives its connection. Deduplicating first leaves the
+ * result unchanged — `count(distinct orderId)` cannot see the duplicates it
+ * removes — while letting the planner hash-aggregate a plain `count(*)`
+ * instead of sorting every group for a `count(distinct)`.
+ *
  * The `HAVING` floor runs in the database so a pair backed by fewer than
  * {@link MIN_SUPPORT} distinct orders never leaves it. Filtering here rather
  * than in the reader is what makes the privacy guarantee hold even if a future
@@ -66,32 +76,50 @@ export const resolveWindowStart = (
 export const collectPurchasePairs = async (
   windowStart: Date
 ): Promise<SignalPair[]> => {
-  const partner = alias(orderItems, 'partner')
+  // The same projection twice under different names: PostgreSQL needs two
+  // distinct aliases to self-join a derived table, and re-deriving it costs a
+  // second aggregate over an already-filtered range rather than a second pass
+  // over the quadratic join.
+  const basketFor = (name: 'basket' | 'partner') =>
+    drizzleDb
+      .selectDistinct({
+        orderId: orderItems.orderId,
+        productId: orderItems.productId,
+      })
+      .from(orderItems)
+      .innerJoin(
+        orders,
+        and(
+          eq(orders.id, orderItems.orderId),
+          ne(orders.status, 'CANCELLED'),
+          gte(orders.createdAt, windowStart)
+        )
+      )
+      .as(name)
 
-  const rows = await drizzleDb
-    .select({
-      anchorProductId: orderItems.productId,
-      recommendedProductId: partner.productId,
-      support: sql<number>`cast(count(distinct ${orderItems.orderId}) as int)`,
-    })
-    .from(orderItems)
-    .innerJoin(
-      orders,
-      and(
-        eq(orders.id, orderItems.orderId),
-        ne(orders.status, 'CANCELLED'),
-        gte(orders.createdAt, windowStart)
-      )
-    )
-    .innerJoin(
-      partner,
-      and(
-        eq(partner.orderId, orderItems.orderId),
-        ne(partner.productId, orderItems.productId)
-      )
-    )
-    .groupBy(orderItems.productId, partner.productId)
-    .having(sql`count(distinct ${orderItems.orderId}) >= ${MIN_SUPPORT}`)
+  const basket = basketFor('basket')
+  const partner = basketFor('partner')
+
+  const rows = await withDatabaseRetry(
+    () =>
+      drizzleDb
+        .select({
+          anchorProductId: basket.productId,
+          recommendedProductId: partner.productId,
+          support: sql<number>`cast(count(*) as int)`,
+        })
+        .from(basket)
+        .innerJoin(
+          partner,
+          and(
+            eq(partner.orderId, basket.orderId),
+            ne(partner.productId, basket.productId)
+          )
+        )
+        .groupBy(basket.productId, partner.productId)
+        .having(sql`count(*) >= ${MIN_SUPPORT}`),
+    { context: 'affinity_purchase_pairs' }
+  )
 
   return rows.map((row) => ({
     anchorProductId: row.anchorProductId,
@@ -105,29 +133,49 @@ export const collectPurchasePairs = async (
  *
  * Grouped by `userId`, so support counts distinct shoppers. Weaker than a
  * purchase because the intent never converted.
+ *
+ * `UNIQUE (userId, productId)` already makes each side of the join one row per
+ * shopper per product, so the distinct projection removes nothing here. It is
+ * kept for symmetry with the other two collectors and because it turns
+ * `count(distinct userId)` into `count(*)`, which the planner can satisfy with
+ * a hash aggregate instead of sorting every group.
  */
 export const collectWishlistPairs = async (
   windowStart: Date
 ): Promise<SignalPair[]> => {
-  const partner = alias(wishlists, 'partner')
+  const likedFor = (name: 'liked' | 'partner') =>
+    drizzleDb
+      .selectDistinct({
+        userId: wishlists.userId,
+        productId: wishlists.productId,
+      })
+      .from(wishlists)
+      .where(gte(wishlists.createdAt, windowStart))
+      .as(name)
 
-  const rows = await drizzleDb
-    .select({
-      anchorProductId: wishlists.productId,
-      recommendedProductId: partner.productId,
-      support: sql<number>`cast(count(distinct ${wishlists.userId}) as int)`,
-    })
-    .from(wishlists)
-    .innerJoin(
-      partner,
-      and(
-        eq(partner.userId, wishlists.userId),
-        ne(partner.productId, wishlists.productId)
-      )
-    )
-    .where(gte(wishlists.createdAt, windowStart))
-    .groupBy(wishlists.productId, partner.productId)
-    .having(sql`count(distinct ${wishlists.userId}) >= ${MIN_SUPPORT}`)
+  const liked = likedFor('liked')
+  const partner = likedFor('partner')
+
+  const rows = await withDatabaseRetry(
+    () =>
+      drizzleDb
+        .select({
+          anchorProductId: liked.productId,
+          recommendedProductId: partner.productId,
+          support: sql<number>`cast(count(*) as int)`,
+        })
+        .from(liked)
+        .innerJoin(
+          partner,
+          and(
+            eq(partner.userId, liked.userId),
+            ne(partner.productId, liked.productId)
+          )
+        )
+        .groupBy(liked.productId, partner.productId)
+        .having(sql`count(*) >= ${MIN_SUPPORT}`),
+    { context: 'affinity_wishlist_pairs' }
+  )
 
   return rows.map((row) => ({
     anchorProductId: row.anchorProductId,
@@ -142,30 +190,58 @@ export const collectWishlistPairs = async (
  * `ProductShare` carries no `userId`, so there is no per-shopper grouping key
  * available. Day bucketing is the only proxy, which is precisely why this
  * signal carries the lowest weight in {@link SIGNAL_WEIGHTS}.
+ *
+ * Nothing constrains how many times one product may be shared in a day, so
+ * joining the raw rows multiplies by (shares of A that day) x (shares of B
+ * that day) — the worst blow-up of the three collectors, and one that grows
+ * with traffic rather than with catalog size. Joining the distinct
+ * `(day, productId)` buckets instead collapses that to one row per product per
+ * day and leaves `support` unchanged, because it was already counting distinct
+ * days. It also moves `date_trunc` out of the join predicate, where no index
+ * can reach it, and into a projection the planner can hash.
  */
 export const collectSharePairs = async (
   windowStart: Date
 ): Promise<SignalPair[]> => {
-  const partner = alias(productShares, 'partner')
-  const dayBucket = sql`date_trunc('day', ${productShares.createdAt})`
+  const bucketFor = (name: 'bucket' | 'partner') =>
+    drizzleDb
+      .selectDistinct({
+        dayBucket: sql<Date>`date_trunc('day', ${productShares.createdAt})`.as(
+          'dayBucket'
+        ),
+        productId: productShares.productId,
+      })
+      .from(productShares)
+      .where(gte(productShares.createdAt, windowStart))
+      .as(name)
 
-  const rows = await drizzleDb
-    .select({
-      anchorProductId: productShares.productId,
-      recommendedProductId: partner.productId,
-      support: sql<number>`cast(count(distinct ${dayBucket}) as int)`,
-    })
-    .from(productShares)
-    .innerJoin(
-      partner,
-      and(
-        sql`date_trunc('day', ${partner.createdAt}) = ${dayBucket}`,
-        ne(partner.productId, productShares.productId)
-      )
-    )
-    .where(gte(productShares.createdAt, windowStart))
-    .groupBy(productShares.productId, partner.productId)
-    .having(sql`count(distinct ${dayBucket}) >= ${MIN_SUPPORT}`)
+  const bucket = bucketFor('bucket')
+  const partner = bucketFor('partner')
+
+  const rows = await withDatabaseRetry(
+    () =>
+      drizzleDb
+        .select({
+          anchorProductId: bucket.productId,
+          recommendedProductId: partner.productId,
+          support: sql<number>`cast(count(*) as int)`,
+        })
+        .from(bucket)
+        .innerJoin(
+          partner,
+          and(
+            // Drizzle renders a subquery's `sql`-aliased column unqualified,
+            // so `eq(partner.dayBucket, bucket.dayBucket)` would emit an
+            // ambiguous `"dayBucket" = "dayBucket"`. The alias names are
+            // literals of this function, so name them explicitly.
+            sql`"partner"."dayBucket" = "bucket"."dayBucket"`,
+            ne(partner.productId, bucket.productId)
+          )
+        )
+        .groupBy(bucket.productId, partner.productId)
+        .having(sql`count(*) >= ${MIN_SUPPORT}`),
+    { context: 'affinity_share_pairs' }
+  )
 
   return rows.map((row) => ({
     anchorProductId: row.anchorProductId,

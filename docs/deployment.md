@@ -79,10 +79,19 @@ from Neon's specialized serverless adapter, such as Vercel-style runtimes using
 Neon's HTTP/WebSocket optimized connection layer.
 
 Database pool behavior can be tuned with `DATABASE_POOL_MAX`,
-`DATABASE_POOL_IDLE_TIMEOUT_MS`, and
-`DATABASE_POOL_CONNECTION_TIMEOUT_MS`. Defaults are 10 connections, 20 seconds
-idle timeout, and 5 seconds connection timeout. `READ_DATABASE_URL` remains
-optional and falls back to `DATABASE_URL`.
+`DATABASE_POOL_IDLE_TIMEOUT_MS`, `DATABASE_POOL_CONNECTION_TIMEOUT_MS`, and
+`DATABASE_POOL_MAX_LIFETIME_SECONDS`. Defaults are 10 connections, 20 seconds
+idle timeout, 5 seconds connection timeout, and a 300 second socket lifetime.
+`READ_DATABASE_URL` remains optional and falls back to `DATABASE_URL`.
+
+`DATABASE_POOL_MAX_LIFETIME_SECONDS` retires a pooled socket once it reaches
+that age, regardless of how recently it was used. The idle timeout alone cannot
+do this on a serverless platform: it is enforced by a timer, and timers do not
+fire while the container is frozen between invocations. A socket parked across
+a freeze therefore still looks fresh by idle accounting long after PgBouncer or
+the database closed its own end, and the next query on it fails with
+`Connection terminated unexpectedly`. Keep this below the pooler's
+`server_idle_timeout` so the client discards the socket first.
 
 For self-hosted deployments, the generic protocols — `postgres`, `redis`, and
 `s3` — are the recommended selections; managed values (`neon`, `upstash`,
@@ -90,11 +99,19 @@ For self-hosted deployments, the generic protocols — `postgres`, `redis`, and
 specialized adapters.
 
 `summarizeProviders()` renders the resolved selection, how each was chosen, and
-whether its credentials are complete, for startup or health diagnostics. It
-carries no URLs, tokens, or other credential-bearing values, and it lists any
-deprecated variable alias in use by name only. Provider availability changes are
-reported as the structured `provider_unavailable`, `provider_fallback`,
-`provider_degraded`, and `provider_recovered` log events.
+whether its credentials are complete, for startup or health diagnostics — see
+`getProviderSummary()`, exposed at `GET /api/health`. It carries no URLs,
+tokens, or other credential-bearing values, and it lists any deprecated
+variable alias in use by name only. This is a configuration check, not a live
+connectivity probe, so it reports a provider as `degraded` only when it was
+_explicitly_ selected without the credentials it requires — it does not by
+itself detect a currently-unreachable database or cache. Runtime provider
+availability changes have a separate, structured event vocabulary
+(`provider_unavailable`, `provider_fallback`, `provider_degraded`,
+`provider_recovered` — see `src/lib/providers/events.ts`); the search-provider
+fallback path is wired to emit `provider_fallback` today (see "Catalog-search
+migration" below), and the helpers are available for other capabilities to
+adopt the same way.
 
 #### Catalog-search migration
 
@@ -113,6 +130,64 @@ Search Index Management, compare result counts and relevance, then set
 `SEARCH_PROVIDER` to switch reads. Roll back by setting it to the prior
 provider; PostgreSQL requires no reindex. Order search remains separate and
 does not export order or customer data to Algolia.
+
+##### Upstash Search → Algolia migration and rollback
+
+Both `upstash` and `postgres` are read-cheap to roll back from because neither
+requires deleting anything from the abandoned provider — Algolia is the only
+side of this migration with state (an index) that needs deliberate cleanup.
+Product writes already fan out to whichever provider is selected at write
+time (`src/lib/search/index.ts`); migrating providers is a **read-cutover**
+exercise, not a data-migration exercise, so the steps below are about
+building confidence in the new index before flipping reads over, not about
+moving rows.
+
+1. **Provision** — create a dedicated Algolia application/index per
+   environment (`ALGOLIA_PRODUCTS_INDEX=products_staging`,
+   `products_production`, never a shared index across environments) and set
+   `ALGOLIA_APP_ID` / `ALGOLIA_ADMIN_API_KEY` alongside the still-active
+   `SEARCH_PROVIDER=upstash`. Configuring Algolia's credentials does not
+   switch reads by itself — only `SEARCH_PROVIDER` does.
+2. **Backfill** — from Admin → Search Index Management, run "Rebuild search
+   index" once Algolia's credentials are present. This full-reindexes every
+   product into Algolia over the admin API in `src/lib/search/algolia-adapter.ts`
+   while `upstash` continues serving live reads, so a slow or interrupted
+   backfill has zero customer-facing impact.
+3. **Dual-write window** — leave both `UPSTASH_SEARCH_REST_URL`/`_TOKEN` and
+   the Algolia variables configured together for at least one full release
+   cycle. New/updated products index into whichever provider
+   `SEARCH_PROVIDER` currently selects for reads — the previous provider's
+   index will drift for products changed during the window, which is why
+   re-running the backfill immediately before comparison (step 4) is
+   required, not optional.
+4. **Comparison** — re-run the backfill, then manually compare a representative
+   query set (top search terms, empty-result queries, facet/filter
+   combinations, typo-tolerance cases) between providers. Algolia additionally
+   changes ranking/relevance behavior (typo tolerance, facets, highlighting)
+   that PostgreSQL/Upstash do not provide — validate storefront autocomplete,
+   facets, and sort against the acceptance queries from
+   `__tests__/lib/search/` before cutover.
+5. **Read cutover** — set `SEARCH_PROVIDER=algolia` and redeploy. This is the
+   only step that changes customer-facing behavior; nothing before it is
+   observable outside Admin.
+6. **Monitoring** — watch for the structured `provider_fallback` log event
+   (see `src/lib/providers/events.ts`, emitted from
+   `searchProductIds` in `src/lib/search/product-search.ts` on every
+   provider search failure) for the first 24–48 hours. A sustained rise
+   indicates Algolia is rejecting or timing out requests and reads are
+   silently falling back to the PostgreSQL `ILIKE` path. `/api/health`'s
+   `search` entry only reports _configuration_ problems (an explicitly
+   selected provider missing required credentials); it does not probe live
+   Algolia connectivity, so it will not by itself show a rate-limited or
+   momentarily-unreachable Algolia as degraded.
+7. **Rollback** — set `SEARCH_PROVIDER` back to `upstash` (or `postgres`) and
+   redeploy; both accept reads immediately with no reindex, because the prior
+   provider's index was never deleted or degraded by the migration. Rollback
+   is safe at any point up through cleanup (step 8).
+8. **Cleanup** — only after the new provider has served production reads
+   without rollback for a full retention/monitoring window, delete the old
+   Upstash Search index/database and remove its environment variables. Do
+   this last and deliberately: cleanup is the one step that is not reversible.
 
 ### Web push setup
 
@@ -232,6 +307,10 @@ replaces `next.config.ts`'s `images.remotePatterns` (which cannot coexist
 with a custom `images.loader`).
 
 ## Platform-Specific Instructions
+
+For a fully self-hosted deployment — Next.js, Nginx, Postgres, Redis, and
+MinIO all on one VM instead of the managed platforms below — see
+[`docs/kamatera-deployment.md`](./kamatera-deployment.md).
 
 ### 1. Vercel (Recommended)
 
@@ -501,6 +580,17 @@ railway run npm run db:migrate
 `.github/workflows/build.yml` runs `database-migrations-preview` /
 `database-migrations-production` **before** `deploy-preview` /
 `deploy-production`. A deploy is blocked if its migration job fails.
+
+`.github/workflows/build-self-hosted.yml` defines the same migration and deploy
+jobs on the same triggers, and the two workflows have separate `concurrency`
+groups, so a push to `develop` or `master` currently runs each of them twice —
+once on a GitHub-hosted runner and once on the self-hosted pool — with nothing
+serialising the two. Sequentially, `db:migrate` is idempotent and the second run
+applies nothing; concurrently, both runs can read the same set of unapplied
+migrations before either records one. Decide which pool owns the deployment
+path and remove the migration and deploy jobs from the other workflow. Until
+then, treat a double preview deployment on a single push as expected rather
+than as a symptom.
 
 Running migrations after the deploy would leave the new code serving live
 traffic against the old schema for the whole duration of the migration job:

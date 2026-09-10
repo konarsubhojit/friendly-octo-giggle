@@ -10,12 +10,18 @@ const DEFAULT_POOL_CONFIG = {
   max: 10,
   idleTimeoutMillis: 20000,
   connectionTimeoutMillis: 5000,
+  // Five minutes sits below the idle-connection timeouts that PgBouncer
+  // (`server_idle_timeout`, 600s by default), managed poolers and Neon
+  // auto-suspend apply, so a socket is retired by this pool before the far end
+  // retires it without telling us.
+  maxLifetimeSeconds: 300,
 } as const satisfies DatabasePoolConfig
 
 type PoolEnvKey =
   | 'DATABASE_POOL_MAX'
   | 'DATABASE_POOL_IDLE_TIMEOUT_MS'
   | 'DATABASE_POOL_CONNECTION_TIMEOUT_MS'
+  | 'DATABASE_POOL_MAX_LIFETIME_SECONDS'
 
 type DatabaseEnv = Pick<Env, 'DATABASE_URL' | 'READ_DATABASE_URL'> &
   Partial<Record<PoolEnvKey, string | undefined>>
@@ -63,6 +69,11 @@ export const createDatabasePoolConfig = (
     source.DATABASE_POOL_CONNECTION_TIMEOUT_MS,
     DEFAULT_POOL_CONFIG.connectionTimeoutMillis,
     'DATABASE_POOL_CONNECTION_TIMEOUT_MS'
+  ),
+  maxLifetimeSeconds: parsePositiveInteger(
+    source.DATABASE_POOL_MAX_LIFETIME_SECONDS,
+    DEFAULT_POOL_CONFIG.maxLifetimeSeconds,
+    'DATABASE_POOL_MAX_LIFETIME_SECONDS'
   ),
 })
 

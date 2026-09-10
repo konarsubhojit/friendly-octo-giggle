@@ -609,7 +609,19 @@ curl http://localhost:3000/cart
 
 ### Search suggestions or reindex controls are unavailable
 
-Confirm the Upstash Search variables are configured. Product and order queries fall back to database search, but index-specific admin controls correctly report missing configuration.
+Confirm `SEARCH_PROVIDER` and the matching provider's variables: `upstash`
+needs `UPSTASH_SEARCH_REST_URL`/`_TOKEN`; `algolia` needs `ALGOLIA_APP_ID` and
+`ALGOLIA_ADMIN_API_KEY` plus an environment-specific `ALGOLIA_PRODUCTS_INDEX`.
+Check `/api/health`'s `search` entry for the resolved provider and any
+diagnostic issue (missing credential, deprecated alias) without exposing the
+credential itself. Product and order queries always fall back to database
+(`ILIKE`) search on a provider failure or on rate limiting — watch for the
+structured `provider_fallback` log event to confirm reads degraded gracefully
+rather than erroring; index-specific admin controls (Admin → Search Index
+Management) correctly report missing configuration rather than fail silently.
+See [Catalog-search migration](./deployment.md#catalog-search-migration) for
+switching providers and the Upstash Search → Algolia migration/rollback
+drill.
 
 ### Product assistant is unavailable
 

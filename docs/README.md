@@ -33,9 +33,11 @@ Welcome to the comprehensive documentation for the e-commerce platform built wit
 - **[Deployment Guide](./deployment.md)** - Platform-specific deployment instructions
 - **[Environment Variables](./deployment.md#environment-variables)** - Configuration reference
 - **[Production Checklist](./deployment.md#production-checklist)** - Pre-launch verification
+- **[Self-Hosting](./self-hosting.md)** - Self-hosted Postgres 18 + PgBouncer on an OCI VM
 
 ### Operations
 
+- **[Self-Hosting Runbook](./self-hosting.md#operations-runbook)** - Pool health, fail2ban, backups
 - **[Troubleshooting](./troubleshooting.md)** - Common issues and solutions
 - **[Monitoring](./troubleshooting.md#monitoring)** - Performance monitoring and logging
 - **[Security](./troubleshooting.md#security)** - Security best practices
@@ -101,23 +103,23 @@ Use the catalog as the product-level index and the API and architecture guides f
 
 ## 📦 Technology Stack
 
-| Category           | Technology                                                   |
-| ------------------ | ------------------------------------------------------------ |
-| **Framework**      | Next.js 16 with App Router                                   |
-| **Language**       | TypeScript 6.x (strict mode)                                 |
-| **Database**       | PostgreSQL (Neon) with Drizzle ORM                           |
-| **Cache**          | Redis (Upstash, HTTP-based)                                  |
-| **Authentication** | NextAuth.js v5                                               |
-| **Validation**     | Zod 4.x                                                      |
-| **Styling**        | Tailwind CSS v4                                              |
-| **State**          | Redux Toolkit 2.x                                            |
-| **Logging**        | Pino                                                         |
+| Category           | Technology                                                                       |
+| ------------------ | -------------------------------------------------------------------------------- |
+| **Framework**      | Next.js 16 with App Router                                                       |
+| **Language**       | TypeScript 6.x (strict mode)                                                     |
+| **Database**       | PostgreSQL (Neon) with Drizzle ORM                                               |
+| **Cache**          | Redis (Upstash, HTTP-based)                                                      |
+| **Authentication** | NextAuth.js v5                                                                   |
+| **Validation**     | Zod 4.x                                                                          |
+| **Styling**        | Tailwind CSS v4                                                                  |
+| **State**          | Redux Toolkit 2.x                                                                |
+| **Logging**        | Pino                                                                             |
 | **Image Storage**  | Vercel Blob or S3-compatible adapters (`s3`/`r2`, dual-read, `STORAGE_PROVIDER`) |
-| **Search**         | Upstash Search (with DB fallback)                            |
-| **Workflows**      | Inngest (durable step functions)                             |
-| **AI**             | AI SDK (product assistant)                                   |
-| **Email**          | MailerSend / Google SMTP                                     |
-| **Feature Flags**  | Vercel Edge Config                                           |
+| **Search**         | Upstash Search (with DB fallback)                                                |
+| **Workflows**      | Inngest (durable step functions)                                                 |
+| **AI**             | AI SDK (product assistant)                                                       |
+| **Email**          | MailerSend / Google SMTP                                                         |
+| **Feature Flags**  | Vercel Edge Config                                                               |
 
 ## 🔧 System Requirements
 
