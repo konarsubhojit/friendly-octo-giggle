@@ -8,8 +8,8 @@ name: Build Self Hosted
 #      check, the test suite and the build are four independent jobs that all
 #      start at once, so a run reports all four verdicts instead of aborting at
 #      the first failing gate and hiding the rest until the next push. The
-#      widest point of the graph is six concurrent jobs — lint, the type check
-#      and the build still running while the three coverage consumers start on
+#      widest point of the graph is five concurrent jobs — lint, the type check
+#      and the build still running while the two coverage consumers start on
 #      the finished test job — and a narrower pool degrades to queueing, never
 #      to failing.
 #   2. The VMs are persistent, so `~/.npm` survives between jobs.
@@ -120,10 +120,10 @@ jobs:
 
       # Only `lcov.info` is published. Istanbul's `lcov` reporter is a
       # composite of `lcovonly` and `html`, so `coverage/` also holds an
-      # `lcov-report/` tree of one HTML page per source file. No consumer below
-      # reads it — SonarQube, DeepSource and Codecov all take `lcov.info` — and
-      # uploading it once and downloading it three times costs far more than
-      # the single file it wraps.
+      # `lcov-report/` tree of one HTML page per source file. Neither consumer
+      # below reads it — DeepSource and Codecov both take `lcov.info` — and
+      # uploading it once and downloading it twice costs far more than the
+      # single file it wraps.
       - name: Upload coverage report
         uses: actions/upload-artifact@v7
         with:
@@ -186,52 +186,36 @@ jobs:
             mv .next/cache "$NEXT_BUILD_CACHE_STORE"
           fi
 
-  # Depends on `test` alone, for the coverage artifact. It deliberately does
-  # not wait on `build`: SonarQube analyses sources, not build output, and its
-  # quality gate wait below can take minutes, so starting it as soon as
-  # coverage exists keeps it off the critical path.
-  sonarqube:
-    name: SonarQube Scan
-    runs-on: [self-hosted, linux, x64]
-    timeout-minutes: 30
-    needs: [test]
-    if: github.ref == 'refs/heads/develop' || github.base_ref == 'develop'
-    steps:
-      # New-code detection and blame need the full history here.
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Download coverage report
-        uses: actions/download-artifact@v8.0.1
-        with:
-          name: coverage-report
-          path: coverage
-
-      - name: Verify coverage report is present
-        run: |
-          if [ ! -s coverage/lcov.info ]; then
-            echo "::error::coverage/lcov.info is missing or empty. The 'Test and Coverage' job must publish the coverage-report artifact before SonarQube can report accurate new-code coverage."
-            exit 1
-          fi
-
-      # sonar.coverage.exclusions below is limited to framework-owned route
-      # entrypoints (page/layout/loading/error), declarative schema, and
-      # config-like bootstrap modules (db, env, redis, logger, email provider
-      # wiring, constant tables) plus type-only declarations. Security-relevant
-      # sources such as src/proxy.ts and src/lib/search/** are intentionally NOT
-      # excluded so the security perimeter stays covered and scanned.
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v8
-        if: github.ref == 'refs/heads/develop' || github.base_ref == 'develop'
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: https://sonarcloud.io
-        with:
-          args: >
-            -Dsonar.qualitygate.wait=true
-            -Dsonar.qualitygate.timeout=600
-            -Dsonar.coverage.exclusions=src/app/**/page.tsx,src/app/**/layout.tsx,src/app/**/loading.tsx,src/app/**/error.tsx,src/lib/schema.ts,src/lib/db.ts,src/lib/env.ts,src/lib/redis.ts,src/lib/logger.ts,src/lib/email/providers.ts,src/lib/constants/categories.ts,src/lib/constants/checkout-policies.ts,src/types/**
+  # There is deliberately no `sonarqube` job here; SonarQube analysis is owned
+  # by `build.yml`, on GitHub-hosted runners. `SonarSource/sonarqube-scan-action`
+  # verifies the SonarScanner CLI download against SonarSource's GPG key, and it
+  # fetches that key at run time from `hkps://keyserver.ubuntu.com` with
+  # `hkps://keys.openpgp.org` as fallback, into a freshly created throwaway
+  # keyring. There is no input for supplying that key from disk, so a runner
+  # that cannot reach those two hosts on port 443 fails the job outright:
+  #
+  #   gpg: keyserver receive failed: Server indicated a failure
+  #   Error: Failed to import SonarSource public key from all keyservers
+  #
+  # Both keyservers failed back to back on this pool, which points at the
+  # runners' egress rather than at a keyserver outage. Since `build.yml`
+  # already runs the identical scan, on the same triggers and against the same
+  # project key, duplicating it here only ever bought a second analysis of the
+  # same commit racing the first — and then a hard failure. Removing it loses
+  # no analysis and frees a runner.
+  #
+  # To move the scan onto the pool later, give the runners egress to those two
+  # keyservers, or set `HTTPS_PROXY` on the runner service (the action forwards
+  # it to gpg as `--keyserver-options http-proxy=...`). Only the first run on
+  # each runner pays that cost: the action caches the scanner in
+  # `RUNNER_TOOL_CACHE`, which persists here, and a cache hit skips both the
+  # download and the key fetch until `scannerVersion` changes.
+  #
+  # `skipSignatureVerification: true` would also make the job pass, by skipping
+  # the key import along with the check it feeds. That trades away the only
+  # thing proving the downloaded scanner is the binary SonarSource signed, for
+  # a job that is already running successfully elsewhere — so it is not the
+  # trade to make here.
 
   deepsource:
     name: DeepSource Analysis
