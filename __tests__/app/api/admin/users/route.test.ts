@@ -4,8 +4,14 @@ import { NextRequest } from 'next/server'
 const mockAuth = vi.hoisted(() => vi.fn())
 const mockFindMany = vi.hoisted(() => vi.fn())
 const mockSelectWhere = vi.hoisted(() => vi.fn())
+const mockOrderCountsWhere = vi.hoisted(() => vi.fn())
+const mockOrderCountsGroupBy = vi.hoisted(() => vi.fn())
 const mockSelectFrom = vi.hoisted(() =>
-  vi.fn(() => ({ where: mockSelectWhere }))
+  vi.fn((table) =>
+    table?.userId === 'userId'
+      ? { where: mockOrderCountsWhere }
+      : { where: mockSelectWhere }
+  )
 )
 const mockSelect = vi.hoisted(() => vi.fn(() => ({ from: mockSelectFrom })))
 
@@ -21,6 +27,7 @@ vi.mock('@/lib/db', () => ({
 }))
 vi.mock('@/lib/schema', () => ({
   users: { createdAt: 'createdAt', name: 'name', email: 'email' },
+  orders: { userId: 'userId' },
 }))
 vi.mock('drizzle-orm', () => ({
   count: vi.fn(),
@@ -29,6 +36,7 @@ vi.mock('drizzle-orm', () => ({
   ilike: vi.fn(),
   and: vi.fn(),
   or: vi.fn(),
+  inArray: vi.fn(),
 }))
 
 import { GET } from '@/app/api/admin/users/route'
@@ -42,7 +50,6 @@ const makeAdminUser = (overrides = {}) => ({
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-02'),
   image: null,
-  orders: [{ id: 'o1' }],
   ...overrides,
 })
 
@@ -50,6 +57,8 @@ describe('GET /api/admin/users', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockSelectWhere.mockResolvedValue([{ value: 0 }])
+    mockOrderCountsWhere.mockReturnValue({ groupBy: mockOrderCountsGroupBy })
+    mockOrderCountsGroupBy.mockResolvedValue([])
   })
 
   it('returns 401 when not authenticated', async () => {
@@ -86,18 +95,18 @@ describe('GET /api/admin/users', () => {
     })
 
     const mockUsers = [
-      makeAdminUser({ orders: [{ id: 'o1' }, { id: 'o2' }] }),
+      makeAdminUser(),
       makeAdminUser({
         id: 'u2',
         name: 'Bob',
         email: 'bob@example.com',
         role: 'ADMIN',
-        orders: [],
       }),
     ]
 
     mockFindMany.mockResolvedValue(mockUsers)
     mockSelectWhere.mockResolvedValue([{ value: 2 }])
+    mockOrderCountsGroupBy.mockResolvedValue([{ userId: 'u1', value: 2 }])
 
     const response = await GET(
       new NextRequest('http://localhost/api/admin/users')
@@ -113,6 +122,10 @@ describe('GET /api/admin/users', () => {
     expect(body.data.nextCursor).toBeNull()
     expect(body.data.hasMore).toBe(false)
     expect(body.data.totalCount).toBe(2)
+    expect(mockFindMany).toHaveBeenCalledWith(
+      expect.not.objectContaining({ with: expect.anything() })
+    )
+    expect(mockOrderCountsWhere).toHaveBeenCalled()
   })
 
   it('returns hasMore=true and nextCursor when results exceed limit', async () => {
@@ -122,7 +135,6 @@ describe('GET /api/admin/users', () => {
       makeAdminUser({
         id: `u${index}`,
         email: `user${index}@test.com`,
-        orders: [],
       })
     )
     mockFindMany.mockResolvedValue(manyUsers)
@@ -195,5 +207,18 @@ describe('GET /api/admin/users', () => {
 
     expect(response.status).toBe(500)
     expect(body.success).toBe(false)
+  })
+
+  it('rejects offsets beyond the cursor-pagination threshold', async () => {
+    mockAuth.mockResolvedValue({ user: { id: 'admin-1', role: 'ADMIN' } })
+
+    const response = await GET(
+      new NextRequest('http://localhost/api/admin/users?offset=10001')
+    )
+    const body = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(body.error).toContain('Offset must not exceed 10000')
+    expect(mockFindMany).not.toHaveBeenCalled()
   })
 })

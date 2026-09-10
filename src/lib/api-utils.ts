@@ -4,6 +4,9 @@ import { ZodError, type ZodType } from 'zod'
 import { logError } from '@/lib/logger'
 
 export const DEFAULT_JSON_BODY_MAX_BYTES = 64 * 1024
+// Offset pagination makes PostgreSQL scan and discard earlier rows; deep pages
+// must use cursor pagination instead so an admin request cannot cause that work.
+export const MAX_ADMIN_LIST_OFFSET = 10_000
 const textEncoder = new TextEncoder()
 
 const getValidationDetails = (error: ZodError<unknown>) =>
@@ -109,6 +112,11 @@ export const parseOffsetParam = (offsetParam: string | null): number => {
   const parsed = Number.parseInt(offsetParam ?? '0', 10)
   return Number.isNaN(parsed) ? 0 : Math.max(0, parsed)
 }
+
+export const getAdminOffsetLimitError = (offset: number): string | null =>
+  offset > MAX_ADMIN_LIST_OFFSET
+    ? `Offset must not exceed ${MAX_ADMIN_LIST_OFFSET}; use cursor pagination for deeper pages`
+    : null
 
 export const apiSuccess = <T>(
   data: T,

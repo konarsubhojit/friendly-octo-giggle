@@ -48,6 +48,13 @@ import {
 } from '@/features/orders/services/stock-reservation'
 import { availableUnits } from './stock-availability'
 
+const COUPON_PAGE_MAX = 200
+
+const clampCouponPage = (limit: number, offset: number) => ({
+  limit: Math.min(Math.max(1, limit), COUPON_PAGE_MAX),
+  offset: Math.max(0, offset),
+})
+
 // ─── Shared error types ──────────────────────────────────
 
 /**
@@ -1255,8 +1262,17 @@ export const db = {
       )
     },
 
-    findAll: async () =>
-      drizzleDb.select().from(coupons).orderBy(desc(coupons.createdAt)),
+    // Coupon admin lists run in serverless memory; cap each page at 200 rows
+    // while still allowing callers to request later pages.
+    findAll: async (limit = COUPON_PAGE_MAX, offset = 0) => {
+      const page = clampCouponPage(limit, offset)
+      return drizzleDb
+        .select()
+        .from(coupons)
+        .orderBy(desc(coupons.createdAt))
+        .limit(page.limit)
+        .offset(page.offset)
+    },
 
     create: async (values: typeof coupons.$inferInsert) => {
       const [created] = await primaryDrizzleDb
@@ -1296,7 +1312,10 @@ export const db = {
     },
 
     /** Per-coupon redemption totals for the admin usage report. */
-    redemptionSummary: async () => {
+    // The aggregate joins redemptions, so cap each page at 200 coupons to
+    // bound result materialization and avoid an unbounded admin report.
+    redemptionSummary: async (limit = COUPON_PAGE_MAX, offset = 0) => {
+      const page = clampCouponPage(limit, offset)
       const rows = await drizzleDb
         .select({
           couponId: coupons.id,
@@ -1320,6 +1339,8 @@ export const db = {
           coupons.usageCount
         )
         .orderBy(desc(coupons.createdAt))
+        .limit(page.limit)
+        .offset(page.offset)
 
       return rows
     },
