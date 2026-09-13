@@ -1,4 +1,4 @@
-import { waitUntil } from '@vercel/functions'
+import { waitUntil } from '@/lib/deferred'
 import { logError, logBusinessEvent } from '@/lib/logger'
 import { sendEmail } from './providers'
 import type { EmailMessage } from './providers'
@@ -142,9 +142,10 @@ export const sendWithRetry = (
   msg: EmailMessage,
   context: RetryContext
 ): void => {
-  try {
-    waitUntil(runRetryChain(msg, context))
-  } catch {
-    runRetryChain(msg, context).catch(() => undefined)
-  }
+  // `runRetryChain` starts running as soon as it's called, before `waitUntil`
+  // ever sees the promise, so the retry chain always runs even if handing it
+  // off to the deferred provider were to fail — and it can't: the `process`
+  // adapter never throws, and the `vercel` adapter's failure mode (a
+  // rejected promise) is already caught and logged by the provider itself.
+  waitUntil(runRetryChain(msg, context))
 }

@@ -6,10 +6,10 @@ import { SessionProvider } from '@/components/providers/SessionProvider'
 import StoreProvider from '@/components/providers/StoreProvider'
 import { CurrencyProvider } from '@/contexts/CurrencyContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
-import { Analytics } from '@vercel/analytics/next'
-import { SpeedInsights } from '@vercel/speed-insights/next'
+import PlatformAnalytics from '@/components/analytics/PlatformAnalytics'
 import { AppEnhancements } from '@/components/pwa/AppEnhancements'
 import { STORE_NAME, STORE_SHORT_NAME } from '@/lib/constants/store'
+import { getProvider } from '@/lib/providers/resolution'
 
 /**
  * Client provider tree.
@@ -98,12 +98,16 @@ export default function RootLayout({
       className={`${nunito.className} ${playfairDisplay.variable}`}
     >
       <head>
-        <link
-          rel="preconnect"
-          href="https://va.vercel-scripts.com"
-          crossOrigin="anonymous"
-        />
-        <link rel="dns-prefetch" href="https://va.vercel-scripts.com" />
+        {getProvider('analytics') === 'vercel' && (
+          <>
+            <link
+              rel="preconnect"
+              href="https://va.vercel-scripts.com"
+              crossOrigin="anonymous"
+            />
+            <link rel="dns-prefetch" href="https://va.vercel-scripts.com" />
+          </>
+        )}
         <link
           rel="preconnect"
           href="https://blob.vercel-storage.com"
@@ -124,8 +128,7 @@ export default function RootLayout({
             <AppEnhancements />
           </AppProviders>
         </Suspense>
-        <Analytics />
-        <SpeedInsights />
+        <PlatformAnalytics />
       </body>
     </html>
   )

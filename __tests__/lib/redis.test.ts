@@ -4,7 +4,7 @@ const { mockWaitUntil } = vi.hoisted(() => ({
   mockWaitUntil: vi.fn((promise: Promise<unknown>) => promise),
 }))
 
-vi.mock('@vercel/functions', () => ({
+vi.mock('@/lib/deferred', () => ({
   waitUntil: mockWaitUntil,
 }))
 
@@ -119,7 +119,7 @@ describe('getCachedData', () => {
     vi.resetModules()
     vi.clearAllMocks()
 
-    vi.doMock('@vercel/functions', () => ({ waitUntil: mockWaitUntil }))
+    vi.doMock('@/lib/deferred', () => ({ waitUntil: mockWaitUntil }))
     vi.doMock('@/lib/cache/index', () => ({
       getCacheClient: vi.fn(() => mockRedisInstance),
     }))
@@ -279,7 +279,7 @@ describe('invalidateCache', () => {
     vi.resetModules()
     vi.clearAllMocks()
 
-    vi.doMock('@vercel/functions', () => ({ waitUntil: mockWaitUntil }))
+    vi.doMock('@/lib/deferred', () => ({ waitUntil: mockWaitUntil }))
     vi.doMock('@/lib/cache/index', () => ({
       getCacheClient: vi.fn(() => mockRedisInstance),
     }))

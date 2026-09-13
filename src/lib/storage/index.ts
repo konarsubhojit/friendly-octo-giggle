@@ -158,7 +158,7 @@ const hasRequiredKeys = (keys: readonly string[]): boolean =>
 
 const isFallbackProviderConfigured = (provider: StorageProviderName): boolean => {
   if (provider === 'vercel') {
-    return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim())
+    return Boolean(env.BLOB_READ_WRITE_TOKEN?.trim())
   }
   return hasRequiredKeys(PROVIDER_REQUIRED_KEYS.storage[provider])
 }

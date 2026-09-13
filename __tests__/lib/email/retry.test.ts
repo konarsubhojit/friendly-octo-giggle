@@ -24,7 +24,7 @@ vi.mock('@/lib/logger', () => ({
   logError: mockLogError,
   logBusinessEvent: mockLogBusinessEvent,
 }))
-vi.mock('@vercel/functions', () => ({ waitUntil: mockWaitUntil }))
+vi.mock('@/lib/deferred', () => ({ waitUntil: mockWaitUntil }))
 
 import {
   isNonRetriableError,

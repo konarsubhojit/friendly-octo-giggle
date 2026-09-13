@@ -2,13 +2,15 @@
  * The single provider-resolution path.
  *
  * Every capability is resolved here, from a plain environment record, by one
- * deterministic precedence rule:
+ * deterministic four-tier precedence rule:
  *
  *   1. the capability's explicit selector variable, when set;
  *   2. otherwise the provider *inferred from which credentials are present*,
  *      so a deployment that predates the selectors keeps the backend it
  *      already uses;
- *   3. otherwise the documented default.
+ *   3. otherwise the preset default supplied by `DEPLOY_TARGET`, when that
+ *      preset names a provider for this capability;
+ *   4. otherwise the documented hardcoded fallback.
  *
  * | Capability | Selector              | Inference order (credentials present)      | Default       |
  * | ---------- | --------------------- | ------------------------------------------ | ------------- |
@@ -19,23 +21,46 @@
  * | rateLimit  | `RATE_LIMIT_PROVIDER` | upstash → redis                            | `memory`      |
  * | config     | `CONFIG_PROVIDER`     | edge-config                                | `environment` |
  * | jobs       | `JOBS_PROVIDER`       | inngest                                    | `inline`      |
+ * | deferred   | `DEFERRED_PROVIDER`   | vercel (from `VERCEL`)                     | `process`     |
+ * | analytics  | `ANALYTICS_PROVIDER`  | vercel (from `VERCEL`)                     | `none`        |
  *
  * Inference reads credential *presence* only. No provider is ever derived
  * from a hostname, and no call site outside this module decides which backend
  * a capability uses.
+ *
+ * `DEPLOY_TARGET` (`vercel` | `self-hosted`, default `vercel`, inferred from
+ * `process.env.VERCEL` when unset) sits between tiers 2 and 4 above. It is a
+ * *preset of defaults*, never an override: an explicit selector or an
+ * inferred credential always wins over it. Its presets are:
+ *
+ * | `DEPLOY_TARGET` | Preset overrides                                                          |
+ * | --------------- | -------------------------------------------------------------------------- |
+ * | `vercel`        | none — exactly today's hardcoded fallbacks                               |
+ * | `self-hosted`   | `storage: s3`, `config: environment`, `deferred: process`, `analytics: none`, `jobs: inline` |
+ *
+ * `database`, `cache`, `search`, and `rateLimit` have no `self-hosted` preset
+ * because their backends are external HTTP services (Postgres, Redis,
+ * Upstash) that work identically on Vercel and off it — inference already
+ * covers them.
  */
 
 import {
+  ANALYTICS_PROVIDERS,
   CACHE_PROVIDERS,
   CONFIG_PROVIDERS,
   DATABASE_DRIVERS,
+  DEFERRED_PROVIDERS,
+  DEPLOY_TARGETS,
   JOBS_PROVIDERS,
   RATE_LIMIT_PROVIDERS,
   SEARCH_PROVIDERS,
   STORAGE_PROVIDERS,
+  type AnalyticsProvider,
   type CacheProvider,
   type ConfigProvider,
   type DatabaseDriver,
+  type DeferredProvider,
+  type DeployTarget,
   type JobsProvider,
   type ProviderCapability,
   type ProviderConfigIssue,
@@ -53,9 +78,13 @@ export type ProviderEnvSource = Readonly<Record<string, string | undefined>>
 
 export interface ProviderResolution {
   readonly selections: ProviderSelections
+  readonly deployTarget: DeployTarget
   readonly issues: readonly ProviderConfigIssue[]
   readonly deprecatedAliases: readonly string[]
 }
+
+/** The `DEPLOY_TARGET` selector variable, shared by resolution and docs. */
+export const DEPLOY_TARGET_KEY = 'DEPLOY_TARGET'
 
 /** Selector variable per capability, shared by resolution, errors, and docs. */
 export const PROVIDER_SELECTOR_KEYS = {
@@ -66,6 +95,8 @@ export const PROVIDER_SELECTOR_KEYS = {
   rateLimit: 'RATE_LIMIT_PROVIDER',
   config: 'CONFIG_PROVIDER',
   jobs: 'JOBS_PROVIDER',
+  deferred: 'DEFERRED_PROVIDER',
+  analytics: 'ANALYTICS_PROVIDER',
 } as const satisfies Record<ProviderCapability, string>
 
 /** Legal values per capability, for actionable "did you mean" error text. */
@@ -77,6 +108,8 @@ export const PROVIDER_VALUES = {
   rateLimit: RATE_LIMIT_PROVIDERS,
   config: CONFIG_PROVIDERS,
   jobs: JOBS_PROVIDERS,
+  deferred: DEFERRED_PROVIDERS,
+  analytics: ANALYTICS_PROVIDERS,
 } as const
 
 /**
@@ -135,8 +168,37 @@ export const PROVIDER_REQUIRED_KEYS = {
     inngest: ['INNGEST_EVENT_KEY', 'INNGEST_SIGNING_KEY'],
     inline: [],
   },
+  deferred: {
+    vercel: [],
+    process: [],
+  },
+  analytics: {
+    vercel: [],
+    none: [],
+  },
 } as const satisfies {
   [C in ProviderCapability]: Record<string, readonly string[]>
+}
+
+/**
+ * The `DEPLOY_TARGET` preset layer: per-capability defaults applied only when
+ * neither an explicit selector nor credential inference decided a capability.
+ *
+ * `vercel` is deliberately empty — it must reproduce today's hardcoded
+ * fallbacks exactly, so it contributes nothing here and resolution falls
+ * through to tier 4.
+ */
+export const DEPLOY_TARGET_PRESETS: {
+  readonly [T in DeployTarget]: Partial<ProviderByCapability>
+} = {
+  vercel: {},
+  'self-hosted': {
+    storage: 's3',
+    config: 'environment',
+    deferred: 'process',
+    analytics: 'none',
+    jobs: 'inline',
+  },
 }
 
 /**
@@ -232,6 +294,38 @@ const RESOLVERS: { [C in ProviderCapability]: CapabilityResolver<C> } = {
       isSet(source.INNGEST_EVENT_KEY) ? 'inngest' : undefined,
     fallback: 'inline' satisfies JobsProvider,
   },
+  deferred: {
+    // `VERCEL` is set automatically on every Vercel deployment, so this
+    // reproduces today's unconditional `@vercel/functions` usage exactly.
+    infer: (source) => (isSet(source.VERCEL) ? 'vercel' : undefined),
+    fallback: 'process' satisfies DeferredProvider,
+  },
+  analytics: {
+    infer: (source) => (isSet(source.VERCEL) ? 'vercel' : undefined),
+    fallback: 'none' satisfies AnalyticsProvider,
+  },
+}
+
+/**
+ * Resolve `DEPLOY_TARGET`.
+ *
+ * Not a capability — it never appears in `ProviderSelections` — but a preset
+ * switch consulted by `resolveCapability`. `process.env.VERCEL` only ever
+ * infers `vercel`, the same value the hardcoded default already is, so an
+ * unconfigured deployment can never silently become `self-hosted`: that value
+ * is reachable only by setting `DEPLOY_TARGET` explicitly. An unrecognized
+ * value is caught by the environment schema's own enum check; here it simply
+ * falls through to the same default an unset variable would produce.
+ */
+const resolveDeployTarget = (source: ProviderEnvSource): DeployTarget => {
+  const requested = readSelector(source, DEPLOY_TARGET_KEY)
+  if (
+    requested !== undefined &&
+    (DEPLOY_TARGETS as readonly string[]).includes(requested)
+  ) {
+    return requested as DeployTarget
+  }
+  return isSet(source.VERCEL) ? 'vercel' : 'vercel'
 }
 
 const requiredKeysFor = (
@@ -246,6 +340,7 @@ const requiredKeysFor = (
 const resolveCapability = <C extends ProviderCapability>(
   capability: C,
   source: ProviderEnvSource,
+  deployTarget: DeployTarget,
   issues: ProviderConfigIssue[]
 ): ProviderSelection<C> => {
   const selector = PROVIDER_SELECTOR_KEYS[capability]
@@ -280,6 +375,15 @@ const resolveCapability = <C extends ProviderCapability>(
   const inferred = resolver.infer(source)
   if (inferred !== undefined) {
     return { capability, provider: inferred, source: 'inferred' }
+  }
+
+  const preset = DEPLOY_TARGET_PRESETS[deployTarget][capability]
+  if (preset !== undefined) {
+    return {
+      capability,
+      provider: preset as ProviderByCapability[C],
+      source: 'preset',
+    }
   }
 
   return { capability, provider: resolver.fallback, source: 'default' }
@@ -321,18 +425,57 @@ export const resolveProviders = (
 ): ProviderResolution => {
   const normalizedSource = normalizeAliases(source)
   const issues: ProviderConfigIssue[] = []
+  const deployTarget = resolveDeployTarget(normalizedSource)
   const selections = {
-    database: resolveCapability('database', normalizedSource, issues),
-    cache: resolveCapability('cache', normalizedSource, issues),
-    search: resolveCapability('search', normalizedSource, issues),
-    storage: resolveCapability('storage', normalizedSource, issues),
-    rateLimit: resolveCapability('rateLimit', normalizedSource, issues),
-    config: resolveCapability('config', normalizedSource, issues),
-    jobs: resolveCapability('jobs', normalizedSource, issues),
+    database: resolveCapability(
+      'database',
+      normalizedSource,
+      deployTarget,
+      issues
+    ),
+    cache: resolveCapability('cache', normalizedSource, deployTarget, issues),
+    search: resolveCapability(
+      'search',
+      normalizedSource,
+      deployTarget,
+      issues
+    ),
+    storage: resolveCapability(
+      'storage',
+      normalizedSource,
+      deployTarget,
+      issues
+    ),
+    rateLimit: resolveCapability(
+      'rateLimit',
+      normalizedSource,
+      deployTarget,
+      issues
+    ),
+    config: resolveCapability(
+      'config',
+      normalizedSource,
+      deployTarget,
+      issues
+    ),
+    jobs: resolveCapability('jobs', normalizedSource, deployTarget, issues),
+    deferred: resolveCapability(
+      'deferred',
+      normalizedSource,
+      deployTarget,
+      issues
+    ),
+    analytics: resolveCapability(
+      'analytics',
+      normalizedSource,
+      deployTarget,
+      issues
+    ),
   } satisfies ProviderSelections
 
   return {
     selections,
+    deployTarget,
     issues,
     deprecatedAliases: listDeprecatedAliases(source),
   }
@@ -347,7 +490,8 @@ export const resolveProviders = (
 export const summarizeProviders = (
   source: ProviderEnvSource
 ): ProviderSummary => {
-  const { selections, issues, deprecatedAliases } = resolveProviders(source)
+  const { selections, deployTarget, issues, deprecatedAliases } =
+    resolveProviders(source)
 
   return {
     providers: Object.values(selections).map((selection) => ({
@@ -359,6 +503,7 @@ export const summarizeProviders = (
         requiredKeysFor(selection.capability, selection.provider)
       ),
     })),
+    deployTarget,
     deprecatedAliases,
     issues,
   }

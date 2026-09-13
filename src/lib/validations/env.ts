@@ -2,9 +2,12 @@ import { z } from 'zod'
 import { PAYMENT_PROVIDERS } from '@/lib/payments/providers'
 import { resolveProviders } from '@/lib/providers/resolution'
 import {
+  ANALYTICS_PROVIDERS,
   CACHE_PROVIDERS,
   CONFIG_PROVIDERS,
   DATABASE_DRIVERS,
+  DEFERRED_PROVIDERS,
+  DEPLOY_TARGETS,
   JOBS_PROVIDERS,
   RATE_LIMIT_PROVIDERS,
   SEARCH_PROVIDERS,
@@ -146,6 +149,9 @@ const BaseEnvSchema = z.object({
   RATE_LIMIT_PROVIDER: z.enum(RATE_LIMIT_PROVIDERS).optional(),
   CONFIG_PROVIDER: z.enum(CONFIG_PROVIDERS).optional(),
   JOBS_PROVIDER: z.enum(JOBS_PROVIDERS).optional(),
+  DEPLOY_TARGET: z.enum(DEPLOY_TARGETS).optional(),
+  DEFERRED_PROVIDER: z.enum(DEFERRED_PROVIDERS).optional(),
+  ANALYTICS_PROVIDER: z.enum(ANALYTICS_PROVIDERS).optional(),
   EDGE_CONFIG: z.string().optional(),
   ALGOLIA_APP_ID: z.string().optional(),
   ALGOLIA_ADMIN_API_KEY: z.string().optional(),
@@ -158,6 +164,7 @@ const BaseEnvSchema = z.object({
   STORAGE_FALLBACK_VERCEL: z.string().optional(),
   STORAGE_FALLBACK_R2: z.string().optional(),
   STORAGE_FALLBACK_S3: z.string().optional(),
+  BLOB_READ_WRITE_TOKEN: z.string().optional(),
   S3_REGION: z.string().optional(),
   S3_BUCKET: z.string().optional(),
   S3_ACCESS_KEY_ID: z.string().optional(),
