@@ -1,10 +1,20 @@
 import type { NextConfig } from 'next'
 import { withSentryConfig } from '@sentry/nextjs'
 import createBundleAnalyzer from '@next/bundle-analyzer'
+import { resolveProviders } from './src/lib/providers/resolution'
 
 const withBundleAnalyzer = createBundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
 })
+
+// `next.config.ts` is the one place that is allowed to read `process.env`
+// directly for provider decisions — it runs before the app's env validation
+// layer exists, so it goes through the same resolution path (`resolveProviders`)
+// that every runtime call site uses, rather than re-implementing the
+// precedence rules here.
+const { deployTarget, selections } = resolveProviders(process.env)
+const isSelfHosted = deployTarget === 'self-hosted'
+const hasCacheBackend = selections.cache.provider !== 'none'
 
 const nextConfig: NextConfig = {
   // india-pincode reads data/pincodes.json.gz at runtime via fs —
@@ -40,6 +50,23 @@ const nextConfig: NextConfig = {
     // Category taxonomy (CACHE_TTL.CATEGORIES_LIST = 3600).
     taxonomy: { stale: 300, revalidate: 3600, expire: 86400 },
   },
+  // `output: 'standalone'` emits a self-contained `server.js` with only the
+  // `node_modules` the app actually needs — what a VM/container deploy wants.
+  // Vercel ignores this setting entirely, so it is only set when
+  // `DEPLOY_TARGET=self-hosted`; omitted (rather than always-on) to keep the
+  // Vercel build output byte-for-byte what it is today.
+  ...(isSelfHosted ? { output: 'standalone' as const } : {}),
+  // Redis-backed cache handler for Cache Components ("use cache") so
+  // `revalidateTag` propagates across instances instead of only affecting
+  // the process that received the request. Only wired up when self-hosted
+  // AND a cache backend is actually configured — otherwise Next.js's default
+  // in-memory/filesystem handler is exactly right for a single process.
+  ...(isSelfHosted && hasCacheBackend
+    ? {
+        cacheHandlers: { default: './src/lib/cache-handler.ts' },
+        cacheMaxMemorySize: 0,
+      }
+    : {}),
   images: {
     // A custom loader takes full ownership of image URL construction, so
     // Next.js forbids combining `loaderFile` with `remotePatterns`/`domains`
@@ -123,7 +150,10 @@ export default withBundleAnalyzer(
     // Upload a larger set of source maps for prettier stack traces (increases build time)
     widenClientFileUpload: true,
     sourcemaps: {
-      // Work around preview build ENOENT for middleware.js.nft.json after uploads.
+      // Vercel-only: works around a preview-build ENOENT for
+      // middleware.js.nft.json after uploads. `VERCEL`/`VERCEL_ENV` are never
+      // set off-Vercel, so this branch is inert (and therefore safe to keep
+      // unconditionally) on a self-hosted deploy.
       disable:
         process.env.VERCEL === '1' && process.env.VERCEL_ENV === 'preview',
     },
@@ -139,7 +169,11 @@ export default withBundleAnalyzer(
       // See the following for more information:
       // https://docs.sentry.io/product/crons/
       // https://vercel.com/docs/cron-jobs
-      automaticVercelMonitors: true,
+      //
+      // Gated on `DEPLOY_TARGET` rather than hardcoded `true`: Vercel Cron
+      // Monitors are a Vercel-platform feature, so instrumenting them off
+      // Vercel would just be dead weight.
+      automaticVercelMonitors: !isSelfHosted,
 
       // Tree-shaking options for reducing bundle size
       treeshake: {

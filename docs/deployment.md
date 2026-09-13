@@ -56,12 +56,52 @@ hostname, so the table below is the whole contract:
 | Rate limit | `RATE_LIMIT_PROVIDER` | `redis`, `upstash`, `memory`     | Upstash → Redis                            | `memory`      |
 | Config     | `CONFIG_PROVIDER`     | `environment`, `edge-config`     | Edge Config                                | `environment` |
 | Jobs       | `JOBS_PROVIDER`       | `inngest`, `inline`              | Inngest                                    | `inline`      |
+| Deferred   | `DEFERRED_PROVIDER`   | `vercel`, `process`              | `VERCEL` set → `vercel`                    | `process`     |
+| Analytics  | `ANALYTICS_PROVIDER`  | `vercel`, `none`                 | `VERCEL` set → `vercel`                    | `none`        |
 
-Precedence is: explicit selector, then inference from _which credentials are
-present_, then the default. Inference is what keeps a deployment that predates
-the selectors on the backend it already uses — existing `DATABASE_URL`,
+`deferred` selects how post-response background work (`waitUntil` calls such as
+stale-cache revalidation and best-effort email retries) is scheduled: `vercel`
+delegates to `@vercel/functions`'s `waitUntil`, and `process` runs the promise
+inline on the current, long-lived Node process and logs any rejection instead
+of letting it go unhandled. `analytics` gates whether `<Analytics>` /
+`<SpeedInsights>` from `@vercel/analytics` / `@vercel/speed-insights` mount at
+all — `none` renders nothing and never loads those packages.
+
+Precedence is four-tiered: explicit selector, then inference from _which
+credentials are present_, then a `DEPLOY_TARGET` preset (below), then the
+hardcoded default. Inference is what keeps a deployment that predates the
+selectors on the backend it already uses — existing `DATABASE_URL`,
 `READ_DATABASE_URL`, Upstash, R2, and Vercel Blob variables all remain accepted
 unchanged.
+
+#### `DEPLOY_TARGET` presets
+
+`DEPLOY_TARGET` (`vercel` | `self-hosted`, inferred from `process.env.VERCEL`
+when unset, default `vercel`) supplies a _preset of per-capability defaults_.
+It sits between credential inference and the hardcoded fallback in the
+precedence order above — it can never override an explicit selector or a
+credential-based inference, only the plain default a capability would
+otherwise fall back to.
+
+| Capability | `vercel` preset | `self-hosted` preset |
+| ---------- | --------------- | -------------------- |
+| Storage    | `vercel`        | `s3`                 |
+| Config     | `environment`   | `environment`        |
+| Deferred   | `vercel`        | `process`            |
+| Analytics  | `vercel`        | `none`               |
+| Jobs       | `inline`        | `inline`             |
+
+`database`, `cache`, `search`, and `rateLimit` have no `DEPLOY_TARGET` preset —
+they are external HTTP services (Postgres, Redis, Upstash) that work
+identically regardless of where the compute runs, so they are left to
+credential inference and the existing hardcoded default in both presets. The
+`vercel` preset reproduces today's exact fallbacks, so an existing Vercel
+deployment that sets none of these new variables is byte-for-byte unchanged.
+
+`summarizeProviders()`'s per-capability `source` field reports `preset` when a
+selection came from this tier (as distinct from `inferred` or `default`), and
+the summary surfaces the resolved `DEPLOY_TARGET` alongside the capability
+table.
 
 An **explicit** selection must be complete: `SEARCH_PROVIDER=algolia` without
 `ALGOLIA_ADMIN_API_KEY`, or `CACHE_PROVIDER=redis` without `REDIS_URL`, is rejected at
@@ -96,7 +136,10 @@ the database closed its own end, and the next query on it fails with
 For self-hosted deployments, the generic protocols — `postgres`, `redis`, and
 `s3` — are the recommended selections; managed values (`neon`, `upstash`,
 `vercel`, `edge-config`) remain available for deployments that need their
-specialized adapters.
+specialized adapters. Setting `DEPLOY_TARGET=self-hosted` supplies these as
+the default for `storage`, `config`, `deferred`, `jobs`, and `analytics`
+without requiring every selector to be set individually — see "`DEPLOY_TARGET`
+presets" above.
 
 `summarizeProviders()` renders the resolved selection, how each was chosen, and
 whether its credentials are complete, for startup or health diagnostics — see
