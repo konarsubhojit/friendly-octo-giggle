@@ -415,7 +415,7 @@ describe('resolveProviders — DEPLOY_TARGET presets', () => {
     expect(selections.storage.source).toBe('preset')
   })
 
-  it('reproduces every one of today\'s selections when DEPLOY_TARGET is unset on a Vercel-shaped env', () => {
+  it("reproduces every one of today's selections when DEPLOY_TARGET is unset on a Vercel-shaped env", () => {
     const vercelShapedEnv: ProviderEnvSource = { ...baseEnv, VERCEL: '1' }
     const { selections, issues, deployTarget } =
       resolveProviders(vercelShapedEnv)

@@ -23,9 +23,8 @@ describe('PlatformAnalytics', () => {
 
   it('renders nothing when the analytics provider is not vercel', async () => {
     mockGetProvider.mockReturnValue('none')
-    const { default: PlatformAnalytics } = await import(
-      '@/components/analytics/PlatformAnalytics'
-    )
+    const { default: PlatformAnalytics } =
+      await import('@/components/analytics/PlatformAnalytics')
 
     const result = await PlatformAnalytics()
 
@@ -35,9 +34,8 @@ describe('PlatformAnalytics', () => {
 
   it('renders Analytics and SpeedInsights when the analytics provider is vercel', async () => {
     mockGetProvider.mockReturnValue('vercel')
-    const { default: PlatformAnalytics } = await import(
-      '@/components/analytics/PlatformAnalytics'
-    )
+    const { default: PlatformAnalytics } =
+      await import('@/components/analytics/PlatformAnalytics')
 
     const result = await PlatformAnalytics()
 

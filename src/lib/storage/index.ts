@@ -1,6 +1,9 @@
 import { env } from '@/lib/env'
 import { logger } from '@/lib/logger'
-import { PROVIDER_REQUIRED_KEYS, resolveProviders } from '@/lib/providers/resolution'
+import {
+  PROVIDER_REQUIRED_KEYS,
+  resolveProviders,
+} from '@/lib/providers/resolution'
 import { createR2StorageAdapter } from './r2'
 import { createS3StorageAdapter } from './s3'
 import { createVercelStorageAdapter } from './vercel'
@@ -156,7 +159,9 @@ const hasRequiredKeys = (keys: readonly string[]): boolean =>
     return typeof value === 'string' && value.trim().length > 0
   })
 
-const isFallbackProviderConfigured = (provider: StorageProviderName): boolean => {
+const isFallbackProviderConfigured = (
+  provider: StorageProviderName
+): boolean => {
   if (provider === 'vercel') {
     return Boolean(env.BLOB_READ_WRITE_TOKEN?.trim())
   }
@@ -169,12 +174,14 @@ const FALLBACK_ENV_BY_PRIMARY: Record<StorageProviderName, keyof typeof env> = {
   s3: 'STORAGE_FALLBACK_S3',
 }
 
-const DEFAULT_FALLBACKS: Record<StorageProviderName, readonly StorageProviderName[]> =
-  {
-    vercel: ['r2', 's3'],
-    r2: ['vercel', 's3'],
-    s3: ['r2', 'vercel'],
-  }
+const DEFAULT_FALLBACKS: Record<
+  StorageProviderName,
+  readonly StorageProviderName[]
+> = {
+  vercel: ['r2', 's3'],
+  r2: ['vercel', 's3'],
+  s3: ['r2', 'vercel'],
+}
 
 const parseFallbackProviderList = (
   raw: string | undefined

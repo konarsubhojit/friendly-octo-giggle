@@ -13,9 +13,8 @@ export const createVercelDeferredRunner = (): DeferredRunner => ({
   provider: 'vercel',
 
   waitUntil(promise: Promise<unknown>): void {
-    const {
-      waitUntil,
-    } = require('@vercel/functions') as typeof import('@vercel/functions')
+    const { waitUntil } =
+      require('@vercel/functions') as typeof import('@vercel/functions')
     waitUntil(promise)
   },
 })

@@ -406,7 +406,9 @@ const normalizeAliases = (source: ProviderEnvSource): ProviderEnvSource => {
     S3_PUBLIC_BASE_URL: source.S3_PUBLIC_BASE_URL ?? source.R2_PUBLIC_BASE_URL,
     S3_ENDPOINT:
       source.S3_ENDPOINT ??
-      (r2AccountId ? `https://${r2AccountId}.r2.cloudflarestorage.com` : undefined),
+      (r2AccountId
+        ? `https://${r2AccountId}.r2.cloudflarestorage.com`
+        : undefined),
     S3_FORCE_PATH_STYLE:
       source.S3_FORCE_PATH_STYLE ?? (r2AccountId ? 'true' : undefined),
   }
@@ -434,12 +436,7 @@ export const resolveProviders = (
       issues
     ),
     cache: resolveCapability('cache', normalizedSource, deployTarget, issues),
-    search: resolveCapability(
-      'search',
-      normalizedSource,
-      deployTarget,
-      issues
-    ),
+    search: resolveCapability('search', normalizedSource, deployTarget, issues),
     storage: resolveCapability(
       'storage',
       normalizedSource,
@@ -452,12 +449,7 @@ export const resolveProviders = (
       deployTarget,
       issues
     ),
-    config: resolveCapability(
-      'config',
-      normalizedSource,
-      deployTarget,
-      issues
-    ),
+    config: resolveCapability('config', normalizedSource, deployTarget, issues),
     jobs: resolveCapability('jobs', normalizedSource, deployTarget, issues),
     deferred: resolveCapability(
       'deferred',

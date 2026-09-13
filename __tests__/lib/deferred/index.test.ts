@@ -65,9 +65,8 @@ describe('getDeferredRunner', () => {
 
   it('__resetDeferredRunnerForTests forces a fresh resolution', async () => {
     mockGetProvider.mockReturnValue('process')
-    const { getDeferredRunner, __resetDeferredRunnerForTests } = await import(
-      '@/lib/deferred'
-    )
+    const { getDeferredRunner, __resetDeferredRunnerForTests } =
+      await import('@/lib/deferred')
 
     getDeferredRunner()
     __resetDeferredRunnerForTests()
