@@ -325,7 +325,7 @@ const resolveDeployTarget = (source: ProviderEnvSource): DeployTarget => {
   ) {
     return requested as DeployTarget
   }
-  return isSet(source.VERCEL) ? 'vercel' : 'vercel'
+  return 'vercel'
 }
 
 const requiredKeysFor = (
