@@ -20,7 +20,7 @@ const isSelfHosted = deployTarget === 'self-hosted'
 // up the same way); wiring it for any other provider would silently turn
 // every cache read into a permanent miss, which is worse than Next's default
 // in-memory handler.
-const hasCacheBackend = selections.cache.provider === 'redis'
+const canUseRedisCacheHandler = selections.cache.provider === 'redis'
 
 const nextConfig: NextConfig = {
   // india-pincode reads data/pincodes.json.gz at runtime via fs —
@@ -67,7 +67,7 @@ const nextConfig: NextConfig = {
   // the process that received the request. Only wired up when self-hosted
   // AND a cache backend is actually configured — otherwise Next.js's default
   // in-memory/filesystem handler is exactly right for a single process.
-  ...(isSelfHosted && hasCacheBackend
+  ...(isSelfHosted && canUseRedisCacheHandler
     ? {
         // Next resolves a relative `cacheHandlers` path against the *build
         // output* directory, not the project root — it must be absolute.
