@@ -210,6 +210,8 @@ describe('resolveProviders — backward compatibility', () => {
       rateLimit: 'memory',
       config: 'environment',
       jobs: 'inline',
+      deferred: 'process',
+      analytics: 'none',
     })
   })
 
@@ -289,6 +291,155 @@ describe('resolveProviders — backward compatibility', () => {
 
   it('reports no deprecated aliases for a canonical environment', () => {
     expect(resolveProviders(baseEnv).deprecatedAliases).toEqual([])
+  })
+})
+
+describe('resolveProviders — DEPLOY_TARGET presets', () => {
+  it('resolves DEPLOY_TARGET=vercel with zero issues across all capabilities', () => {
+    const { selections, issues, deployTarget } = resolveProviders({
+      ...baseEnv,
+      DEPLOY_TARGET: 'vercel',
+      VERCEL: '1',
+    })
+
+    expect(deployTarget).toBe('vercel')
+    expect(issues).toEqual([])
+    expect(PROVIDER_CAPABILITIES.every((c) => selections[c].provider)).toBe(
+      true
+    )
+  })
+
+  it('resolves DEPLOY_TARGET=self-hosted with zero issues across all capabilities', () => {
+    const { selections, issues, deployTarget } = resolveProviders({
+      ...baseEnv,
+      DEPLOY_TARGET: 'self-hosted',
+      REDIS_URL: SECRETS.REDIS_URL,
+    })
+
+    expect(deployTarget).toBe('self-hosted')
+    expect(issues).toEqual([])
+    expect(PROVIDER_CAPABILITIES.every((c) => selections[c].provider)).toBe(
+      true
+    )
+  })
+
+  it('applies the self-hosted preset when nothing else decides a capability', () => {
+    const { selections } = resolveProviders({
+      ...baseEnv,
+      DEPLOY_TARGET: 'self-hosted',
+    })
+
+    expect(selections.storage).toMatchObject({
+      provider: 's3',
+      source: 'preset',
+    })
+    expect(selections.config).toMatchObject({
+      provider: 'environment',
+      source: 'preset',
+    })
+    expect(selections.deferred).toMatchObject({
+      provider: 'process',
+      source: 'preset',
+    })
+    expect(selections.analytics).toMatchObject({
+      provider: 'none',
+      source: 'preset',
+    })
+    expect(selections.jobs).toMatchObject({
+      provider: 'inline',
+      source: 'preset',
+    })
+  })
+
+  it('leaves database, cache, search, and rateLimit to inference under self-hosted', () => {
+    const { selections } = resolveProviders({
+      ...baseEnv,
+      DEPLOY_TARGET: 'self-hosted',
+      REDIS_URL: SECRETS.REDIS_URL,
+    })
+
+    expect(selections.cache).toMatchObject({
+      provider: 'redis',
+      source: 'inferred',
+    })
+    expect(selections.rateLimit).toMatchObject({
+      provider: 'redis',
+      source: 'inferred',
+    })
+    expect(selections.database).toMatchObject({
+      provider: 'postgres',
+      source: 'default',
+    })
+    expect(selections.search).toMatchObject({
+      provider: 'postgres',
+      source: 'default',
+    })
+  })
+
+  it('an explicit selector beats the self-hosted preset', () => {
+    const { selections } = resolveProviders({
+      ...baseEnv,
+      DEPLOY_TARGET: 'self-hosted',
+      STORAGE_PROVIDER: 'vercel',
+    })
+
+    expect(selections.storage).toMatchObject({
+      provider: 'vercel',
+      source: 'explicit',
+    })
+  })
+
+  it('credential inference beats the self-hosted preset', () => {
+    const { selections } = resolveProviders({
+      ...baseEnv,
+      DEPLOY_TARGET: 'self-hosted',
+      EDGE_CONFIG: SECRETS.EDGE_CONFIG,
+    })
+
+    expect(selections.config).toMatchObject({
+      provider: 'edge-config',
+      source: 'inferred',
+    })
+  })
+
+  it('the self-hosted preset beats the hardcoded fallback', () => {
+    const { selections } = resolveProviders({
+      ...baseEnv,
+      DEPLOY_TARGET: 'self-hosted',
+    })
+
+    // The documented hardcoded fallback for storage is `vercel`; the
+    // self-hosted preset overrides it to `s3` with no credentials required
+    // (inferred/defaulted/preset selections never raise issues).
+    expect(selections.storage.provider).toBe('s3')
+    expect(selections.storage.source).toBe('preset')
+  })
+
+  it("reproduces every one of today's selections when DEPLOY_TARGET is unset on a Vercel-shaped env", () => {
+    const vercelShapedEnv: ProviderEnvSource = { ...baseEnv, VERCEL: '1' }
+    const { selections, issues, deployTarget } =
+      resolveProviders(vercelShapedEnv)
+
+    expect(deployTarget).toBe('vercel')
+    expect(issues).toEqual([])
+    expect(
+      Object.fromEntries(
+        Object.values(selections).map((selection) => [
+          selection.capability,
+          selection.provider,
+        ])
+      )
+    ).toEqual({
+      database: 'postgres',
+      cache: 'none',
+      search: 'postgres',
+      storage: 'vercel',
+      rateLimit: 'memory',
+      config: 'environment',
+      jobs: 'inline',
+      deferred: 'vercel',
+      analytics: 'vercel',
+    })
   })
 })
 

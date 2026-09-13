@@ -40,12 +40,13 @@ vi.mock('react-hot-toast', () => ({
   Toaster: () => null,
 }))
 
-vi.mock('@vercel/analytics/next', () => ({
-  Analytics: () => <div data-testid="analytics" />,
-}))
-
-vi.mock('@vercel/speed-insights/next', () => ({
-  SpeedInsights: () => <div data-testid="speed-insights" />,
+vi.mock('@/components/analytics/PlatformAnalytics', () => ({
+  default: () => (
+    <>
+      <div data-testid="analytics" />
+      <div data-testid="speed-insights" />
+    </>
+  ),
 }))
 
 describe('app/layout.tsx', () => {
