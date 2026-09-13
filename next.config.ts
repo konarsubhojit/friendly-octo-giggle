@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import path from 'node:path'
 import { withSentryConfig } from '@sentry/nextjs'
 import createBundleAnalyzer from '@next/bundle-analyzer'
 import { resolveProviders } from './src/lib/providers/resolution'
@@ -14,7 +15,12 @@ const withBundleAnalyzer = createBundleAnalyzer({
 // precedence rules here.
 const { deployTarget, selections } = resolveProviders(process.env)
 const isSelfHosted = deployTarget === 'self-hosted'
-const hasCacheBackend = selections.cache.provider !== 'none'
+// The custom cache handler only supports the `redis` backend (see the
+// comment atop `src/lib/cache-handler.ts` for why `upstash` cannot be wired
+// up the same way); wiring it for any other provider would silently turn
+// every cache read into a permanent miss, which is worse than Next's default
+// in-memory handler.
+const hasCacheBackend = selections.cache.provider === 'redis'
 
 const nextConfig: NextConfig = {
   // india-pincode reads data/pincodes.json.gz at runtime via fs —
@@ -63,7 +69,11 @@ const nextConfig: NextConfig = {
   // in-memory/filesystem handler is exactly right for a single process.
   ...(isSelfHosted && hasCacheBackend
     ? {
-        cacheHandlers: { default: './src/lib/cache-handler.ts' },
+        // Next resolves a relative `cacheHandlers` path against the *build
+        // output* directory, not the project root — it must be absolute.
+        cacheHandlers: {
+          default: path.join(process.cwd(), 'src/lib/cache-handler.ts'),
+        },
         cacheMaxMemorySize: 0,
       }
     : {}),

@@ -81,18 +81,34 @@ TARGET` preset → hardcoded fallback. The `vercel` preset reproduces every
   when self-hosted (Vercel ignores the field, so it is simply omitted there
   rather than set redundantly). `cacheHandlers.default` and
   `cacheMaxMemorySize: 0` are wired to `src/lib/cache-handler.ts` only when
-  self-hosted _and_ a cache backend is actually configured — otherwise Next's
-  own in-memory handler is exactly right for a single Vercel-managed
-  invocation. `automaticVercelMonitors` is now `!isSelfHosted` rather than a
-  hardcoded `true`. The Sentry `sourcemaps.disable` branch keyed on
-  `VERCEL === '1' && VERCEL_ENV === 'preview'` is unchanged in behaviour — it
-  is still needed for Vercel preview builds — but now carries a comment
-  noting it is Vercel-only and inert elsewhere.
+  self-hosted _and_ the `cache` capability resolves specifically to `redis` —
+  otherwise Next's own in-memory handler is exactly right (a single Vercel
+  invocation, or a self-hosted deploy using `upstash`/`none` for which the
+  custom handler cannot be loaded — see below). `automaticVercelMonitors` is
+  now `!isSelfHosted` rather than a hardcoded `true`. The Sentry
+  `sourcemaps.disable` branch keyed on `VERCEL === '1' && VERCEL_ENV ===
+  'preview'` is unchanged in behaviour — it is still needed for Vercel preview
+  builds — but now carries a comment noting it is Vercel-only and inert
+  elsewhere.
 - **`src/lib/cache-handler.ts` — Redis-backed Cache Components handler.**
   Implements the Next.js 16 `CacheHandler` contract (`get`/`set`/
-  `refreshTags`/`getExpiration`/`updateTags`) entirely on top of the existing
-  `CacheClient` contract from `src/lib/cache/index.ts` — no new Redis client
-  or vendor SDK. Entries are stored as a single JSON document (base64-encoded
+  `refreshTags`/`getExpiration`/`updateTags`) on top of the existing
+  `CacheClient` contract — no new Redis client or vendor SDK is introduced.
+  Next.js loads `cacheHandlers.default` via a raw Node `import()` against the
+  given file path, bypassing the bundler entirely, so every module reachable
+  from this file must be resolvable by Node's own built-in (and limited)
+  TypeScript support: relative imports need an explicit `.ts` extension (see
+  `allowImportingTsExtensions` in `tsconfig.json`), the `@/*` alias is
+  unavailable, and non-erasable syntax (e.g. a parameter-property constructor)
+  is rejected outright. That rules out importing the client through
+  `src/lib/cache/index.ts` (its graph reaches `@/lib/env`, the Zod schema, and
+  the payments module) and rules out the `upstash` adapter (its
+  `UpstashPipeline` class uses a parameter-property constructor). The handler
+  therefore imports `getProvider` from `src/lib/providers/resolution.ts` and
+  `NodeRedisCacheClient` from `src/lib/cache/node-redis-adapter.ts` directly by
+  relative, extensioned path, and only supports the `redis` cache provider;
+  `next.config.ts` only wires it up when `cache` resolves to exactly `redis`
+  (see above). Entries are stored as a single JSON document (base64-encoded
   value bytes plus tags/timestamp/expire/revalidate metadata) under
   `nextcache:v1:entry:<key>`; each tag's most recent stale/expired timestamps
   are stored under `nextcache:v1:tag:<tag>` with a 30-day retention window so
@@ -102,9 +118,9 @@ TARGET` preset → hardcoded fallback. The `vercel` preset reproduces every
   its tags were revalidated after it was written; a tag marked merely stale
   (not expired) causes the entry to be served with `revalidate: -1` to force a
   background refresh. An `expire: 0` (fully dynamic) entry is never persisted.
-  When `getCacheClient()` returns `null` (no cache backend actually reachable
-  despite being configured), every operation degrades to an always-miss /
-  no-op — Next.js simply regenerates on every request rather than crashing.
+  When no Redis client is reachable, every operation degrades to an
+  always-miss / no-op — Next.js simply regenerates on every request rather
+  than crashing.
 - **Env schema.** `src/lib/validations/env.ts` accepts `DEPLOY_TARGET`,
   `DEFERRED_PROVIDER`, `ANALYTICS_PROVIDER` (all optional enums, validated
   against the same `*_PROVIDERS`/`DEPLOY_TARGETS` arrays used by the
@@ -139,7 +155,9 @@ TARGET` preset → hardcoded fallback. The `vercel` preset reproduces every
   `refreshTags`/`getExpiration`/`updateTags` on top of the existing
   `CacheClient` contract, MUST namespace its Redis keys separately from the
   application's own cache keys, and MUST degrade to a safe no-op/always-miss
-  behaviour when `getCacheClient()` returns `null`.
+  behaviour when no Redis client is reachable (including when `cache`
+  resolves to a provider, such as `upstash`, the handler cannot construct due
+  to Next's raw-import loading constraints).
 - **FR-008**: `next.config.ts` MUST NOT set `output: 'standalone'` or wire up
   `cacheHandlers` when `DEPLOY_TARGET` resolves to `vercel`.
 - **FR-009**: The environment schema MUST accept `DEPLOY_TARGET`,

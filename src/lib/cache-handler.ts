@@ -17,8 +17,66 @@
  * application's own Redis keys (see `src/lib/cache.ts`).
  */
 
-import { getCacheClient } from '@/lib/cache/index'
-import { logError } from '@/lib/logger'
+// This module is loaded directly by Next's cache-handler machinery via
+// Node's own raw ESM `import()`, not through the app's bundler: no `@/` path
+// alias, and every module reachable from here must resolve the same way —
+// plus Node's built-in TypeScript loader only supports "erasable" syntax
+// (no parameter properties, enums, etc.), which rules out
+// `src/lib/cache/upstash-adapter.ts` (its `UpstashPipeline` class uses a
+// parameter-property constructor). That rules out `src/lib/cache/index.ts`
+// too (it pulls in `@/lib/env`, which pulls in the Zod-validated env schema
+// and the payments module). `src/lib/providers/resolution.ts` and
+// `src/lib/cache/node-redis-adapter.ts` have neither issue, so the client is
+// constructed here directly from those, still going through
+// `getProvider('cache')` for the backend decision — only the *credential
+// values* are read from `process.env` directly below, mirroring the one
+// other sanctioned direct-`process.env` read site, `next.config.ts`. The
+// `upstash` provider degrades to "no cache handler" here (see below) since
+// its adapter cannot be loaded this way; Upstash is HTTP-based cross-instance
+// storage, so a self-hosted deploy using it doesn't need this handler at all.
+import { getProvider } from './providers/resolution.ts'
+import { NodeRedisCacheClient } from './cache/node-redis-adapter.ts'
+import type { CacheClient } from './cache/types.ts'
+import { logError } from './logger.ts'
+
+let cacheClientSingleton: CacheClient | null = null
+let cacheClientResolved = false
+
+const getCacheClient = (): CacheClient | null => {
+  if (cacheClientResolved) return cacheClientSingleton
+  cacheClientResolved = true
+
+  const provider = getProvider('cache')
+
+  switch (provider) {
+    case 'redis': {
+      const url = process.env.REDIS_URL
+      if (!url) return null
+      const client = new NodeRedisCacheClient(url, {
+        onError: (err) =>
+          logError({ error: err, context: 'node_redis_connection' }),
+      })
+      client
+        .connect()
+        .catch((err: unknown) =>
+          logError({ error: err, context: 'node_redis_initial_connect' })
+        )
+      cacheClientSingleton = client
+      return cacheClientSingleton
+    }
+
+    case 'upstash':
+    case 'none':
+    default:
+      return null
+  }
+}
+
+/** Exposed for tests that need to force re-resolution of the singleton. */
+export const __resetCacheHandlerClientForTests = (): void => {
+  cacheClientSingleton = null
+  cacheClientResolved = false
+}
 
 // ── Next.js cache handler contract ──────────────────────
 //

@@ -5,7 +5,7 @@ import {
   recordCacheMetric,
   recordCheckoutQueueLagMetric,
   recordOrderProcessingMetric,
-} from './metrics'
+} from './metrics.ts'
 
 // Create base logger configuration
 const isDevelopment = process.env.NODE_ENV === 'development'

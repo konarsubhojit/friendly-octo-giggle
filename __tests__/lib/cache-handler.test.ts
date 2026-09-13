@@ -1,12 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { CacheClient } from '@/lib/cache/types'
 
-const { mockGetCacheClient } = vi.hoisted(() => ({
-  mockGetCacheClient: vi.fn(),
+// `src/lib/cache-handler.ts` deliberately does not import `@/lib/cache/index`
+// (see the comment in that file) — it constructs the client itself from
+// `getProvider('cache')` plus the individual adapter classes, so those are
+// what this suite mocks instead.
+const { mockGetProvider } = vi.hoisted(() => ({
+  mockGetProvider: vi.fn(),
 }))
 
-vi.mock('@/lib/cache/index', () => ({
-  getCacheClient: mockGetCacheClient,
+vi.mock('@/lib/providers/resolution', () => ({
+  getProvider: mockGetProvider,
+}))
+
+const { mockNodeRedisCacheClient } = vi.hoisted(() => ({
+  mockNodeRedisCacheClient: vi.fn(),
+}))
+
+vi.mock('@/lib/cache/node-redis-adapter', () => ({
+  NodeRedisCacheClient: mockNodeRedisCacheClient,
 }))
 
 /**
@@ -64,10 +76,21 @@ const readStreamAsString = async (
 describe('cache-handler', () => {
   let fakeClient: CacheClient
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
     fakeClient = createFakeCacheClient()
-    mockGetCacheClient.mockReturnValue(fakeClient)
+    mockGetProvider.mockReturnValue('redis')
+    process.env.REDIS_URL = 'redis://localhost:6379'
+    mockNodeRedisCacheClient.mockImplementation(function () {
+      return {
+        ...fakeClient,
+        connect: vi.fn().mockResolvedValue(undefined),
+      }
+    })
+
+    const { __resetCacheHandlerClientForTests } =
+      await import('@/lib/cache-handler')
+    __resetCacheHandlerClientForTests()
   })
 
   it('round-trips a value through set then get', async () => {
@@ -191,8 +214,10 @@ describe('cache-handler', () => {
   })
 
   it('degrades to always-miss / no-op writes when no cache client is configured', async () => {
-    mockGetCacheClient.mockReturnValue(null)
-    const { default: cacheHandler } = await import('@/lib/cache-handler')
+    mockGetProvider.mockReturnValue('none')
+    const { __resetCacheHandlerClientForTests, default: cacheHandler } =
+      await import('@/lib/cache-handler')
+    __resetCacheHandlerClientForTests()
 
     await cacheHandler.set(
       'no-client-key',

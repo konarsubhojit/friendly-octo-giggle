@@ -141,6 +141,30 @@ the default for `storage`, `config`, `deferred`, `jobs`, and `analytics`
 without requiring every selector to be set individually — see "`DEPLOY_TARGET`
 presets" above.
 
+#### Cache Components handler on self-hosted (Redis only)
+
+When `DEPLOY_TARGET=self-hosted` and the `cache` capability resolves to
+`redis`, `next.config.ts` wires up `src/lib/cache-handler.ts` as the Cache
+Components (`"use cache"`) `cacheHandlers.default`, so `revalidateTag`
+propagates across every instance sharing that Redis rather than only the
+process that received the request. With `cache` resolved to `upstash` or
+`none`, Next's own default in-memory/filesystem handler is used instead — the
+custom handler is Redis-only because of how Next loads it (see below), and
+wiring it up for a provider it cannot serve would turn every cache read into a
+permanent miss, which is worse than doing nothing.
+
+Next.js loads `cacheHandlers.default` through a raw Node `import()` against
+the given file path — bypassing the app's bundler entirely, so the module and
+everything it imports must be resolvable by Node's own (limited) built-in
+TypeScript support: relative imports need an explicit `.ts` extension (hence
+`allowImportingTsExtensions` in `tsconfig.json`), the `@/*` path alias is
+unavailable, and constructs outside "erasable syntax" (such as a
+parameter-property constructor) are rejected. This is why
+`src/lib/cache-handler.ts` imports `src/lib/providers/resolution.ts` and
+`src/lib/cache/node-redis-adapter.ts` directly by relative path instead of
+going through `src/lib/cache/index.ts` — the latter's dependency graph
+(env validation, payments) is not reachable this way.
+
 `summarizeProviders()` renders the resolved selection, how each was chosen, and
 whether its credentials are complete, for startup or health diagnostics — see
 `getProviderSummary()`, exposed at `GET /api/health`. It carries no URLs,

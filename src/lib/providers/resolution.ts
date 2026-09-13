@@ -72,7 +72,7 @@ import {
   type RateLimitProvider,
   type SearchProvider,
   type StorageProvider,
-} from './types'
+} from './types.ts'
 
 export type ProviderEnvSource = Readonly<Record<string, string | undefined>>
 
