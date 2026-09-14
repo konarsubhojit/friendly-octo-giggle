@@ -375,9 +375,12 @@ with a custom `images.loader`).
 
 ## Platform-Specific Instructions
 
-For a fully self-hosted deployment — Next.js, Nginx, Postgres, Redis, and
-MinIO all on one VM instead of the managed platforms below — see
-[`docs/kamatera-deployment.md`](./kamatera-deployment.md).
+For a fully self-hosted deployment — Next.js, a reverse proxy, Postgres, Redis,
+and MinIO all on one VM instead of the managed platforms below — see
+[`docs/oracle-ampere-deployment.md`](./oracle-ampere-deployment.md) for the
+arm64 (Oracle Ampere A1) container stack in `deploy/`, or
+[`docs/kamatera-deployment.md`](./kamatera-deployment.md) for the same topology
+on an x86 VM with Nginx.
 
 ### 1. Vercel (Recommended)
 
