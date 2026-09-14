@@ -25,7 +25,8 @@ reuses the Postgres/PgBouncer topology described here.
 The `provider-matrix` job in `.github/workflows/build.yml` proves the
 self-hosted profile's adapters against real disposable services rather than
 mocks: `postgres:16-alpine` and `redis:7-alpine` run as job `services:`, and
-`minio/minio` is started as a plain container in a step (GitHub Actions
+the pinned `quay.io/minio/minio` image is started as a plain container in a
+step to avoid Docker Hub anonymous-pull denials (GitHub Actions
 `services:` cannot override a container's command, and MinIO's image needs
 `server /data` on its command line). The job applies migrations with
 `npm run db:migrate`, then runs three opt-in integration suites that are

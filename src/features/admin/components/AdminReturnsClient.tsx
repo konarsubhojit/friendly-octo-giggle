@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from 'react-redux'
 import { AdminDataView } from '@/features/admin/components/AdminDataView'
 import {
@@ -59,6 +60,7 @@ export function AdminReturnsClient({
   initialReturns,
   permissions,
 }: AdminReturnsClientProps) {
+  const router = useRouter()
   const dispatch = useDispatch<AdminDispatch>()
   const { filter, items, loading, error, decisionError } = useSelector(
     (state: AdminRootState) => state.returns
@@ -102,12 +104,10 @@ export function AdminReturnsClient({
         onRefund: () => {},
         onMarkCompleted: () => {},
         onViewOrder: (row) => {
-          globalThis.location.assign(
-            `/admin/orders?search=${encodeURIComponent(row.orderId)}`
-          )
+          router.push(`/admin/orders?search=${encodeURIComponent(row.orderId)}`)
         },
       }),
-    [permissions]
+    [permissions, router]
   )
 
   const returnRows = useMemo(() => items.map(toReturnRow), [items])
