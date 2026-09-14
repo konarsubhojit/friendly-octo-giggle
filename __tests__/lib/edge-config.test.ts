@@ -37,6 +37,34 @@ describe('edge-config', () => {
   })
 
   describe('getFeatureFlags', () => {
+    it('defaults every scheduled job flag to false and keeps them independent', () => {
+      const scheduledJobFlags = [
+        'enableStockReservationExpiryJob',
+        'enableProductAffinityJob',
+        'enableExchangeRateRefreshJob',
+        'enableAbandonedCartScanJob',
+        'enableActivityRetentionJob',
+        'enableFailedEmailRetryJob',
+      ] as const
+
+      expect(
+        scheduledJobFlags.every((flag) => DEFAULT_FEATURE_FLAGS[flag] === false)
+      ).toBe(true)
+
+      const enabledOnlyForStockExpiry = {
+        ...DEFAULT_FEATURE_FLAGS,
+        enableStockReservationExpiryJob: true,
+      }
+      expect(enabledOnlyForStockExpiry.enableStockReservationExpiryJob).toBe(
+        true
+      )
+      expect(
+        scheduledJobFlags
+          .filter((flag) => flag !== 'enableStockReservationExpiryJob')
+          .every((flag) => enabledOnlyForStockExpiry[flag] === false)
+      ).toBe(true)
+    })
+
     it('returns defaults when EDGE_CONFIG is not set', async () => {
       const { getFeatureFlags } = await import('@/lib/edge-config')
       const flags = await getFeatureFlags()

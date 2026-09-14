@@ -38,6 +38,24 @@ export const computeProductAffinityFunction = inngest.createFunction(
     retries: AFFINITY_RETRIES,
   },
   async ({ event, step }) => {
+    // The explicit admin event remains available even while the recurring run is
+    // disabled, so operators can refresh recommendations on demand.
+    const eventData = (event?.data ?? {}) as Record<string, unknown>
+    const triggeredBy =
+      typeof eventData.triggeredBy === 'string' ? eventData.triggeredBy : 'cron'
+    if (triggeredBy === 'cron') {
+      const { getFeatureFlags } = await import('@/lib/edge-config')
+      if (!(await getFeatureFlags()).enableProductAffinityJob) {
+        const { logBusinessEvent } = await import('@/lib/logger')
+        logBusinessEvent({
+          event: 'cron_product_affinity_skipped',
+          details: { reason: 'disabled' },
+          success: true,
+        })
+        return { skipped: true, reason: 'disabled' as const }
+      }
+    }
+
     const {
       batchAnchors,
       collectPurchasePairs,
@@ -51,13 +69,10 @@ export const computeProductAffinityFunction = inngest.createFunction(
     const startedAt = Date.now()
     // The cron trigger and the admin event trigger carry different payload
     // shapes, so the union has no shared members; read them as unknown values.
-    const eventData = (event?.data ?? {}) as Record<string, unknown>
     const windowDays =
       typeof eventData.windowDays === 'number'
         ? eventData.windowDays
         : AFFINITY_WINDOW_DAYS
-    const triggeredBy =
-      typeof eventData.triggeredBy === 'string' ? eventData.triggeredBy : 'cron'
 
     // Resolved once and memoized by the step, so a retry reuses the same
     // boundary. Recomputing `now()` per attempt would let the window drift and

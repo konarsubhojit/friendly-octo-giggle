@@ -35,7 +35,15 @@ The core storefront requires PostgreSQL and NextAuth configuration. Enable newer
 - Vercel Blob or S3-compatible storage: admin image upload. See [Image storage](#image-storage).
 - Web Push (VAPID) credentials: browser push notifications for order-status changes. See [Web push setup](#web-push-setup).
 - Sentry: server, edge, and browser tracing/error capture.
-- Edge Config: maintenance, sale, and shipping feature settings.
+- Edge Config: maintenance, sale, shipping, and independently controlled
+  scheduled-job feature settings. Every scheduled job is off until its own
+  `featureFlags` value is explicitly set to `true`: `enableStockReservationExpiryJob`
+  (`expire-stock-reservations`), `enableProductAffinityJob`
+  (`compute-product-affinity` cron), `enableExchangeRateRefreshJob`
+  (`refresh-exchange-rates`), `enableAbandonedCartScanJob`
+  (`scan-abandoned-carts`), `enableActivityRetentionJob` (`activity-retention`),
+  and `enableFailedEmailRetryJob` (`retry-failed-emails`). The explicit
+  affinity-recompute admin event remains available regardless of its cron flag.
 - Cron authorization: exchange-rate refresh and failed-email retry jobs.
 
 Unset optional integrations must be treated as disabled capabilities, not as reasons for the core application to fail startup.

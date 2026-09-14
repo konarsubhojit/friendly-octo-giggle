@@ -36,6 +36,17 @@ export const scanAbandonedCartsFunction = inngest.createFunction(
     retries: 2,
   },
   async ({ step }) => {
+    const { getFeatureFlags } = await import('@/lib/edge-config')
+    if (!(await getFeatureFlags()).enableAbandonedCartScanJob) {
+      const { logBusinessEvent } = await import('@/lib/logger')
+      logBusinessEvent({
+        event: 'cron_abandoned_cart_skipped',
+        details: { reason: 'disabled' },
+        success: true,
+      })
+      return { skipped: true, reason: 'disabled' as const }
+    }
+
     const candidates = await step.run('find-abandoned-carts', async () => {
       const { findAbandonedCartCandidates } =
         await import('@/features/cart/services/abandoned-cart-service')

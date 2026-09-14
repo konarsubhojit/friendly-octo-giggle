@@ -27,6 +27,17 @@ export const expireStockReservationsFunction = inngest.createFunction(
     retries: RESERVATION_EXPIRY_RETRIES,
   },
   async ({ step }) => {
+    const { getFeatureFlags } = await import('@/lib/edge-config')
+    if (!(await getFeatureFlags()).enableStockReservationExpiryJob) {
+      const { logBusinessEvent } = await import('@/lib/logger')
+      logBusinessEvent({
+        event: 'cron_stock_reservations_skipped',
+        details: { reason: 'disabled' },
+        success: true,
+      })
+      return { skipped: true, reason: 'disabled' as const }
+    }
+
     const settlement = await step.run('expire-due-reservations', async () => {
       const { expireDueReservations } =
         await import('@/features/orders/services/stock-reservation')

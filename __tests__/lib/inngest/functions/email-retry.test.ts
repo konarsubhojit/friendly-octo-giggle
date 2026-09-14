@@ -2,11 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   mockGetRetriableFailedEmails,
+  mockGetFeatureFlags,
   mockRetryFailedEmail,
   mockLogBusinessEvent,
   mockLogError,
 } = vi.hoisted(() => ({
   mockGetRetriableFailedEmails: vi.fn(),
+  mockGetFeatureFlags: vi.fn(),
   mockRetryFailedEmail: vi.fn(),
   mockLogBusinessEvent: vi.fn(),
   mockLogError: vi.fn(),
@@ -21,6 +23,7 @@ vi.mock('@/lib/logger', () => ({
   logBusinessEvent: mockLogBusinessEvent,
   logError: mockLogError,
 }))
+vi.mock('@/lib/edge-config', () => ({ getFeatureFlags: mockGetFeatureFlags }))
 
 import {
   EMAIL_RETRY_BATCH_SIZE,
@@ -58,9 +61,25 @@ const internals = (fn: unknown) => fn as FunctionInternals
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockGetFeatureFlags.mockResolvedValue({ enableFailedEmailRetryJob: true })
 })
 
 describe('retryFailedEmailsFunction', () => {
+  it('skips by default without loading failed emails', async () => {
+    mockGetFeatureFlags.mockResolvedValue({})
+
+    await expect(
+      internals(retryFailedEmailsFunction).fn({
+        step: { run: async (_id, handler) => handler() },
+      })
+    ).resolves.toEqual({ skipped: true, reason: 'disabled' })
+
+    expect(mockGetRetriableFailedEmails).not.toHaveBeenCalled()
+    expect(mockLogBusinessEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'cron_retry_emails_skipped' })
+    )
+  })
+
   it('queues retriable rows in batches of ten', async () => {
     mockGetRetriableFailedEmails.mockResolvedValue(
       Array.from({ length: EMAIL_RETRY_BATCH_SIZE + 2 }, (_, index) => ({
