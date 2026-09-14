@@ -99,13 +99,26 @@ describe.skipIf(!TEST_REDIS_URL)(
 
     it('scan walks keys and returns a numeric cursor', async () => {
       await client.set(`${KEY_PREFIX}string`, 'value')
-      const [cursor, keys] = await client.scan(0, {
-        match: `${KEY_PREFIX}string`,
-        count: 100,
-      })
-      expect(typeof cursor).toBe('number')
-      expect(Number.isNaN(cursor)).toBe(false)
-      expect(keys).toContain(`${KEY_PREFIX}string`)
+
+      // SCAN only guarantees a full sweep once the cursor comes back to 0, so
+      // iterate rather than trusting a single page to contain the key.
+      const seen: string[] = []
+      let cursor = 0
+      let iterations = 0
+      do {
+        const [next, keys] = await client.scan(cursor, {
+          match: `${KEY_PREFIX}*`,
+          count: 100,
+        })
+        expect(typeof next).toBe('number')
+        expect(Number.isNaN(next)).toBe(false)
+        seen.push(...keys)
+        cursor = next
+        iterations += 1
+      } while (cursor !== 0 && iterations < 100)
+
+      expect(cursor).toBe(0)
+      expect(seen).toContain(`${KEY_PREFIX}string`)
     })
   }
 )

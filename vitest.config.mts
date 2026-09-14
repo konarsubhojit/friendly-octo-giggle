@@ -18,12 +18,13 @@ export default defineConfig({
     environment: 'node',
     pool: 'threads',
     globals: true,
-    // Worker count is deliberately left to Vitest, which sizes the pool from
-    // the host's available parallelism. The previous fixed `maxWorkers: 16`
-    // was tuned for a wide self-hosted runner pool that no longer exists; on
-    // the 4-core `ubuntu-latest` runner that now runs the `test` job it
-    // oversubscribed the CPU badly enough that arbitrary tests blew the 5s
-    // default timeout, so the suite failed on a different file each run.
+    // Worker count and per-file concurrency are deliberately left to Vitest,
+    // which sizes them from the host's available parallelism. The previous
+    // fixed `maxWorkers: 16` / `maxConcurrency: 120` were tuned for a wide
+    // self-hosted runner pool that no longer exists; on the 4-core
+    // `ubuntu-latest` runner that now runs the `test` job that oversubscribed
+    // the CPU badly enough that arbitrary tests blew the 5s default timeout,
+    // so the suite failed on a different file each run.
     fileParallelism: true,
     env: {
       DATABASE_URL: 'postgresql://test:test@localhost:5432/test',

@@ -91,7 +91,7 @@ jobs:
       PG_USER: octo
       PG_PASSWORD: octo
       PG_HOST: localhost
-      PG_PORT: "5432"
+      PG_PORT: '5432'
       PG_DB: octo
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
