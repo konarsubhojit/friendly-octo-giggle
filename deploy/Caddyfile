@@ -1,0 +1,58 @@
+# Reverse proxy for the self-hosted profile.
+#
+# Caddy is the only process with a public listener. Everything it proxies to —
+# the app, Postgres, Redis, MinIO — is bound to loopback, matching the topology
+# in `docs/kamatera-deployment.md`.
+#
+# > This repository is public. `<domain>` and `<email>` below are placeholders.
+# > Never commit a real domain, address, or credential.
+#
+# Automatic TLS: naming a real hostname in the site block is all Caddy needs.
+# It provisions and renews a Let's Encrypt certificate on its own (HTTP-01 over
+# :80, so :80 must be reachable from the internet — see the double-gate section
+# of `docs/oracle-ampere-deployment.md`) and redirects http → https itself.
+#
+# ---------------------------------------------------------------------------
+# Security headers: deliberately NOT set here
+# ---------------------------------------------------------------------------
+# `next.config.ts`'s `headers()` already emits `Strict-Transport-Security`,
+# `Referrer-Policy`, and `Permissions-Policy` on every response. Adding them
+# again here would send each header twice, and duplicates are not additive: the
+# HSTS specification tells a user agent to ignore `Strict-Transport-Security`
+# entirely when it appears more than once, so doubling it silently turns HSTS
+# off. Set each header in exactly one layer; for these three that layer is the
+# application, so changing them means editing `next.config.ts`, not this file.
+
+{
+	# Replace with the address that should receive Let's Encrypt expiry notices.
+	email <email>
+}
+
+<domain> {
+	encode zstd gzip
+
+	# `.next/static` is content-addressed: the build hashes every filename, so a
+	# changed file is a changed URL and these can be cached immutably. Served
+	# straight off disk rather than through Node.
+	#
+	# Mount the image's `/app/.next/static` at `/srv/static` in the proxy
+	# container to use this. Drop the whole block if you would rather let the
+	# app serve them — it does so correctly, just less cheaply.
+	handle_path /_next/static/* {
+		root * /srv/static
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:3000 {
+			# Auth.js builds callback URLs from the forwarded host, so these
+			# must survive the hop. Pair them with `AUTH_TRUST_HOST=true` in the
+			# app's environment, otherwise Auth.js refuses to trust a forwarded
+			# host and OAuth redirects land on the wrong origin.
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-Host {host}
+			header_up X-Real-IP {remote_host}
+		}
+	}
+}

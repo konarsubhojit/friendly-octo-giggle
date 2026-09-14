@@ -1,0 +1,109 @@
+# Self-hosted stack for `DEPLOY_TARGET=self-hosted`.
+#
+# Topology matches `docs/kamatera-deployment.md`: app, postgres, redis and
+# minio bind to `127.0.0.1` only, and the reverse proxy is the single public
+# listener. Do not publish any other port on the VM's public interface.
+#
+#   docker compose -f deploy/docker-compose.yml up -d
+#
+# `deploy/.env.selfhost` is git-ignored — copy `.env.selfhost.example` to
+# create it. This repository is public; never commit real values.
+
+services:
+  app:
+    image: ${APP_IMAGE:-ghcr.io/OWNER/REPO:latest}
+    restart: unless-stopped
+    # The long form with `required: false` keeps `docker compose config` — and
+    # therefore CI validation of this file — working on a checkout that has no
+    # `.env.selfhost`. The short `env_file: [.env.selfhost]` form is a hard
+    # error when the file is absent.
+    env_file:
+      - path: .env.selfhost
+        required: false
+    environment:
+      NODE_ENV: production
+      DEPLOY_TARGET: self-hosted
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    ports:
+      - '127.0.0.1:3000:3000' # loopback only — the proxy is the public edge
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    mem_limit: 1536m
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-octo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-in-env-selfhost}
+      POSTGRES_DB: ${POSTGRES_DB:-octo}
+    ports:
+      - '127.0.0.1:5432:5432' # loopback only
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-octo}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # `shared_buffers` should be ~25% of this ceiling, not of the VM's total RAM.
+    mem_limit: 1024m
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Cache and mirror data only, never authoritative — so an LRU eviction
+    # policy is correct and losing the dataset costs a cold cache, nothing more.
+    command: >-
+      redis-server --maxmemory 200mb --maxmemory-policy allkeys-lru
+      --save 60 1000
+    ports:
+      - '127.0.0.1:6379:6379' # loopback only
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    mem_limit: 256m
+
+  minio:
+    image: minio/minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-change-me-in-env-selfhost}
+    ports:
+      - '127.0.0.1:9000:9000' # S3 API — reachable only through the app
+      - '127.0.0.1:9001:9001' # console — reach it over an SSH tunnel
+    volumes:
+      - miniodata:/data
+    mem_limit: 512m
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    # The only service with a public listener. :80 must stay open for the
+    # Let's Encrypt HTTP-01 challenge and the http → https redirect.
+    # `network_mode: host` is what lets `reverse_proxy 127.0.0.1:3000` in the
+    # Caddyfile reach the app's loopback-published port.
+    network_mode: host
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    depends_on:
+      - app
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
+  caddydata:
+  caddyconfig:

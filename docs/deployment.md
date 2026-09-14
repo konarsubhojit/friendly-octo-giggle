@@ -648,16 +648,16 @@ railway run npm run db:migrate
 `database-migrations-production` **before** `deploy-preview` /
 `deploy-production`. A deploy is blocked if its migration job fails.
 
-`.github/workflows/build-self-hosted.yml` defines the same migration and deploy
-jobs on the same triggers, and the two workflows have separate `concurrency`
-groups, so a push to `develop` or `master` currently runs each of them twice —
-once on a GitHub-hosted runner and once on the self-hosted pool — with nothing
-serialising the two. Sequentially, `db:migrate` is idempotent and the second run
-applies nothing; concurrently, both runs can read the same set of unapplied
-migrations before either records one. Decide which pool owns the deployment
-path and remove the migration and deploy jobs from the other workflow. Until
-then, treat a double preview deployment on a single push as expected rather
-than as a symptom.
+`build.yml` is the **sole owner** of the migration and deploy path. No other
+workflow in this repository runs `db:migrate` or deploys to Vercel, so a push to
+`develop` or `master` applies each pending migration exactly once. Keep it that
+way: a second workflow defining the same jobs on the same triggers would have
+its own `concurrency` group, and two concurrent runs can each read the same set
+of unapplied migrations before either records one.
+
+`.github/workflows/deploy-selfhost.yml` builds and publishes the self-hosted
+container image, but it is `workflow_dispatch`-only and touches neither the
+database nor Vercel, so it cannot race this path.
 
 Running migrations after the deploy would leave the new code serving live
 traffic against the old schema for the whole duration of the migration job:
