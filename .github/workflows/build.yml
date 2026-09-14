@@ -91,7 +91,7 @@ jobs:
       PG_USER: octo
       PG_PASSWORD: octo
       PG_HOST: localhost
-      PG_PORT: "5432"
+      PG_PORT: '5432'
       PG_DB: octo
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
@@ -117,7 +117,7 @@ jobs:
             -e MINIO_ROOT_USER="$MINIO_ROOT_USER" \
             -e MINIO_ROOT_PASSWORD="$MINIO_ROOT_PASSWORD" \
             minio/minio server /data
-          for i in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             curl -fs http://localhost:9000/minio/health/live && break
             sleep 1
           done
