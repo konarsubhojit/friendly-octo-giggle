@@ -84,5 +84,28 @@ describe.skipIf(!TEST_REDIS_URL)(
       await expect(client.del(`${KEY_PREFIX}string`)).resolves.toBe(1)
       await expect(client.get(`${KEY_PREFIX}string`)).resolves.toBeNull()
     })
+
+    // node-redis speaks the raw protocol here — EXPIRE answers 1/0 and SCAN
+    // takes and returns a string cursor — so these two commands are where the
+    // adapter's normalization to the `CacheClient` contract can silently rot
+    // against a real server without the fake in `contract.test.ts` noticing.
+    it('expire reports whether the key existed', async () => {
+      await client.set(`${KEY_PREFIX}string`, 'value')
+      await expect(client.expire(`${KEY_PREFIX}string`, 60)).resolves.toBe(true)
+      await expect(client.expire(`${KEY_PREFIX}absent`, 60)).resolves.toBe(
+        false
+      )
+    })
+
+    it('scan walks keys and returns a numeric cursor', async () => {
+      await client.set(`${KEY_PREFIX}string`, 'value')
+      const [cursor, keys] = await client.scan(0, {
+        match: `${KEY_PREFIX}string`,
+        count: 100,
+      })
+      expect(typeof cursor).toBe('number')
+      expect(Number.isNaN(cursor)).toBe(false)
+      expect(keys).toContain(`${KEY_PREFIX}string`)
+    })
   }
 )
