@@ -95,8 +95,15 @@ const fakeNodeRedisClient = {
       store.sets.delete(key)
     return existed ? 1 : 0
   }),
-  expire: vi.fn(async () => true),
-  scan: vi.fn(async () => ({ cursor: 0, keys: [] })),
+  // node-redis replies with the raw protocol values: EXPIRE answers 1/0, and
+  // SCAN takes and returns its cursor as a string. The adapter is what
+  // normalizes them to the boolean/number the `CacheClient` contract promises,
+  // so the fake must not pre-normalize them or it would hide that conversion.
+  expire: vi.fn(async (key: string) => (store.strings.has(key) ? 1 : 0)),
+  scan: vi.fn(async (_cursor: string) => ({
+    cursor: '0',
+    keys: [...store.strings.keys()],
+  })),
   eval: vi.fn(async () => 1),
   multi: vi.fn(() => ({
     del: vi.fn().mockReturnThis(),
@@ -186,8 +193,8 @@ const fakeUpstashRedis = {
       store.sets.delete(key)
     return existed ? 1 : 0
   }),
-  expire: vi.fn(async () => 1),
-  scan: vi.fn(async () => [0, []]),
+  expire: vi.fn(async (key: string) => (store.strings.has(key) ? 1 : 0)),
+  scan: vi.fn(async () => ['0', [...store.strings.keys()]]),
   eval: vi.fn(async () => 1),
   pipeline: vi.fn(() => ({
     del: vi.fn().mockReturnThis(),
@@ -275,6 +282,26 @@ describe('CacheClient contract', () => {
     await expect(client.del('to-delete')).resolves.toBe(1)
     await expect(client.get('to-delete')).resolves.toBeNull()
   })
+
+  it.each(buildAdapters())(
+    '$name: expire reports success as a boolean, not the raw reply',
+    async ({ client }) => {
+      await client.set('expiring', 'value')
+      await expect(client.expire('expiring', 60)).resolves.toBe(true)
+      await expect(client.expire('missing', 60)).resolves.toBe(false)
+    }
+  )
+
+  it.each(buildAdapters())(
+    '$name: scan returns a numeric cursor and the matched keys',
+    async ({ client }) => {
+      await client.set('scanned', 'value')
+      await expect(client.scan(0, { match: '*' })).resolves.toEqual([
+        0,
+        ['scanned'],
+      ])
+    }
+  )
 
   it.each(buildAdapters())(
     '$name: reports isReady true once connected',

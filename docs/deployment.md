@@ -35,7 +35,15 @@ The core storefront requires PostgreSQL and NextAuth configuration. Enable newer
 - Vercel Blob or S3-compatible storage: admin image upload. See [Image storage](#image-storage).
 - Web Push (VAPID) credentials: browser push notifications for order-status changes. See [Web push setup](#web-push-setup).
 - Sentry: server, edge, and browser tracing/error capture.
-- Edge Config: maintenance, sale, and shipping feature settings.
+- Edge Config: maintenance, sale, shipping, and independently controlled
+  scheduled-job feature settings. Every scheduled job is off until its own
+  `featureFlags` value is explicitly set to `true`: `enableStockReservationExpiryJob`
+  (`expire-stock-reservations`), `enableProductAffinityJob`
+  (`compute-product-affinity` cron), `enableExchangeRateRefreshJob`
+  (`refresh-exchange-rates`), `enableAbandonedCartScanJob`
+  (`scan-abandoned-carts`), `enableActivityRetentionJob` (`activity-retention`),
+  and `enableFailedEmailRetryJob` (`retry-failed-emails`). The explicit
+  affinity-recompute admin event remains available regardless of its cron flag.
 - Cron authorization: exchange-rate refresh and failed-email retry jobs.
 
 Unset optional integrations must be treated as disabled capabilities, not as reasons for the core application to fail startup.
@@ -56,12 +64,52 @@ hostname, so the table below is the whole contract:
 | Rate limit | `RATE_LIMIT_PROVIDER` | `redis`, `upstash`, `memory`     | Upstash → Redis                            | `memory`      |
 | Config     | `CONFIG_PROVIDER`     | `environment`, `edge-config`     | Edge Config                                | `environment` |
 | Jobs       | `JOBS_PROVIDER`       | `inngest`, `inline`              | Inngest                                    | `inline`      |
+| Deferred   | `DEFERRED_PROVIDER`   | `vercel`, `process`              | `VERCEL` set → `vercel`                    | `process`     |
+| Analytics  | `ANALYTICS_PROVIDER`  | `vercel`, `none`                 | `VERCEL` set → `vercel`                    | `none`        |
 
-Precedence is: explicit selector, then inference from _which credentials are
-present_, then the default. Inference is what keeps a deployment that predates
-the selectors on the backend it already uses — existing `DATABASE_URL`,
+`deferred` selects how post-response background work (`waitUntil` calls such as
+stale-cache revalidation and best-effort email retries) is scheduled: `vercel`
+delegates to `@vercel/functions`'s `waitUntil`, and `process` runs the promise
+inline on the current, long-lived Node process and logs any rejection instead
+of letting it go unhandled. `analytics` gates whether `<Analytics>` /
+`<SpeedInsights>` from `@vercel/analytics` / `@vercel/speed-insights` mount at
+all — `none` renders nothing and never loads those packages.
+
+Precedence is four-tiered: explicit selector, then inference from _which
+credentials are present_, then a `DEPLOY_TARGET` preset (below), then the
+hardcoded default. Inference is what keeps a deployment that predates the
+selectors on the backend it already uses — existing `DATABASE_URL`,
 `READ_DATABASE_URL`, Upstash, R2, and Vercel Blob variables all remain accepted
 unchanged.
+
+#### `DEPLOY_TARGET` presets
+
+`DEPLOY_TARGET` (`vercel` | `self-hosted`, inferred from `process.env.VERCEL`
+when unset, default `vercel`) supplies a _preset of per-capability defaults_.
+It sits between credential inference and the hardcoded fallback in the
+precedence order above — it can never override an explicit selector or a
+credential-based inference, only the plain default a capability would
+otherwise fall back to.
+
+| Capability | `vercel` preset | `self-hosted` preset |
+| ---------- | --------------- | -------------------- |
+| Storage    | `vercel`        | `s3`                 |
+| Config     | `environment`   | `environment`        |
+| Deferred   | `vercel`        | `process`            |
+| Analytics  | `vercel`        | `none`               |
+| Jobs       | `inline`        | `inline`             |
+
+`database`, `cache`, `search`, and `rateLimit` have no `DEPLOY_TARGET` preset —
+they are external HTTP services (Postgres, Redis, Upstash) that work
+identically regardless of where the compute runs, so they are left to
+credential inference and the existing hardcoded default in both presets. The
+`vercel` preset reproduces today's exact fallbacks, so an existing Vercel
+deployment that sets none of these new variables is byte-for-byte unchanged.
+
+`summarizeProviders()`'s per-capability `source` field reports `preset` when a
+selection came from this tier (as distinct from `inferred` or `default`), and
+the summary surfaces the resolved `DEPLOY_TARGET` alongside the capability
+table.
 
 An **explicit** selection must be complete: `SEARCH_PROVIDER=algolia` without
 `ALGOLIA_ADMIN_API_KEY`, or `CACHE_PROVIDER=redis` without `REDIS_URL`, is rejected at
@@ -96,7 +144,34 @@ the database closed its own end, and the next query on it fails with
 For self-hosted deployments, the generic protocols — `postgres`, `redis`, and
 `s3` — are the recommended selections; managed values (`neon`, `upstash`,
 `vercel`, `edge-config`) remain available for deployments that need their
-specialized adapters.
+specialized adapters. Setting `DEPLOY_TARGET=self-hosted` supplies these as
+the default for `storage`, `config`, `deferred`, `jobs`, and `analytics`
+without requiring every selector to be set individually — see "`DEPLOY_TARGET`
+presets" above.
+
+#### Cache Components handler on self-hosted (Redis only)
+
+When `DEPLOY_TARGET=self-hosted` and the `cache` capability resolves to
+`redis`, `next.config.ts` wires up `src/lib/cache-handler.ts` as the Cache
+Components (`"use cache"`) `cacheHandlers.default`, so `revalidateTag`
+propagates across every instance sharing that Redis rather than only the
+process that received the request. With `cache` resolved to `upstash` or
+`none`, Next's own default in-memory/filesystem handler is used instead — the
+custom handler is Redis-only because of how Next loads it (see below), and
+wiring it up for a provider it cannot serve would turn every cache read into a
+permanent miss, which is worse than doing nothing.
+
+Next.js loads `cacheHandlers.default` through a raw Node `import()` against
+the given file path — bypassing the app's bundler entirely, so the module and
+everything it imports must be resolvable by Node's own (limited) built-in
+TypeScript support: relative imports need an explicit `.ts` extension (hence
+`allowImportingTsExtensions` in `tsconfig.json`), the `@/*` path alias is
+unavailable, and constructs outside "erasable syntax" (such as a
+parameter-property constructor) are rejected. This is why
+`src/lib/cache-handler.ts` imports `src/lib/providers/resolution.ts` and
+`src/lib/cache/node-redis-adapter.ts` directly by relative path instead of
+going through `src/lib/cache/index.ts` — the latter's dependency graph
+(env validation, payments) is not reachable this way.
 
 `summarizeProviders()` renders the resolved selection, how each was chosen, and
 whether its credentials are complete, for startup or health diagnostics — see
@@ -308,9 +383,12 @@ with a custom `images.loader`).
 
 ## Platform-Specific Instructions
 
-For a fully self-hosted deployment — Next.js, Nginx, Postgres, Redis, and
-MinIO all on one VM instead of the managed platforms below — see
-[`docs/kamatera-deployment.md`](./kamatera-deployment.md).
+For a fully self-hosted deployment — Next.js, a reverse proxy, Postgres, Redis,
+and MinIO all on one VM instead of the managed platforms below — see
+[`docs/oracle-ampere-deployment.md`](./oracle-ampere-deployment.md) for the
+arm64 (Oracle Ampere A1) container stack in `deploy/`, or
+[`docs/kamatera-deployment.md`](./kamatera-deployment.md) for the same topology
+on an x86 VM with Nginx.
 
 ### 1. Vercel (Recommended)
 
@@ -581,16 +659,16 @@ railway run npm run db:migrate
 `database-migrations-production` **before** `deploy-preview` /
 `deploy-production`. A deploy is blocked if its migration job fails.
 
-`.github/workflows/build-self-hosted.yml` defines the same migration and deploy
-jobs on the same triggers, and the two workflows have separate `concurrency`
-groups, so a push to `develop` or `master` currently runs each of them twice —
-once on a GitHub-hosted runner and once on the self-hosted pool — with nothing
-serialising the two. Sequentially, `db:migrate` is idempotent and the second run
-applies nothing; concurrently, both runs can read the same set of unapplied
-migrations before either records one. Decide which pool owns the deployment
-path and remove the migration and deploy jobs from the other workflow. Until
-then, treat a double preview deployment on a single push as expected rather
-than as a symptom.
+`build.yml` is the **sole owner** of the migration and deploy path. No other
+workflow in this repository runs `db:migrate` or deploys to Vercel, so a push to
+`develop` or `master` applies each pending migration exactly once. Keep it that
+way: a second workflow defining the same jobs on the same triggers would have
+its own `concurrency` group, and two concurrent runs can each read the same set
+of unapplied migrations before either records one.
+
+`.github/workflows/deploy-selfhost.yml` builds and publishes the self-hosted
+container image, but it is `workflow_dispatch`-only and touches neither the
+database nor Vercel, so it cannot race this path.
 
 Running migrations after the deploy would leave the new code serving live
 traffic against the old schema for the whole duration of the migration job:

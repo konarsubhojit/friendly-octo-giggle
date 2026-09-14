@@ -22,6 +22,7 @@ const mockEnv = vi.hoisted(() => ({
   R2_SECRET_ACCESS_KEY: undefined as string | undefined,
   R2_BUCKET: undefined as string | undefined,
   R2_PUBLIC_BASE_URL: undefined as string | undefined,
+  BLOB_READ_WRITE_TOKEN: undefined as string | undefined,
 }))
 
 vi.mock('@/lib/env', () => ({ env: mockEnv }))
@@ -63,7 +64,7 @@ beforeEach(() => {
   mockEnv.R2_SECRET_ACCESS_KEY = undefined
   mockEnv.R2_BUCKET = undefined
   mockEnv.R2_PUBLIC_BASE_URL = undefined
-  vi.stubEnv('BLOB_READ_WRITE_TOKEN', '')
+  mockEnv.BLOB_READ_WRITE_TOKEN = undefined
   vi.resetModules()
 })
 
@@ -149,7 +150,7 @@ describe('resolveStorageUrl', () => {
 
   it('falls back to vercel and logs a warning when r2 is missing the object', async () => {
     mockEnv.STORAGE_PROVIDER = 'r2'
-    vi.stubEnv('BLOB_READ_WRITE_TOKEN', 'token')
+    mockEnv.BLOB_READ_WRITE_TOKEN = 'token'
     const r2GetUrl = vi.fn().mockResolvedValue(null)
     const vercelGetUrl = vi
       .fn()
@@ -175,7 +176,7 @@ describe('resolveStorageUrl', () => {
 
   it('falls back from vercel to r2 when vercel is the active provider', async () => {
     mockEnv.STORAGE_PROVIDER = 'vercel'
-    vi.stubEnv('BLOB_READ_WRITE_TOKEN', 'token')
+    mockEnv.BLOB_READ_WRITE_TOKEN = 'token'
     mockEnv.R2_ACCOUNT_ID = 'acct'
     mockEnv.R2_ACCESS_KEY_ID = 'ak'
     mockEnv.R2_SECRET_ACCESS_KEY = 'sk'
@@ -201,7 +202,7 @@ describe('resolveStorageUrl', () => {
 
   it('returns null and logs an error when both providers miss', async () => {
     mockEnv.STORAGE_PROVIDER = 'r2'
-    vi.stubEnv('BLOB_READ_WRITE_TOKEN', 'token')
+    mockEnv.BLOB_READ_WRITE_TOKEN = 'token'
     const r2GetUrl = vi.fn().mockResolvedValue(null)
     const vercelGetUrl = vi.fn().mockResolvedValue(null)
     mockCreateR2Adapter.mockReturnValue(makeAdapter('r2', r2GetUrl))
@@ -253,7 +254,7 @@ describe('resolveStorageUrl', () => {
     mockEnv.S3_ACCESS_KEY_ID = 'ak'
     mockEnv.S3_SECRET_ACCESS_KEY = 'sk'
     mockEnv.S3_PUBLIC_BASE_URL = 'https://s3.example.com'
-    vi.stubEnv('BLOB_READ_WRITE_TOKEN', 'token')
+    mockEnv.BLOB_READ_WRITE_TOKEN = 'token'
     mockEnv.R2_ACCOUNT_ID = 'acct'
     mockEnv.R2_ACCESS_KEY_ID = 'ak'
     mockEnv.R2_SECRET_ACCESS_KEY = 'sk'
@@ -284,7 +285,7 @@ describe('resolveStorageUrl', () => {
     mockEnv.S3_ACCESS_KEY_ID = 'ak'
     mockEnv.S3_SECRET_ACCESS_KEY = 'sk'
     mockEnv.S3_PUBLIC_BASE_URL = 'https://s3.example.com'
-    vi.stubEnv('BLOB_READ_WRITE_TOKEN', 'token')
+    mockEnv.BLOB_READ_WRITE_TOKEN = 'token'
     const s3GetUrl = vi.fn().mockRejectedValue(new Error('s3 unavailable'))
     const vercelGetUrl = vi
       .fn()

@@ -23,9 +23,9 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          # Must match the Node version used by build.yml and
-          # build-self-hosted.yml, otherwise the agent validates changes on a
-          # different runtime than the one that gates the pull request.
+          # Must match the Node version used by build.yml and by the
+          # Dockerfile, otherwise the agent validates changes on a different
+          # runtime than the one that gates the pull request.
           node-version: '24'
           cache: 'npm'
 

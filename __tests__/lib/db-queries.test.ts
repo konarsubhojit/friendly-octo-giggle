@@ -285,6 +285,7 @@ vi.mock('drizzle-orm', () => {
   }))
   return {
     eq: vi.fn((...args: unknown[]) => ({ op: 'eq', args })),
+    count: vi.fn(),
     desc: vi.fn((col: unknown) => ({ op: 'desc', col })),
     and: vi.fn((...args: unknown[]) => ({ op: 'and', args })),
     isNull: vi.fn((col: unknown) => ({ op: 'isNull', col })),
@@ -835,6 +836,59 @@ describe('db.users', () => {
 
       expect(result).toBe(false)
     })
+  })
+})
+
+describe('db.coupons', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('bounds coupon lists with the default page', async () => {
+    const chain = {
+      from: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      offset: vi.fn().mockResolvedValue([]),
+    }
+    mockSelect.mockReturnValue(chain)
+
+    await db.coupons.findAll()
+
+    expect(chain.limit).toHaveBeenCalledWith(200)
+    expect(chain.offset).toHaveBeenCalledWith(0)
+  })
+
+  it('caps requested coupon pages at 200 rows', async () => {
+    const chain = {
+      from: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      offset: vi.fn().mockResolvedValue([]),
+    }
+    mockSelect.mockReturnValue(chain)
+
+    await db.coupons.findAll(500, 25)
+
+    expect(chain.limit).toHaveBeenCalledWith(200)
+    expect(chain.offset).toHaveBeenCalledWith(25)
+  })
+
+  it('bounds redemption summaries with the default page', async () => {
+    const chain = {
+      from: vi.fn().mockReturnThis(),
+      leftJoin: vi.fn().mockReturnThis(),
+      groupBy: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      offset: vi.fn().mockResolvedValue([]),
+    }
+    mockSelect.mockReturnValue(chain)
+
+    await db.coupons.redemptionSummary()
+
+    expect(chain.limit).toHaveBeenCalledWith(200)
+    expect(chain.offset).toHaveBeenCalledWith(0)
   })
 })
 

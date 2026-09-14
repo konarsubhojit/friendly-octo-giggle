@@ -29,6 +29,9 @@ yarn-error.log*
 .env
 .env*.dev*
 .env *
+# Self-hosted deployment secrets. `deploy/.env.selfhost.example` stays tracked
+# as the template; the filled-in copy beside it must never be committed.
+deploy/.env.selfhost
 
 # Vercel
 .vercel

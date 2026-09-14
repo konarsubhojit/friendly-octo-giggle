@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { inngestFunctions } from '@/lib/inngest/registry'
+import { DEFAULT_FEATURE_FLAGS } from '@/lib/edge-config'
 
 /** Every function the migration depends on. A missing id means dead code. */
 const EXPECTED_FUNCTION_IDS = [
@@ -38,5 +39,28 @@ describe('inngest registry', () => {
   it('has no duplicate function ids', () => {
     const ids = functionIds()
     expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it('maps every registered cron function to a dedicated default-off flag', () => {
+    const cronJobFlags = {
+      'activity-retention': 'enableActivityRetentionJob',
+      'retry-failed-emails': 'enableFailedEmailRetryJob',
+      'scan-abandoned-carts': 'enableAbandonedCartScanJob',
+      'refresh-exchange-rates': 'enableExchangeRateRefreshJob',
+      'expire-stock-reservations': 'enableStockReservationExpiryJob',
+      'compute-product-affinity': 'enableProductAffinityJob',
+    } as const
+    const cronIds = inngestFunctions
+      .filter((fn) =>
+        (
+          fn as unknown as { opts: { triggers: Array<{ cron?: string }> } }
+        ).opts.triggers.some((trigger) => trigger.cron)
+      )
+      .map((fn) => (fn as unknown as { opts: { id: string } }).opts.id)
+
+    expect(cronIds.sort()).toEqual(Object.keys(cronJobFlags).sort())
+    for (const flag of Object.values(cronJobFlags)) {
+      expect(DEFAULT_FEATURE_FLAGS[flag]).toBe(false)
+    }
   })
 })

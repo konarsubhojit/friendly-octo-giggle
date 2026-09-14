@@ -1,8 +1,14 @@
 import { NextRequest } from 'next/server'
 import { drizzleDb } from '@/lib/db'
-import { users } from '@/lib/schema'
-import { desc, lt, ilike, and, or, SQL, count } from 'drizzle-orm'
-import { apiSuccess, apiError, handleApiError } from '@/lib/api-utils'
+import { orders, users } from '@/lib/schema'
+import { desc, lt, ilike, and, or, SQL, count, inArray } from 'drizzle-orm'
+import {
+  apiSuccess,
+  apiError,
+  getAdminOffsetLimitError,
+  handleApiError,
+  parseOffsetParam,
+} from '@/lib/api-utils'
 import { checkAdminAuth } from '@/features/admin/services/admin-auth'
 import { cacheAdminUsersList } from '@/lib/cache'
 
@@ -17,10 +23,14 @@ const parseLimit = (param: string | null, defaultSize: number): number =>
     100
   )
 
-const buildWhereConditions = (cursor: string | null, search: string): SQL[] => {
+const buildWhereConditions = (
+  cursor: string | null,
+  search: string,
+  useOffset = false
+): SQL[] => {
   const conditions: SQL[] = []
 
-  if (cursor) {
+  if (cursor && !useOffset) {
     const cursorDate = new Date(cursor)
     if (!Number.isNaN(cursorDate.getTime())) {
       conditions.push(lt(users.createdAt, cursorDate))
@@ -52,10 +62,18 @@ export const GET = async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url)
     const cursor = searchParams.get('cursor')
+    const offsetParam = searchParams.get('offset')
+    const useOffset = offsetParam !== null
     const search = searchParams.get('search')?.trim() ?? ''
     const limit = parseLimit(searchParams.get('limit'), PAGE_SIZE)
+    const offset = useOffset ? parseOffsetParam(offsetParam) : 0
 
-    const conditions = buildWhereConditions(cursor, search)
+    const offsetError = getAdminOffsetLimitError(offset)
+    if (offsetError) {
+      return apiError(offsetError, 400)
+    }
+
+    const conditions = buildWhereConditions(cursor, search, useOffset)
     const countConditions = buildWhereConditions(null, search)
     const whereClause = resolveWhereClause(conditions)
     const countWhereClause = resolveWhereClause(countConditions)
@@ -66,7 +84,7 @@ export const GET = async (request: NextRequest) => {
           where: whereClause,
           orderBy: [desc(users.createdAt)],
           limit: limit + 1,
-          with: { orders: { columns: { id: true } } },
+          offset: useOffset ? offset : undefined,
         }),
         drizzleDb
           .select({ value: count() })
@@ -80,6 +98,20 @@ export const GET = async (request: NextRequest) => {
       const nextCursor =
         hasMore && lastItem ? lastItem.createdAt.toISOString() : null
       const totalCount = Number(totalRows[0]?.value ?? 0)
+      const pageIds = pageItems.map((user) => user.id)
+      // Count only orders for this page's users: relation hydration would load
+      // every historical order row even though the response needs just a count.
+      const orderCounts =
+        pageIds.length === 0
+          ? []
+          : await drizzleDb
+              .select({ userId: orders.userId, value: count() })
+              .from(orders)
+              .where(inArray(orders.userId, pageIds))
+              .groupBy(orders.userId)
+      const orderCountByUserId = new Map(
+        orderCounts.map((row) => [row.userId, Number(row.value)])
+      )
 
       const userList = pageItems.map((user) => ({
         id: user.id,
@@ -96,7 +128,7 @@ export const GET = async (request: NextRequest) => {
             ? user.updatedAt.toISOString()
             : user.updatedAt,
         image: user.image,
-        _count: { orders: user.orders.length },
+        _count: { orders: orderCountByUserId.get(user.id) ?? 0 },
       }))
 
       return { users: userList, nextCursor, hasMore, totalCount }
@@ -104,7 +136,8 @@ export const GET = async (request: NextRequest) => {
 
     const result = await cacheAdminUsersList(fetcher, {
       search,
-      cursor,
+      cursor: useOffset ? null : cursor,
+      offset,
       limit,
     })
 

@@ -1,0 +1,43 @@
+# Keep the build context small and keep host-local state out of the image.
+#
+# `node_modules` is excluded deliberately: the `deps` stage runs `npm ci` from
+# `package-lock.json`, so a host copy would only be overwritten — and on a
+# cross-architecture build it would carry the wrong prebuilt native binaries.
+
+node_modules
+.next
+out
+build
+coverage
+playwright-report
+test-results
+
+.git
+.github
+.gitignore
+
+# Never bake secrets into a layer. `.env.example` files are the only ones
+# tracked, and nothing in the build needs them.
+.env
+.env.*
+!.env.example
+deploy/.env.selfhost
+
+# Editor / OS noise
+.vscode
+.idea
+.DS_Store
+*.log
+npm-debug.log*
+
+# Not needed to build or run the server
+__tests__
+playwright-tests
+specs
+docs
+deploy
+*.md
+!README.md
+
+# Local HTTPS dev certificates (`next dev --experimental-https`)
+certificates

@@ -15,7 +15,7 @@
  *    lose the session that mattered.
  */
 
-import type { EventSessions } from 'inngest'
+import type { EventSessions, EventSessionValue } from 'inngest'
 
 /**
  * Session keys used by this application.
@@ -90,7 +90,7 @@ export const threadSession = (
 export const mergeSessions = (
   ...fragments: ReadonlyArray<EventSessions | undefined>
 ): EventSessions | undefined => {
-  const merged: Record<string, string | number> = {}
+  const merged: Record<string, EventSessionValue> = {}
 
   for (const fragment of fragments) {
     if (!fragment) continue

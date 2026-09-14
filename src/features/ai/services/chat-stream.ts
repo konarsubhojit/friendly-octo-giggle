@@ -1,4 +1,4 @@
-import { waitUntil } from '@vercel/functions'
+import { waitUntil } from '@/lib/deferred'
 import { setCachedAiResponse } from '@/lib/ai/ai-cache'
 import { logError, logBusinessEvent } from '@/lib/logger'
 import type { CurrencyCode } from '@/lib/currency'

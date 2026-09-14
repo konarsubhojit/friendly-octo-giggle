@@ -8,7 +8,7 @@
  * New code should import from `@/lib/cache` directly.
  */
 
-import { waitUntil } from '@vercel/functions'
+import { waitUntil } from '@/lib/deferred'
 import { logCacheOperation, logError, Timer } from './logger'
 import { getCacheClient, type CacheClient } from './cache/index'
 import { env } from './env'

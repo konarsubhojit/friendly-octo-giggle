@@ -37,6 +37,17 @@ export const activityRetentionFunction = inngest.createFunction(
     triggers: [cron('0 4 1 * *')],
   },
   async ({ step }) => {
+    const { getFeatureFlags } = await import('@/lib/edge-config')
+    if (!(await getFeatureFlags()).enableActivityRetentionJob) {
+      const { logBusinessEvent } = await import('@/lib/logger')
+      logBusinessEvent({
+        event: 'cron_admin_activity_retention_skipped',
+        details: { reason: 'disabled' },
+        success: true,
+      })
+      return { skipped: true, reason: 'disabled' as const }
+    }
+
     const cutoff = getActivityRetentionCutoff()
     const deleted = await step.run('delete-expired-admin-activity', () =>
       deleteExpiredAdminAuditLogs(cutoff)

@@ -1,0 +1,140 @@
+name: Deploy Self-Hosted Image
+
+# Builds the `DEPLOY_TARGET=self-hosted` container image for linux/arm64
+# (Oracle Ampere A1) and publishes it to GHCR.
+#
+# ---------------------------------------------------------------------------
+# Why `workflow_dispatch` only
+# ---------------------------------------------------------------------------
+# `build.yml` is the sole owner of the database-migration and Vercel deploy
+# path. This workflow has no `push` or `pull_request` trigger precisely so it
+# can never run alongside that pipeline, and it touches neither the database
+# nor Vercel. Publishing an image is an explicit, operator-initiated act.
+#
+# ---------------------------------------------------------------------------
+# Why native arm64 and not QEMU
+# ---------------------------------------------------------------------------
+# `runs-on: ubuntu-24.04-arm` is a GitHub-hosted arm64 runner, so the whole
+# build is native. Do not replace it with `docker/setup-qemu-action` plus
+# `--platform linux/arm64` on an amd64 runner: with `reactCompiler: true` and
+# Turbopack, the emulated compile is roughly an order of magnitude slower
+# (measured: `npm ci` 35s -> 262s, the Next.js compile 35s -> 7.5 minutes) and
+# routinely exceeds the job timeout. This runner is the arm64 gate for the
+# image; there is no local or in-agent arm64 validation, and a native
+# `docker build` on an amd64 machine only proves the Dockerfile itself.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Image tag to publish (in addition to the commit SHA)'
+        required: false
+        default: 'latest'
+      prerender_catalog:
+        description: >-
+          Build with the DATABASE_URL secret so product pages are prerendered.
+          Off means a smoke image with an empty catalog.
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  # Publishing two images to the same tag concurrently would make the tag point
+  # at whichever push finished last, which is not necessarily the newer commit.
+  # The tag — not `github.ref` — is what is contended: the same workflow
+  # dispatched from two branches with the default `latest` races for one tag.
+  group: ${{ github.workflow }}-${{ inputs.tag }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+  # `cache-to: type=gha` writes to the Actions cache, which needs this scope.
+  # Unlisted permissions are denied, so without it every arm64 build stays
+  # cold while the push itself still succeeds.
+  actions: write
+
+jobs:
+  build-and-push:
+    name: Build linux/arm64 image and push to GHCR
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive lowercase image name
+        id: image
+        # GHCR rejects uppercase path segments and `github.repository` preserves
+        # the owner's original casing, so it cannot be used verbatim.
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      # `generateStaticParams` reads the catalog to decide which product pages
+      # to prerender. Without a reachable database those queries degrade
+      # gracefully and the build still succeeds -- but the image then contains
+      # zero prerendered product pages (`/products/[id]` collapses to a single
+      # `/products/__no_products__` entry) and every product URL is rendered on
+      # demand on first request.
+      #
+      # That is acceptable for a smoke image and wrong for one serving traffic,
+      # so the choice is explicit rather than implied. Set the `DATABASE_URL`
+      # repository secret to a reachable read-only connection string and run
+      # this workflow with `prerender_catalog` enabled to get a fully
+      # prerendered image. See docs/oracle-ampere-deployment.md.
+      - name: Report the prerender mode for this build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ "${{ inputs.prerender_catalog }}" = "true" ]; then
+            if [ -z "$DATABASE_URL" ]; then
+              echo "::error::prerender_catalog was requested but the DATABASE_URL secret is not set."
+              exit 1
+            fi
+            echo "::notice::Building with a reachable DATABASE_URL - catalog will be prerendered."
+          else
+            echo "::warning::Building without a database. The image will contain NO prerendered product pages; every product page falls back to on-demand rendering. Do not serve production traffic from it."
+          fi
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          # Native: this runner is arm64, so no QEMU layer is involved.
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ steps.image.outputs.name }}:${{ github.sha }}
+            ${{ steps.image.outputs.name }}:${{ inputs.tag }}
+          # A BuildKit secret, not a `build-arg`: build arguments survive in
+          # image/BuildKit metadata and are exported wholesale by
+          # `cache-to: type=gha,mode=max`, so a password passed that way can be
+          # recovered from the build cache. A secret mount exists only inside
+          # the `RUN` that mounts it. With the input off nothing is passed and
+          # the Dockerfile falls back to its unresolvable placeholder host.
+          secrets: |
+            ${{ inputs.prerender_catalog == true && format('database_url={0}', secrets.DATABASE_URL) || '' }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Summarise
+        run: |
+          {
+            echo "### Published"
+            echo
+            echo '```'
+            echo "${{ steps.image.outputs.name }}:${{ github.sha }}"
+            echo "${{ steps.image.outputs.name }}:${{ inputs.tag }}"
+            echo '```'
+            echo
+            echo "Platform: \`linux/arm64\` (native, \`ubuntu-24.04-arm\`)"
+            echo "Catalog prerendered: \`${{ inputs.prerender_catalog }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

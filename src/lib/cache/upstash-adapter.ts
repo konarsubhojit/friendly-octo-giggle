@@ -6,7 +6,7 @@
  */
 
 import { Redis } from '@upstash/redis'
-import type { CacheClient, CachePipeline } from './types'
+import type { CacheClient, CachePipeline } from './types.ts'
 
 class UpstashPipeline implements CachePipeline {
   constructor(private readonly inner: ReturnType<Redis['pipeline']>) {}
@@ -67,10 +67,15 @@ export class UpstashCacheClient implements CacheClient {
     // Upstash uses a discriminated union for set options — build a concrete
     // variant to satisfy the type checker.
     if (options?.ex !== undefined && options?.nx) {
-      return this.redis.set(key, value, { ex: options.ex, nx: true }) as Promise<string | null>
+      return this.redis.set(key, value, {
+        ex: options.ex,
+        nx: true,
+      }) as Promise<string | null>
     }
     if (options?.ex !== undefined) {
-      return this.redis.set(key, value, { ex: options.ex }) as Promise<string | null>
+      return this.redis.set(key, value, { ex: options.ex }) as Promise<
+        string | null
+      >
     }
     if (options?.nx) {
       return this.redis.set(key, value, { nx: true }) as Promise<string | null>
@@ -96,7 +101,11 @@ export class UpstashCacheClient implements CacheClient {
     return this.redis.hgetall<T>(key)
   }
 
-  async hincrby(key: string, field: string, increment: number): Promise<number> {
+  async hincrby(
+    key: string,
+    field: string,
+    increment: number
+  ): Promise<number> {
     return this.redis.hincrby(key, field, increment)
   }
 
@@ -140,11 +149,7 @@ export class UpstashCacheClient implements CacheClient {
     return new UpstashPipeline(this.redis.pipeline())
   }
 
-  async eval(
-    script: string,
-    keys: string[],
-    args: string[]
-  ): Promise<unknown> {
+  async eval(script: string, keys: string[], args: string[]): Promise<unknown> {
     return this.redis.eval(script, keys, args)
   }
 

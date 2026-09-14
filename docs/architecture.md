@@ -618,6 +618,24 @@ no separate cron endpoint to authenticate:
 - `refresh-exchange-rates` daily at 03:00 UTC
 - `scan-abandoned-carts` daily at 10:00 UTC
 - `expire-stock-reservations` hourly
+- `compute-product-affinity` daily at 04:00 UTC (and on an explicit admin event)
+- `activity-retention` monthly on the first day at 04:00 UTC
+
+Every scheduled job is disabled unless its own Edge Config feature flag is
+explicitly set to `true`; there is no shared scheduled-jobs switch:
+
+| Job                             | Feature flag                      |
+| ------------------------------- | --------------------------------- |
+| `expire-stock-reservations`     | `enableStockReservationExpiryJob` |
+| `compute-product-affinity` cron | `enableProductAffinityJob`        |
+| `refresh-exchange-rates`        | `enableExchangeRateRefreshJob`    |
+| `scan-abandoned-carts`          | `enableAbandonedCartScanJob`      |
+| `activity-retention`            | `enableActivityRetentionJob`      |
+| `retry-failed-emails`           | `enableFailedEmailRetryJob`       |
+
+The explicit `recommendations/affinity.recompute` admin event is not gated, so
+operators can refresh recommendations on demand while its recurring cron stays
+off.
 
 Abandoned-cart scans fan out one event per cart to preserve experiment
 attribution and per-cart idempotency. Failed-email retries fan out bounded
@@ -657,10 +675,12 @@ Environment variables are parsed at import time through a Zod schema in `lib/env
 
 `lib/edge-config.ts` exposes optional remote config for:
 
-- feature flags such as maintenance mode, sale mode, wishlist, and reviews
+- feature flags such as maintenance mode, sale mode, wishlist, reviews, and
+  independently controlled scheduled jobs
 - shipping settings such as free-shipping threshold and delivery estimates
 
-When Vercel Edge Config is not configured, the app uses hard-coded safe defaults.
+When Vercel Edge Config is not configured, the app uses hard-coded safe defaults,
+including `false` for every scheduled-job flag.
 
 ### Deployment Shape
 

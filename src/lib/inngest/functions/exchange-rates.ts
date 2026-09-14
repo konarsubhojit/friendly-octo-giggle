@@ -77,6 +77,17 @@ export const refreshExchangeRatesFunction = inngest.createFunction(
     retries: EXCHANGE_RATE_RETRIES,
   },
   async ({ step }) => {
+    const { getFeatureFlags } = await import('@/lib/edge-config')
+    if (!(await getFeatureFlags()).enableExchangeRateRefreshJob) {
+      const { logBusinessEvent } = await import('@/lib/logger')
+      logBusinessEvent({
+        event: 'cron_exchange_rates_skipped',
+        details: { reason: 'disabled' },
+        success: true,
+      })
+      return { skipped: true, reason: 'disabled' as const }
+    }
+
     if (!process.env.EXCHANGE_RATE_API_KEY) {
       // Not a failure: the app falls back to its static rate table, and
       // retrying cannot conjure a key.

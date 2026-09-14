@@ -11,7 +11,7 @@
  */
 
 import { createClient, type RedisClientType } from 'redis'
-import type { CacheClient, CachePipeline } from './types'
+import type { CacheClient, CachePipeline } from './types.ts'
 
 // ── Configuration ───────────────────────────────────────
 
@@ -82,10 +82,7 @@ export class NodeRedisCacheClient implements CacheClient {
   private _isReady = false
   private readonly _onError?: (err: Error) => void
 
-  constructor(
-    url: string,
-    options?: { onError?: (err: Error) => void }
-  ) {
+  constructor(url: string, options?: { onError?: (err: Error) => void }) {
     this._onError = options?.onError
 
     this.client = createClient({
@@ -181,7 +178,11 @@ export class NodeRedisCacheClient implements CacheClient {
     return result as T
   }
 
-  async hincrby(key: string, field: string, increment: number): Promise<number> {
+  async hincrby(
+    key: string,
+    field: string,
+    increment: number
+  ): Promise<number> {
     return this.withTimeout(this.client.hIncrBy(key, field, increment))
   }
 
@@ -208,20 +209,23 @@ export class NodeRedisCacheClient implements CacheClient {
   }
 
   async expire(key: string, seconds: number): Promise<boolean> {
-    return this.withTimeout(this.client.expire(key, seconds))
+    const result = await this.withTimeout(this.client.expire(key, seconds))
+    return result === 1
   }
 
   async scan(
     cursor: number,
     options?: { match?: string; count?: number }
   ): Promise<[number, string[]]> {
+    // node-redis takes and returns the cursor as a string; the shared
+    // CacheClient contract uses a number, so convert on both sides.
     const result = await this.withTimeout(
-      this.client.scan(cursor, {
+      this.client.scan(String(cursor), {
         MATCH: options?.match,
         COUNT: options?.count,
       })
     )
-    return [result.cursor, result.keys]
+    return [Number(result.cursor), result.keys]
   }
 
   // ── Pipeline / scripting ──────────────────────────────
@@ -230,14 +234,8 @@ export class NodeRedisCacheClient implements CacheClient {
     return new NodeRedisPipeline(this.client)
   }
 
-  async eval(
-    script: string,
-    keys: string[],
-    args: string[]
-  ): Promise<unknown> {
-    return this.withTimeout(
-      this.client.eval(script, { keys, arguments: args })
-    )
+  async eval(script: string, keys: string[], args: string[]): Promise<unknown> {
+    return this.withTimeout(this.client.eval(script, { keys, arguments: args }))
   }
 
   // ── Lifecycle ─────────────────────────────────────────
@@ -262,8 +260,6 @@ export class NodeRedisCacheClient implements CacheClient {
         COMMAND_TIMEOUT_MS
       )
     })
-    return Promise.race([promise, timeout]).finally(() =>
-      clearTimeout(timerId)
-    )
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timerId))
   }
 }

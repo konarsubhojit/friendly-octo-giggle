@@ -1,15 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const { mockExpireDueReservations, mockLogBusinessEvent } = vi.hoisted(() => ({
-  mockExpireDueReservations: vi.fn(),
-  mockLogBusinessEvent: vi.fn(),
-}))
+const { mockExpireDueReservations, mockGetFeatureFlags, mockLogBusinessEvent } =
+  vi.hoisted(() => ({
+    mockExpireDueReservations: vi.fn(),
+    mockGetFeatureFlags: vi.fn(),
+    mockLogBusinessEvent: vi.fn(),
+  }))
 
 vi.mock('@/features/orders/services/stock-reservation', () => ({
   expireDueReservations: mockExpireDueReservations,
 }))
 
 vi.mock('@/lib/logger', () => ({ logBusinessEvent: mockLogBusinessEvent }))
+vi.mock('@/lib/edge-config', () => ({ getFeatureFlags: mockGetFeatureFlags }))
 
 import {
   RESERVATION_EXPIRY_RETRIES,
@@ -24,11 +27,7 @@ type FunctionInternals = {
     retries: number
     triggers: ReadonlyArray<{ cron?: string }>
   }
-  fn: (context: { step: unknown }) => Promise<{
-    reservations: number
-    quantity: number
-    drained: boolean
-  }>
+  fn: (context: { step: unknown }) => Promise<Record<string, unknown>>
 }
 
 const internals =
@@ -49,6 +48,9 @@ const run = () => internals.fn({ step })
 beforeEach(() => {
   vi.clearAllMocks()
   scores.length = 0
+  mockGetFeatureFlags.mockResolvedValue({
+    enableStockReservationExpiryJob: true,
+  })
 })
 
 describe('expireStockReservationsFunction', () => {
@@ -56,6 +58,17 @@ describe('expireStockReservationsFunction', () => {
     expect(internals.opts.id).toBe('expire-stock-reservations')
     expect(internals.opts.triggers).toEqual([{ cron: '0 * * * *' }])
     expect(internals.opts.retries).toBe(RESERVATION_EXPIRY_RETRIES)
+  })
+
+  it('skips by default without claiming reservations', async () => {
+    mockGetFeatureFlags.mockResolvedValue({})
+
+    await expect(run()).resolves.toEqual({ skipped: true, reason: 'disabled' })
+
+    expect(mockExpireDueReservations).not.toHaveBeenCalled()
+    expect(mockLogBusinessEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'cron_stock_reservations_skipped' })
+    )
   })
 
   it('claims a bounded batch and reports a drained backlog', async () => {

@@ -115,7 +115,7 @@ vi.mock('@/lib/ai/ai-cache', () => ({
   setCachedAiResponse: setCachedAiResponseMock,
 }))
 
-vi.mock('@vercel/functions', () => ({
+vi.mock('@/lib/deferred', () => ({
   waitUntil: waitUntilMock,
 }))
 

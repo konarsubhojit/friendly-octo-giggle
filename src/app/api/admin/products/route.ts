@@ -6,6 +6,7 @@ import { ProductInputSchema } from '@/features/product/validations'
 import {
   apiSuccess,
   apiError,
+  getAdminOffsetLimitError,
   handleApiError,
   parseOffsetParam,
   parseJsonBody,
@@ -86,6 +87,10 @@ export const GET = async (request: NextRequest) => {
     )
 
     const offset = useOffset ? parseOffsetParam(offsetParam) : 0
+    const offsetError = getAdminOffsetLimitError(offset)
+    if (offsetError) {
+      return apiError(offsetError, 400)
+    }
 
     const conditions: SQL[] = [isNull(products.deletedAt)]
     const countConditions: SQL[] = [isNull(products.deletedAt)]
