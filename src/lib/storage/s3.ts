@@ -61,6 +61,21 @@ const isNotFoundError = (error: unknown): boolean => {
   return status === 404
 }
 
+/**
+ * Loopback hosts never put bytes on a network, so plain HTTP to one carries no
+ * transport risk — the same reasoning that makes `http://127.0.0.1` a secure
+ * context in every browser. The self-hosted profile relies on this: MinIO binds
+ * to loopback and the app runs in the same network namespace, so requiring TLS
+ * there would only mean a self-signed certificate and a CA bundle protecting a
+ * hop that cannot be observed. Any other host must still use HTTPS.
+ */
+const isLoopbackHost = (hostname: string): boolean => {
+  const host = hostname.replace(/^\[|\]$/g, '').toLowerCase()
+  return (
+    host === 'localhost' || host === '::1' || /^127(?:\.\d{1,3}){3}$/.test(host)
+  )
+}
+
 const assertEndpointSecurity = ({
   endpoint,
   provider,
@@ -76,9 +91,13 @@ const assertEndpointSecurity = ({
     )
   }
 
-  if (parsed.protocol === 'http:' && env.NODE_ENV === 'production') {
+  if (
+    parsed.protocol === 'http:' &&
+    env.NODE_ENV === 'production' &&
+    !isLoopbackHost(parsed.hostname)
+  ) {
     throw new Error(
-      `${provider.toUpperCase()} endpoint must use HTTPS in production.`
+      `${provider.toUpperCase()} endpoint must use HTTPS in production unless it is a loopback address.`
     )
   }
 }

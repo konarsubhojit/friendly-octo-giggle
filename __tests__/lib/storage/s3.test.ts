@@ -122,7 +122,8 @@ describe('createS3StorageAdapter', () => {
 
   it('attaches a custom CA TLS handler when configured', async () => {
     mockEnv.S3_ENDPOINT = 'https://127.0.0.1:9000'
-    mockEnv.S3_CA_CERT_PEM = '-----BEGIN CERTIFICATE-----\\nabc\\n-----END CERTIFICATE-----'
+    mockEnv.S3_CA_CERT_PEM =
+      '-----BEGIN CERTIFICATE-----\\nabc\\n-----END CERTIFICATE-----'
     mockSend.mockResolvedValue({})
     const { createS3StorageAdapter, __resetS3ClientsForTests } =
       await import('@/lib/storage/s3')
@@ -139,13 +140,25 @@ describe('createS3StorageAdapter', () => {
 
   it('rejects insecure HTTP endpoints in production', async () => {
     mockEnv.NODE_ENV = 'production'
-    mockEnv.S3_ENDPOINT = 'http://127.0.0.1:9000'
+    mockEnv.S3_ENDPOINT = 'http://minio.internal:9000'
     const { createS3StorageAdapter, __resetS3ClientsForTests } =
       await import('@/lib/storage/s3')
     __resetS3ClientsForTests()
     await expect(
       createS3StorageAdapter().put('images/abc.png', Buffer.from([1]))
     ).rejects.toThrow(/must use HTTPS in production/)
+  })
+
+  it('allows HTTP loopback endpoints in production', async () => {
+    mockEnv.NODE_ENV = 'production'
+    mockEnv.S3_ENDPOINT = 'http://127.0.0.1:9000'
+    mockSend.mockResolvedValue({})
+    const { createS3StorageAdapter, __resetS3ClientsForTests } =
+      await import('@/lib/storage/s3')
+    __resetS3ClientsForTests()
+    await expect(
+      createS3StorageAdapter().put('images/abc.png', Buffer.from([1]))
+    ).resolves.toEqual(expect.objectContaining({ pathname: 'images/abc.png' }))
   })
 
   it('put() sets content type and immutable cache control', async () => {
@@ -191,13 +204,15 @@ describe('createS3StorageAdapter', () => {
   })
 
   it('getUrl() returns null on not-found and rethrows other errors', async () => {
-    mockSend.mockRejectedValueOnce({ name: 'NotFound' }).mockRejectedValueOnce(
-      new Error('network error')
-    )
+    mockSend
+      .mockRejectedValueOnce({ name: 'NotFound' })
+      .mockRejectedValueOnce(new Error('network error'))
     const { createS3StorageAdapter, __resetS3ClientsForTests } =
       await import('@/lib/storage/s3')
     __resetS3ClientsForTests()
-    expect(await createS3StorageAdapter().getUrl('images/missing.png')).toBeNull()
+    expect(
+      await createS3StorageAdapter().getUrl('images/missing.png')
+    ).toBeNull()
     await expect(
       createS3StorageAdapter().getUrl('images/abc.png')
     ).rejects.toThrow('network error')

@@ -34,10 +34,13 @@ Welcome to the comprehensive documentation for the e-commerce platform built wit
 - **[Environment Variables](./deployment.md#environment-variables)** - Configuration reference
 - **[Production Checklist](./deployment.md#production-checklist)** - Pre-launch verification
 - **[Self-Hosting](./self-hosting.md)** - Self-hosted Postgres 18 + PgBouncer on an OCI VM
+- **[Oracle Ampere Deployment](./oracle-ampere-deployment.md)** - Full arm64 self-hosted stack on an A1 instance (Docker, Caddy, systemd)
+- **[Kamatera Deployment](./kamatera-deployment.md)** - The same full self-hosted stack on an x86 VM with Nginx
 
 ### Operations
 
 - **[Self-Hosting Runbook](./self-hosting.md#operations-runbook)** - Pool health, fail2ban, backups
+- **[Oracle Ampere Operations](./oracle-ampere-deployment.md#8-operations)** - Container logs, health, and backups on A1
 - **[Troubleshooting](./troubleshooting.md)** - Common issues and solutions
 - **[Monitoring](./troubleshooting.md#monitoring)** - Performance monitoring and logging
 - **[Security](./troubleshooting.md#security)** - Security best practices

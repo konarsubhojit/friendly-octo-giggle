@@ -1,0 +1,75 @@
+# systemd unit for the Next.js standalone server.
+#
+# Alternative to the `app` service in `deploy/docker-compose.yml` — pick one
+# process model and stick to it, do not run both.
+#
+# Install:
+#   sudo cp deploy/systemd/octo-app.service /etc/systemd/system/
+#   sudo install -m 0600 -o root -g root \
+#     deploy/.env.selfhost /etc/octo/app.env
+#   # `Documentation=` below points into /opt/octo, so stage the runbook too,
+#   # otherwise `systemctl status` advertises a path that does not exist.
+#   sudo install -D -m 0644 docs/oracle-ampere-deployment.md \
+#     /opt/octo/docs/oracle-ampere-deployment.md
+#   sudo systemctl daemon-reload && sudo systemctl enable --now octo-app
+#
+# ---------------------------------------------------------------------------
+# Cache invalidation caveat
+# ---------------------------------------------------------------------------
+# `revalidateTag` only reaches the process that received the request unless
+# Next.js is using the shared Redis `cacheHandler`. `next.config.ts` wires up
+# `src/lib/cache-handler.ts` only when `DEPLOY_TARGET=self-hosted` *and* the
+# `cache` capability resolves specifically to `redis` — that means `REDIS_URL`
+# set, or `CACHE_PROVIDER=redis`. Without it, running more than one copy of
+# this unit (or of the app and a worker) leaves every other process serving
+# the stale entry until its own `cacheLife` expiry. On a single instance the
+# default in-memory handler is correct and this does not apply.
+
+[Unit]
+Description=Octo storefront (Next.js standalone)
+Documentation=file:///opt/octo/docs/oracle-ampere-deployment.md
+After=network-online.target postgresql.service redis-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=octo
+Group=octo
+WorkingDirectory=/opt/octo
+
+# Secrets live in a root-owned 0600 file outside the unit, so they are not
+# readable via `systemctl cat` and do not appear in the journal. Never inline
+# a credential with `Environment=` — those are world-readable.
+EnvironmentFile=/etc/octo/app.env
+
+Environment=NODE_ENV=production
+Environment=DEPLOY_TARGET=self-hosted
+Environment=PORT=3000
+# Bind to loopback only: the reverse proxy is the single public listener.
+Environment=HOSTNAME=127.0.0.1
+
+ExecStart=/usr/bin/node /opt/octo/server.js
+
+Restart=on-failure
+RestartSec=5s
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+# Hardening. The app writes nothing outside its own state directory.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+StateDirectory=octo
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=octo-app
+
+[Install]
+WantedBy=multi-user.target

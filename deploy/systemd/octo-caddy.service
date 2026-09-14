@@ -1,0 +1,55 @@
+# systemd unit for the Caddy reverse proxy.
+#
+# Only needed when running the app under systemd rather than Compose — the
+# Compose stack already includes a `caddy` service.
+#
+# Install:
+#   sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
+#   sudo cp deploy/systemd/octo-caddy.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now octo-caddy
+#
+# `AmbientCapabilities=CAP_NET_BIND_SERVICE` is what lets an unprivileged user
+# bind :80 and :443. :80 must stay reachable from the internet for the
+# Let's Encrypt HTTP-01 challenge — on Oracle Cloud that means both the VCN
+# Security List and the instance's local iptables, see
+# `docs/oracle-ampere-deployment.md`.
+
+[Unit]
+Description=Caddy reverse proxy for the Octo storefront
+Documentation=https://caddyserver.com/docs/
+After=network-online.target octo-app.service
+Wants=network-online.target
+
+[Service]
+Type=notify
+User=caddy
+Group=caddy
+
+# Certificates, account keys, and OCSP staples. Losing this directory means
+# re-issuing from Let's Encrypt, which is rate limited.
+EnvironmentFile=-/etc/octo/caddy.env
+
+# No `--environ`: it prints the whole service environment, including anything
+# in the EnvironmentFile above, straight into the journal.
+ExecStart=/usr/bin/caddy run --config /etc/caddy/Caddyfile
+ExecReload=/usr/bin/caddy reload --config /etc/caddy/Caddyfile --force
+
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=30
+
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+StateDirectory=caddy
+ConfigurationDirectory=caddy
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=octo-caddy
+
+[Install]
+WantedBy=multi-user.target
