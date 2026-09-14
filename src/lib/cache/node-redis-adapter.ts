@@ -209,20 +209,23 @@ export class NodeRedisCacheClient implements CacheClient {
   }
 
   async expire(key: string, seconds: number): Promise<boolean> {
-    return this.withTimeout(this.client.expire(key, seconds))
+    const result = await this.withTimeout(this.client.expire(key, seconds))
+    return result === 1
   }
 
   async scan(
     cursor: number,
     options?: { match?: string; count?: number }
   ): Promise<[number, string[]]> {
+    // node-redis takes and returns the cursor as a string; the shared
+    // CacheClient contract uses a number, so convert on both sides.
     const result = await this.withTimeout(
-      this.client.scan(cursor, {
+      this.client.scan(String(cursor), {
         MATCH: options?.match,
         COUNT: options?.count,
       })
     )
-    return [result.cursor, result.keys]
+    return [Number(result.cursor), result.keys]
   }
 
   // ── Pipeline / scripting ──────────────────────────────
