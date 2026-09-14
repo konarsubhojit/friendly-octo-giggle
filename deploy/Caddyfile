@@ -31,17 +31,34 @@
 <domain> {
 	encode zstd gzip
 
-	# `.next/static` is content-addressed: the build hashes every filename, so a
-	# changed file is a changed URL and these can be cached immutably. Served
-	# straight off disk rather than through Node.
+	# `.next/static` is deliberately NOT served from disk here. Doing so would
+	# need the image's `/app/.next/static` mounted into the proxy — which
+	# neither the Compose `caddy` service nor the systemd unit does — and
+	# because `handle_path` is mutually exclusive with the proxy `handle`
+	# below, a missing mount turns every asset request into a 404 rather than
+	# falling through. Next.js already serves these with
+	# `Cache-Control: public, max-age=31536000, immutable` (the filenames are
+	# content-addressed), so the proxy adds nothing but a failure mode.
+
+	# Uploaded objects. `S3_PUBLIC_BASE_URL=https://<domain>/media` makes every
+	# stored image URL land here, so this route is what serves them: MinIO is on
+	# loopback and is never a public listener itself. `handle_path` strips
+	# `/media`, and the rewrite puts the path-style bucket segment back, so
+	# `/media/images/abc.png` reaches `127.0.0.1:9000/<bucket>/images/abc.png`.
+	# Replace `<bucket>` with the real `S3_BUCKET` value, and give the bucket an
+	# anonymous download policy — these are public product images, and Caddy
+	# forwards no SigV4 credentials:
 	#
-	# Mount the image's `/app/.next/static` at `/srv/static` in the proxy
-	# container to use this. Drop the whole block if you would rather let the
-	# app serve them — it does so correctly, just less cheaply.
-	handle_path /_next/static/* {
-		root * /srv/static
-		header Cache-Control "public, max-age=31536000, immutable"
-		file_server
+	#   mc anonymous set download local/<bucket>
+	#
+	# Only GET/HEAD is proxied; uploads go through the app's own API, which
+	# signs its requests.
+	@media_write not method GET HEAD
+	handle_path /media/* {
+		respond @media_write 405
+		reverse_proxy 127.0.0.1:9000 {
+			rewrite /<bucket>{uri}
+		}
 	}
 
 	handle {

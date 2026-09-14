@@ -154,10 +154,32 @@ cp .env.selfhost.example .env.selfhost
 chmod 600 .env.selfhost
 "$EDITOR" .env.selfhost           # fill in real values
 
-docker compose pull
-docker compose up -d
-docker compose ps
+docker compose --env-file .env.selfhost pull
+docker compose --env-file .env.selfhost up -d
+docker compose --env-file .env.selfhost ps
 ```
+
+`--env-file` is required on every invocation. Compose interpolates `${...}`
+from the project environment before a service's `env_file` is read, so without
+it `APP_IMAGE` keeps its placeholder and `POSTGRES_PASSWORD` /
+`MINIO_ROOT_PASSWORD` — which have no defaults, on purpose — abort the command
+rather than bringing up services with a password published in this repository.
+
+Then make the bucket readable by the `/media` route in `deploy/Caddyfile`,
+which proxies to MinIO without credentials:
+
+<!-- doc-drift-ignore-next-block --> third-party mc commands
+
+```bash
+docker compose --env-file .env.selfhost exec minio sh -c '
+  mc alias set local http://127.0.0.1:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" &&
+  mc mb --ignore-existing local/<bucket> &&
+  mc anonymous set download local/<bucket>'
+```
+
+Set the same `<bucket>` in the `handle_path /media/*` route of
+`deploy/Caddyfile`; that route is what makes `S3_PUBLIC_BASE_URL` resolve,
+since MinIO itself is never a public listener.
 
 Apply migrations from a machine that can reach the database — the image runs
 the server only, it does not migrate:
@@ -203,9 +225,15 @@ To build a fully prerendered image, pass a reachable connection string. A
 read-only role is enough; nothing at build time writes.
 
 ```bash
-docker build --build-arg DATABASE_URL="postgresql://<user>:<password>@<host>:5432/<db>" \
-  -t <image>:<tag> .
+DATABASE_URL="postgresql://<user>:<password>@<host>:5432/<db>" \
+  docker build --secret id=database_url,env=DATABASE_URL -t <image>:<tag> .
 ```
+
+Pass it as a **BuildKit secret, not a `--build-arg`**. Build arguments are kept
+in image and BuildKit metadata and are exported wholesale by
+`cache-to: type=gha,mode=max`, so a password given that way can be read back
+out of the build cache long after the build. A secret mount exists only for the
+`RUN` that mounts it.
 
 In CI, set the `DATABASE_URL` repository secret and run
 `.github/workflows/deploy-selfhost.yml` with its `prerender_catalog` input
@@ -259,7 +287,12 @@ AUTH_TRUST_HOST=true
 AUTH_URL=https://<domain>
 NEXTAUTH_URL=https://<domain>
 NEXT_PUBLIC_BASE_URL=https://<domain>
+NEXT_PUBLIC_APP_URL=https://<domain>
 ```
+
+`NEXT_PUBLIC_APP_URL` is not optional: `src/lib/validations/env.ts` requires it
+whenever `NODE_ENV=production` and rejects the entire environment without it,
+so the unit or container exits at startup with `Invalid environment variables`.
 
 Behind a reverse proxy the app sees a request for `127.0.0.1:3000`. Without
 `AUTH_TRUST_HOST` Auth.js refuses to build callback URLs from the forwarded
@@ -323,8 +356,8 @@ the default in-memory handler is exactly right and this does not apply.
 ## 8. Operations
 
 ```bash
-docker compose logs -f app          # application logs (Pino JSON)
-docker compose ps                   # container health
+docker compose --env-file .env.selfhost logs -f app   # app logs (Pino JSON)
+docker compose --env-file .env.selfhost ps            # container health
 curl -s https://<domain>/api/health # provider readiness
 curl -s https://<domain>/api/metrics # Prometheus metrics
 ```

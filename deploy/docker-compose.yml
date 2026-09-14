@@ -4,7 +4,12 @@
 # minio bind to `127.0.0.1` only, and the reverse proxy is the single public
 # listener. Do not publish any other port on the VM's public interface.
 #
-#   docker compose -f deploy/docker-compose.yml up -d
+#   docker compose --env-file deploy/.env.selfhost \
+#     -f deploy/docker-compose.yml up -d
+#
+# `--env-file` is not optional. Compose interpolates `${...}` from the project
+# environment *before* any service `env_file` is read, so without it `APP_IMAGE`
+# keeps its placeholder and the required credentials below abort the command.
 #
 # `deploy/.env.selfhost` is git-ignored — copy `.env.selfhost.example` to
 # create it. This repository is public; never commit real values.
@@ -13,20 +18,28 @@ services:
   app:
     image: ${APP_IMAGE:-ghcr.io/OWNER/REPO:latest}
     restart: unless-stopped
-    # The long form with `required: false` keeps `docker compose config` — and
-    # therefore CI validation of this file — working on a checkout that has no
-    # `.env.selfhost`. The short `env_file: [.env.selfhost]` form is a hard
-    # error when the file is absent.
+    # `required: false` so the file may also be supplied from elsewhere (the
+    # systemd install puts it at `/etc/octo/app.env`) without making this a
+    # hard error. It is still what populates the container's environment:
+    # `--env-file` above only feeds `${...}` interpolation.
     env_file:
       - path: .env.selfhost
         required: false
+    # Host networking, like `caddy` below, so that the single `.env.selfhost`
+    # is valid for both process models: its `DATABASE_URL`, `REDIS_URL`, and
+    # `S3_ENDPOINT` all name `127.0.0.1`, which on a bridge network would be
+    # the app container itself rather than `postgres`, `redis`, or `minio`.
+    # Those services publish on the host's loopback interface, so sharing the
+    # host namespace makes the loopback URLs resolve exactly as they do under
+    # the systemd units.
+    network_mode: host
     environment:
       NODE_ENV: production
       DEPLOY_TARGET: self-hosted
       PORT: 3000
-      HOSTNAME: 0.0.0.0
-    ports:
-      - '127.0.0.1:3000:3000' # loopback only — the proxy is the public edge
+      # Bind to loopback only — with host networking, `0.0.0.0` would publish
+      # the app on the VM's public interface, bypassing the proxy.
+      HOSTNAME: 127.0.0.1
     depends_on:
       postgres:
         condition: service_healthy
@@ -39,7 +52,10 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-octo}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-in-env-selfhost}
+      # Required, with no default: a fixed fallback password would mean a
+      # missed secret silently brings up a database whose credentials are
+      # published in this repository. `:?` fails the command instead.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in deploy/.env.selfhost}
       POSTGRES_DB: ${POSTGRES_DB:-octo}
     ports:
       - '127.0.0.1:5432:5432' # loopback only
@@ -77,8 +93,9 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-change-me-in-env-selfhost}
+      # Required for the same reason as POSTGRES_PASSWORD above.
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER in deploy/.env.selfhost}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD in deploy/.env.selfhost}
     ports:
       - '127.0.0.1:9000:9000' # S3 API — reachable only through the app
       - '127.0.0.1:9001:9001' # console — reach it over an SSH tunnel

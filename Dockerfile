@@ -39,9 +39,13 @@
 # `/products/[id]` collapses to a single `/products/__no_products__` entry, so
 # every product URL falls back to on-demand rendering on the first request.
 # That is fine for a CI smoke build and wrong for a production image. Pass a
-# reachable `DATABASE_URL` when building anything you intend to serve:
+# reachable `DATABASE_URL` when building anything you intend to serve — as a
+# BuildKit secret, never as a `--build-arg`. Build arguments are recorded in
+# image/BuildKit metadata and are exported by `cache-to: type=gha,mode=max`,
+# so a password passed that way outlives the build even though no layer copies
+# it. A secret mount exists only for the lifetime of the `RUN` that mounts it:
 #
-#   docker build --build-arg DATABASE_URL="postgresql://..." -t app .
+#   docker build --secret id=database_url,env=DATABASE_URL -t app .
 #
 # See `docs/oracle-ampere-deployment.md` for the full explanation.
 
@@ -75,21 +79,36 @@ COPY . .
 ENV DEPLOY_TARGET=self-hosted
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Build-time-only values. `ARG` (not `ENV`) so they do not persist into the
-# final image, and so a caller can override them without editing this file.
-# The DATABASE_URL default is a deliberately unresolvable hostname: a build
-# without a real database must fail DNS loudly in the logs rather than
-# silently connect to something unintended.
-ARG DATABASE_URL="postgresql://BUILD_TIME_PLACEHOLDER_DO_NOT_USE:5432/build"
+# The cache backend is resolved while `next build` runs: `next.config.ts` wires
+# `cacheHandlers.default` to `src/lib/cache-handler.ts` only when the `cache`
+# capability resolves to `redis` at *build* time, so a runtime-only
+# `CACHE_PROVIDER=redis` arrives too late and `revalidateTag` would never
+# propagate between instances. The selector is a provider name, not a
+# credential — `src/lib/cache-handler.ts` still reads `REDIS_URL` at runtime
+# and falls back to no shared handler when the running deployment has none.
+ARG CACHE_PROVIDER=redis
+ENV CACHE_PROVIDER=${CACHE_PROVIDER}
+
+# Build-time-only value. `ARG` (not `ENV`) so it does not persist into the
+# final image, and so a caller can override it without editing this file.
 ARG NEXTAUTH_URL="http://localhost:3000"
 
-# `next build` requires NEXTAUTH_SECRET to be set but never uses its value —
-# nothing at build time signs or verifies a token. It is exported for the
+# The connection string arrives as a BuildKit secret (`--secret id=database_url`)
+# rather than a build argument, so it is never written to a layer, to image
+# metadata, or to an exported build cache. When no secret is mounted the
+# fallback is a deliberately unresolvable hostname: a build without a real
+# database must fail DNS loudly in the logs rather than silently connect to
+# something unintended.
+#
+# `next build` also requires NEXTAUTH_SECRET to be set but never uses its value
+# — nothing at build time signs or verifies a token. It is exported for the
 # duration of this one command rather than via `ENV`, so it is neither baked
 # into a layer nor reported by image scanners as a committed secret.
-RUN DATABASE_URL="$DATABASE_URL" \
-  NEXTAUTH_URL="$NEXTAUTH_URL" \
-  NEXTAUTH_SECRET="build-time-only-never-used-to-sign-anything" \
+RUN --mount=type=secret,id=database_url \
+  DATABASE_URL="$(cat /run/secrets/database_url 2>/dev/null || true)"; \
+  export DATABASE_URL="${DATABASE_URL:-postgresql://BUILD_TIME_PLACEHOLDER_DO_NOT_USE:5432/build}"; \
+  export NEXTAUTH_URL; \
+  export NEXTAUTH_SECRET="build-time-only-never-used-to-sign-anything"; \
   npm run build
 
 # ---------------------------------------------------------------------------

@@ -41,12 +41,18 @@ on:
 concurrency:
   # Publishing two images to the same tag concurrently would make the tag point
   # at whichever push finished last, which is not necessarily the newer commit.
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # The tag — not `github.ref` — is what is contended: the same workflow
+  # dispatched from two branches with the default `latest` races for one tag.
+  group: ${{ github.workflow }}-${{ inputs.tag }}
   cancel-in-progress: false
 
 permissions:
   contents: read
   packages: write
+  # `cache-to: type=gha` writes to the Actions cache, which needs this scope.
+  # Unlisted permissions are denied, so without it every arm64 build stays
+  # cold while the push itself still succeeds.
+  actions: write
 
 jobs:
   build-and-push:
@@ -108,8 +114,14 @@ jobs:
           tags: |
             ${{ steps.image.outputs.name }}:${{ github.sha }}
             ${{ steps.image.outputs.name }}:${{ inputs.tag }}
-          build-args: |
-            DATABASE_URL=${{ inputs.prerender_catalog == true && secrets.DATABASE_URL || 'postgresql://BUILD_TIME_PLACEHOLDER_DO_NOT_USE:5432/build' }}
+          # A BuildKit secret, not a `build-arg`: build arguments survive in
+          # image/BuildKit metadata and are exported wholesale by
+          # `cache-to: type=gha,mode=max`, so a password passed that way can be
+          # recovered from the build cache. A secret mount exists only inside
+          # the `RUN` that mounts it. With the input off nothing is passed and
+          # the Dockerfile falls back to its unresolvable placeholder host.
+          secrets: |
+            ${{ inputs.prerender_catalog == true && format('database_url={0}', secrets.DATABASE_URL) || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

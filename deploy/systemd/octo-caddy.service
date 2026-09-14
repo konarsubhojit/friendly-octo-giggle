@@ -29,7 +29,9 @@ Group=caddy
 # re-issuing from Let's Encrypt, which is rate limited.
 EnvironmentFile=-/etc/octo/caddy.env
 
-ExecStart=/usr/bin/caddy run --environ --config /etc/caddy/Caddyfile
+# No `--environ`: it prints the whole service environment, including anything
+# in the EnvironmentFile above, straight into the journal.
+ExecStart=/usr/bin/caddy run --config /etc/caddy/Caddyfile
 ExecReload=/usr/bin/caddy reload --config /etc/caddy/Caddyfile --force
 
 Restart=on-failure

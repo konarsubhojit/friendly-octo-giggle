@@ -7,6 +7,10 @@
 #   sudo cp deploy/systemd/octo-app.service /etc/systemd/system/
 #   sudo install -m 0600 -o root -g root \
 #     deploy/.env.selfhost /etc/octo/app.env
+#   # `Documentation=` below points into /opt/octo, so stage the runbook too,
+#   # otherwise `systemctl status` advertises a path that does not exist.
+#   sudo install -D -m 0644 docs/oracle-ampere-deployment.md \
+#     /opt/octo/docs/oracle-ampere-deployment.md
 #   sudo systemctl daemon-reload && sudo systemctl enable --now octo-app
 #
 # ---------------------------------------------------------------------------
