@@ -23,7 +23,9 @@ describe('refreshExchangeRatesFunction', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.unstubAllEnvs()
-    mockGetFeatureFlags.mockResolvedValue({ enableExchangeRateRefreshJob: true })
+    mockGetFeatureFlags.mockResolvedValue({
+      enableExchangeRateRefreshJob: true,
+    })
   })
 
   it('skips by default without checking exchange-rate credentials', async () => {

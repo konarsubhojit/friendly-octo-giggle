@@ -55,7 +55,9 @@ describe('edge-config', () => {
         ...DEFAULT_FEATURE_FLAGS,
         enableStockReservationExpiryJob: true,
       }
-      expect(enabledOnlyForStockExpiry.enableStockReservationExpiryJob).toBe(true)
+      expect(enabledOnlyForStockExpiry.enableStockReservationExpiryJob).toBe(
+        true
+      )
       expect(
         scheduledJobFlags
           .filter((flag) => flag !== 'enableStockReservationExpiryJob')

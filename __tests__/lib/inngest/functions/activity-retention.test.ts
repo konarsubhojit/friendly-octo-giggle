@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { mockDelete, mockGetFeatureFlags, mockLogBusinessEvent } = vi.hoisted(() => ({
-  mockDelete: vi.fn(),
-  mockGetFeatureFlags: vi.fn(),
-  mockLogBusinessEvent: vi.fn(),
-}))
+const { mockDelete, mockGetFeatureFlags, mockLogBusinessEvent } = vi.hoisted(
+  () => ({
+    mockDelete: vi.fn(),
+    mockGetFeatureFlags: vi.fn(),
+    mockLogBusinessEvent: vi.fn(),
+  })
+)
 
 vi.mock('@/lib/db', () => ({
   drizzleDb: {
@@ -112,7 +114,9 @@ describe('activity retention', () => {
 
     expect(mockDelete).not.toHaveBeenCalled()
     expect(mockLogBusinessEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ event: 'cron_admin_activity_retention_skipped' })
+      expect.objectContaining({
+        event: 'cron_admin_activity_retention_skipped',
+      })
     )
   })
 })

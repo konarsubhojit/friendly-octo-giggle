@@ -624,14 +624,14 @@ no separate cron endpoint to authenticate:
 Every scheduled job is disabled unless its own Edge Config feature flag is
 explicitly set to `true`; there is no shared scheduled-jobs switch:
 
-| Job | Feature flag |
-| --- | --- |
-| `expire-stock-reservations` | `enableStockReservationExpiryJob` |
-| `compute-product-affinity` cron | `enableProductAffinityJob` |
-| `refresh-exchange-rates` | `enableExchangeRateRefreshJob` |
-| `scan-abandoned-carts` | `enableAbandonedCartScanJob` |
-| `activity-retention` | `enableActivityRetentionJob` |
-| `retry-failed-emails` | `enableFailedEmailRetryJob` |
+| Job                             | Feature flag                      |
+| ------------------------------- | --------------------------------- |
+| `expire-stock-reservations`     | `enableStockReservationExpiryJob` |
+| `compute-product-affinity` cron | `enableProductAffinityJob`        |
+| `refresh-exchange-rates`        | `enableExchangeRateRefreshJob`    |
+| `scan-abandoned-carts`          | `enableAbandonedCartScanJob`      |
+| `activity-retention`            | `enableActivityRetentionJob`      |
+| `retry-failed-emails`           | `enableFailedEmailRetryJob`       |
 
 The explicit `recommendations/affinity.recompute` admin event is not gated, so
 operators can refresh recommendations on demand while its recurring cron stays

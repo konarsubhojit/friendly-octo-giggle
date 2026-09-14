@@ -1,14 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const {
-  mockExpireDueReservations,
-  mockGetFeatureFlags,
-  mockLogBusinessEvent,
-} = vi.hoisted(() => ({
-  mockExpireDueReservations: vi.fn(),
-  mockGetFeatureFlags: vi.fn(),
-  mockLogBusinessEvent: vi.fn(),
-}))
+const { mockExpireDueReservations, mockGetFeatureFlags, mockLogBusinessEvent } =
+  vi.hoisted(() => ({
+    mockExpireDueReservations: vi.fn(),
+    mockGetFeatureFlags: vi.fn(),
+    mockLogBusinessEvent: vi.fn(),
+  }))
 
 vi.mock('@/features/orders/services/stock-reservation', () => ({
   expireDueReservations: mockExpireDueReservations,
@@ -51,7 +48,9 @@ const run = () => internals.fn({ step })
 beforeEach(() => {
   vi.clearAllMocks()
   scores.length = 0
-  mockGetFeatureFlags.mockResolvedValue({ enableStockReservationExpiryJob: true })
+  mockGetFeatureFlags.mockResolvedValue({
+    enableStockReservationExpiryJob: true,
+  })
 })
 
 describe('expireStockReservationsFunction', () => {

@@ -52,8 +52,9 @@ describe('inngest registry', () => {
     } as const
     const cronIds = inngestFunctions
       .filter((fn) =>
-        (fn as unknown as { opts: { triggers: Array<{ cron?: string }> } }).opts
-          .triggers.some((trigger) => trigger.cron)
+        (
+          fn as unknown as { opts: { triggers: Array<{ cron?: string }> } }
+        ).opts.triggers.some((trigger) => trigger.cron)
       )
       .map((fn) => (fn as unknown as { opts: { id: string } }).opts.id)
 
