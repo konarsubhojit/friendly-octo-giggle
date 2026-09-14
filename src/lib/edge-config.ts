@@ -16,6 +16,37 @@ export interface FeatureFlags {
    * When off, the UI falls back to the support-email instruction.
    */
   readonly returnVideoViaInstagram: boolean
+  /**
+   * Whether the hourly sweep releases stock held by expired checkout requests.
+   * Defaults to `false`, so reservations remain untouched until an environment
+   * explicitly opts into automated expiry.
+   */
+  readonly enableStockReservationExpiryJob: boolean
+  /**
+   * Whether the daily cron recomputes product affinity recommendations.
+   * Defaults to `false`; explicit admin recompute events remain available.
+   */
+  readonly enableProductAffinityJob: boolean
+  /**
+   * Whether the daily cron refreshes cached currency exchange rates.
+   * Defaults to `false`, preserving the static-rate fallback until enabled.
+   */
+  readonly enableExchangeRateRefreshJob: boolean
+  /**
+   * Whether the daily scan queues recovery reminders for abandoned carts.
+   * Defaults to `false`, so marketing reminders are never sent implicitly.
+   */
+  readonly enableAbandonedCartScanJob: boolean
+  /**
+   * Whether the monthly cron deletes expired admin activity records.
+   * Defaults to `false`, leaving retention deletion under explicit control.
+   */
+  readonly enableActivityRetentionJob: boolean
+  /**
+   * Whether the nightly sweep queues retries for failed email deliveries.
+   * Defaults to `false`, so only deliberate retry processing is performed.
+   */
+  readonly enableFailedEmailRetryJob: boolean
 }
 
 export interface ShippingConfig {
@@ -73,6 +104,12 @@ const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   enableWishlist: true,
   enableReviews: true,
   returnVideoViaInstagram: false,
+  enableStockReservationExpiryJob: false,
+  enableProductAffinityJob: false,
+  enableExchangeRateRefreshJob: false,
+  enableAbandonedCartScanJob: false,
+  enableActivityRetentionJob: false,
+  enableFailedEmailRetryJob: false,
 }
 
 const DEFAULT_SHIPPING_CONFIG: ShippingConfig = {

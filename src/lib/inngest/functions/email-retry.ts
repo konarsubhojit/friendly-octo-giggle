@@ -49,6 +49,17 @@ export const retryFailedEmailsFunction = inngest.createFunction(
     triggers: [cron('30 2 * * *')],
   },
   async ({ step }) => {
+    const { getFeatureFlags } = await import('@/lib/edge-config')
+    if (!(await getFeatureFlags()).enableFailedEmailRetryJob) {
+      const { logBusinessEvent } = await import('@/lib/logger')
+      logBusinessEvent({
+        event: 'cron_retry_emails_skipped',
+        details: { reason: 'disabled' },
+        success: true,
+      })
+      return { skipped: true, reason: 'disabled' as const }
+    }
+
     const retriable = await step.run('load-retriable-emails', async () => {
       const { getRetriableFailedEmails } =
         await import('@/lib/email/failed-emails')

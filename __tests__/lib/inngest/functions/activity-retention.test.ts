@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { mockDelete, mockLogBusinessEvent } = vi.hoisted(() => ({
+const { mockDelete, mockGetFeatureFlags, mockLogBusinessEvent } = vi.hoisted(() => ({
   mockDelete: vi.fn(),
+  mockGetFeatureFlags: vi.fn(),
   mockLogBusinessEvent: vi.fn(),
 }))
 
@@ -13,6 +14,7 @@ vi.mock('@/lib/db', () => ({
 vi.mock('@/lib/logger', () => ({
   logBusinessEvent: mockLogBusinessEvent,
 }))
+vi.mock('@/lib/edge-config', () => ({ getFeatureFlags: mockGetFeatureFlags }))
 vi.mock('@/lib/schema', () => ({
   adminAuditLogs: {
     createdAt: 'createdAt',
@@ -44,12 +46,13 @@ type FunctionInternals = {
     step: {
       run: (_id: string, handler: () => Promise<number>) => Promise<number>
     }
-  }) => Promise<{ deleted: number; cutoff: string }>
+  }) => Promise<Record<string, unknown>>
 }
 
 describe('activity retention', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockGetFeatureFlags.mockResolvedValue({ enableActivityRetentionJob: true })
   })
 
   it('computes a 24-month cutoff', () => {
@@ -96,6 +99,20 @@ describe('activity retention', () => {
         event: 'cron_admin_activity_retention_completed',
         success: true,
       })
+    )
+  })
+
+  it('skips by default without deleting activity', async () => {
+    const internals = activityRetentionFunction as unknown as FunctionInternals
+    mockGetFeatureFlags.mockResolvedValue({})
+
+    await expect(
+      internals.fn({ step: { run: (_id, handler) => handler() } })
+    ).resolves.toEqual({ skipped: true, reason: 'disabled' })
+
+    expect(mockDelete).not.toHaveBeenCalled()
+    expect(mockLogBusinessEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'cron_admin_activity_retention_skipped' })
     )
   })
 })
