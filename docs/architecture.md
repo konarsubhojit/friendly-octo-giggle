@@ -621,8 +621,11 @@ no separate cron endpoint to authenticate:
 - `compute-product-affinity` daily at 04:00 UTC (and on an explicit admin event)
 - `activity-retention` monthly on the first day at 04:00 UTC
 
-Every scheduled job is disabled unless its own Edge Config feature flag is
-explicitly set to `true`; there is no shared scheduled-jobs switch:
+Every scheduled job is registered only when its own Edge Config feature flag is
+explicitly set to `true`; there is no shared scheduled-jobs switch. A disabled
+job is not advertised by `/api/inngest`, does not appear in the Inngest
+dashboard, and cannot fire on its schedule. The next deploy or Inngest sync
+removes a function that was already synced before its flag was disabled:
 
 | Job                             | Feature flag                      |
 | ------------------------------- | --------------------------------- |

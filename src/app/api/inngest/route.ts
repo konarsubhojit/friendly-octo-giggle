@@ -1,6 +1,12 @@
 import { serve } from 'inngest/next'
+import { computeProductAffinityEventFunction } from '@/features/recommendations/inngest/affinity'
+import { getFeatureFlags } from '@/lib/edge-config'
 import { inngest } from '@/lib/inngest/client'
-import { inngestFunctions } from '@/lib/inngest/registry'
+import {
+  cronFunctions,
+  cronJobFlags,
+  eventFunctions,
+} from '@/lib/inngest/registry'
 
 /**
  * Budget for a single step invocation.
@@ -11,7 +17,43 @@ import { inngestFunctions } from '@/lib/inngest/registry'
  */
 export const maxDuration = 30
 
-export const { GET, POST, PUT } = serve({
-  client: inngest,
-  functions: [...inngestFunctions],
-})
+type InngestMethod = 'GET' | 'POST' | 'PUT'
+type CronFunctionId = keyof typeof cronJobFlags
+
+const functionId = (fn: (typeof cronFunctions)[number]) =>
+  (fn as unknown as { opts: { id: CronFunctionId } }).opts.id
+
+const createServeHandler = async () => {
+  let enabledCronFunctions: Array<(typeof cronFunctions)[number]> = []
+
+  try {
+    const flags = await getFeatureFlags()
+    enabledCronFunctions = cronFunctions.filter(
+      (fn) => flags[cronJobFlags[functionId(fn)]]
+    )
+  } catch {
+    // Fail closed: event functions remain available, but no schedules are synced.
+  }
+
+  const productAffinityEnabled = enabledCronFunctions.some(
+    (fn) => functionId(fn) === 'compute-product-affinity'
+  )
+
+  return serve({
+    client: inngest,
+    functions: [
+      ...eventFunctions,
+      ...(productAffinityEnabled ? [] : [computeProductAffinityEventFunction]),
+      ...enabledCronFunctions,
+    ],
+  })
+}
+
+const createMethodHandler =
+  (method: InngestMethod): ReturnType<typeof serve>[InngestMethod] =>
+  async (request, response) =>
+    (await createServeHandler())[method](request, response)
+
+export const GET = createMethodHandler('GET')
+export const POST = createMethodHandler('POST')
+export const PUT = createMethodHandler('PUT')
