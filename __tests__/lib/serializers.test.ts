@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { serializeOrder, serializeOrders } from '@/lib/serializers'
+import {
+  serializeOrder,
+  serializeOrders,
+  serializeProduct,
+} from '@/lib/serializers'
 
 const mockDate = new Date('2024-06-15T12:00:00.000Z')
 const mockISOString = '2024-06-15T12:00:00.000Z'
@@ -110,6 +114,20 @@ describe('serializeOrder', () => {
     expect(result.customerName).toBe('John Doe')
     expect(result.totalAmount).toBe(59.98)
     expect(result.status).toBe('PENDING')
+  })
+})
+
+describe('serializeProduct', () => {
+  it('does not expose the internal search vector column', () => {
+    const result = serializeProduct(
+      makeProduct({
+        deletedAt: null,
+        images: [],
+        searchVector: "'test':1A",
+      }) as never
+    )
+
+    expect(result).not.toHaveProperty('searchVector')
   })
 })
 
