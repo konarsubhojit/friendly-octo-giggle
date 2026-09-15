@@ -111,19 +111,22 @@ jobs:
       # MinIO's image needs `server /data` on its command line, which the
       # `services:` block cannot supply (it only starts a container's default
       # CMD), so it is started as a plain, manually-managed container instead.
+      # The pinned Quay images avoid Docker Hub anonymous-pull denials on hosted runners.
       - name: Start disposable MinIO and create the test bucket
         run: |
           docker run -d --name minio-ci -p 9000:9000 \
             -e MINIO_ROOT_USER="$MINIO_ROOT_USER" \
             -e MINIO_ROOT_PASSWORD="$MINIO_ROOT_PASSWORD" \
-            minio/minio server /data
+            quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z server /data
           for _ in $(seq 1 30); do
             curl -fs http://localhost:9000/minio/health/live && break
             sleep 1
           done
+          curl -fs http://localhost:9000/minio/health/live \
+            || { echo "::error::MinIO did not become healthy"; docker logs minio-ci; exit 1; }
           docker run --rm --network host \
             -e "MC_HOST_ci=http://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@localhost:9000" \
-            minio/mc mb "ci/$MINIO_BUCKET"
+            quay.io/minio/mc:RELEASE.2025-04-16T18-13-26Z mb --ignore-existing "ci/$MINIO_BUCKET"
 
       - name: Apply database migrations to the disposable Postgres
         run: |
