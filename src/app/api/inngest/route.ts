@@ -6,6 +6,7 @@ import {
   cronFunctions,
   cronJobFlags,
   eventFunctions,
+  inngestFunctions,
 } from '@/lib/inngest/registry'
 
 /**
@@ -17,7 +18,7 @@ import {
  */
 export const maxDuration = 30
 
-type InngestMethod = 'GET' | 'POST' | 'PUT'
+type InngestSyncMethod = 'GET' | 'PUT'
 type CronFunctionId = keyof typeof cronJobFlags
 
 const functionId = (fn: (typeof cronFunctions)[number]) =>
@@ -49,11 +50,16 @@ const createServeHandler = async () => {
   })
 }
 
-const createMethodHandler =
-  (method: InngestMethod): ReturnType<typeof serve>[InngestMethod] =>
+const executionHandler = serve({
+  client: inngest,
+  functions: [...inngestFunctions],
+})
+
+const createSyncMethodHandler =
+  (method: InngestSyncMethod): ReturnType<typeof serve>[InngestSyncMethod] =>
   async (request, response) =>
     (await createServeHandler())[method](request, response)
 
-export const GET = createMethodHandler('GET')
-export const POST = createMethodHandler('POST')
-export const PUT = createMethodHandler('PUT')
+export const GET = createSyncMethodHandler('GET')
+export const POST = executionHandler.POST
+export const PUT = createSyncMethodHandler('PUT')

@@ -1,14 +1,25 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
 
-const { mockGetFeatureFlags, mockHandler, mockServe } = vi.hoisted(() => ({
-  mockGetFeatureFlags: vi.fn(),
-  mockHandler: vi.fn(() => Promise.resolve(new Response())),
-  mockServe: vi.fn((_options: unknown) => ({
-    GET: mockHandler,
-    POST: mockHandler,
-    PUT: mockHandler,
-  })),
-}))
+const { mockGetFeatureFlags, mockInvokedServeOptions, mockServe } =
+  vi.hoisted(() => {
+    const mockGetFeatureFlags = vi.fn()
+    const mockHandler = vi.fn(() => Promise.resolve(new Response()))
+    const mockInvokedServeOptions = vi.fn()
+    const mockServe = vi.fn((options: unknown) => {
+      const handler = vi.fn(() => {
+        mockInvokedServeOptions(options)
+        return mockHandler()
+      })
+
+      return { GET: handler, POST: handler, PUT: handler }
+    })
+
+    return {
+      mockGetFeatureFlags,
+      mockInvokedServeOptions,
+      mockServe,
+    }
+  })
 
 vi.mock('inngest/next', () => ({
   serve: mockServe,
@@ -22,7 +33,11 @@ vi.mock('@/lib/edge-config', async (importOriginal) => ({
 import * as route from '@/app/api/inngest/route'
 import { inngest } from '@/lib/inngest/client'
 import { DEFAULT_FEATURE_FLAGS } from '@/lib/edge-config'
-import { cronJobFlags, eventFunctions } from '@/lib/inngest/registry'
+import {
+  cronJobFlags,
+  eventFunctions,
+  inngestFunctions,
+} from '@/lib/inngest/registry'
 
 type RegisteredFunction = {
   readonly opts: {
@@ -40,6 +55,9 @@ const getFunctions = () =>
 
 const invokeGet = () =>
   route.GET(new Request('https://localhost/api/inngest') as never, undefined)
+
+const invokePost = () =>
+  route.POST(new Request('https://localhost/api/inngest') as never, undefined)
 
 const enabledFlags = (
   flag?: (typeof cronJobFlags)[keyof typeof cronJobFlags]
@@ -97,6 +115,18 @@ describe('GET/POST/PUT /api/inngest', () => {
     ).toBe(true)
     expect(getFunctions()).toEqual(expect.arrayContaining([...eventFunctions]))
     expect(getFunctions()).toHaveLength(eventFunctions.length + 1)
+  })
+
+  it('keeps the complete registry available for queued executions', async () => {
+    await invokePost()
+
+    const options = mockInvokedServeOptions.mock.calls.at(-1)?.[0] as {
+      readonly functions: RegisteredFunction[]
+    }
+    expect(options.functions.map((fn) => fn.opts.id).sort()).toEqual(
+      inngestFunctions.map((fn) => fn.opts.id).sort()
+    )
+    expect(mockGetFeatureFlags).not.toHaveBeenCalled()
   })
 
   it('keeps product affinity event-only until its cron flag is enabled', async () => {
