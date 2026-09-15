@@ -32,7 +32,11 @@ type RegisteredFunction = {
 }
 
 const getFunctions = () =>
-  mockServe.mock.calls.at(-1)?.[0].functions as RegisteredFunction[]
+  (
+    mockServe.mock.calls.at(-1)?.[0] as
+      | { readonly functions: RegisteredFunction[] }
+      | undefined
+  )?.functions ?? []
 
 const invokeGet = () =>
   route.GET(new Request('https://localhost/api/inngest') as never, undefined)
