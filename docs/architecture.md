@@ -391,10 +391,11 @@ Product search resolves through a single provider, selected by
 `src/lib/providers/resolution.ts` — see `docs/deployment.md`'s "Provider
 selection" and "Catalog-search migration" sections for the full precedence
 rules, every environment variable, and the Upstash Search → Algolia migration
-and rollback drill. `postgres` is the baseline (Drizzle/SQL `ILIKE` query,
-requires no external service); `upstash` and `algolia` provide indexed lookup
-with richer relevance/typo-tolerance/facets. Only one provider serves reads at
-a time; product writes fan out to whichever provider is currently selected.
+and rollback drill. `postgres` is the baseline (hybrid `ts_rank` + `pg_trgm`
+ranked query, requires no external service); `upstash` and `algolia` provide
+indexed lookup with richer relevance/typo-tolerance/facets. Only one provider
+serves reads at a time; product writes fan out to whichever provider is
+currently selected.
 
 Order search follows a similar hybrid strategy:
 
