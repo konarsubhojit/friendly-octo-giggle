@@ -186,10 +186,7 @@ describe('CartError (app/cart/error.tsx)', () => {
 
   it('"Continue shopping" link points to the "/" homepage', () => {
     render(<CartError error={createError('fail')} reset={vi.fn()} />)
-    expect(screen.getByText('Continue shopping')).toHaveAttribute(
-      'href',
-      '/'
-    )
+    expect(screen.getByText('Continue shopping')).toHaveAttribute('href', '/')
   })
 
   it('displays fallback message when error.message is empty', () => {
