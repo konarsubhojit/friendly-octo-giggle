@@ -39,7 +39,7 @@ interface RouteErrorCardProps {
  *       reset={reset}
  *       title="Error Loading Cart"
  *       fallbackMessage="Failed to load your shopping cart"
- *       secondaryHref="/shop"
+ *       secondaryHref="/"
  *       secondaryLabel="Continue shopping"
  *     />
  *   )

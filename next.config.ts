@@ -89,17 +89,19 @@ const nextConfig: NextConfig = {
     loader: 'custom',
     loaderFile: './src/lib/image-loader.ts',
   },
-  // `/` is an alias for the storefront listing. This is issued at the routing
-  // layer as a real 308 rather than by a `redirect()` inside a page component:
-  // under `cacheComponents: true` a render-time redirect on an otherwise
-  // static route prerenders an empty shell and expresses the redirect only in
-  // the RSC payload, so a cold document load renders a blank page instead of
-  // navigating. A config redirect never reaches the renderer.
+  // The storefront listing is the homepage — it renders directly at `/`, so
+  // `/shop` is now just a legacy alias for bookmarked/external links. This is
+  // issued at the routing layer as a real 308 rather than by a `redirect()`
+  // inside a page component: under `cacheComponents: true` a render-time
+  // redirect on an otherwise static route prerenders an empty shell and
+  // expresses the redirect only in the RSC payload, so a cold document load
+  // renders a blank page instead of navigating. A config redirect never
+  // reaches the renderer.
   async redirects() {
     return [
       {
-        source: '/',
-        destination: '/shop',
+        source: '/shop',
+        destination: '/',
         permanent: true,
       },
     ]

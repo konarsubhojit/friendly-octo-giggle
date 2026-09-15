@@ -552,7 +552,7 @@ export function SearchBar({
                     {categoryQuickLinks.slice(0, 6).map((category) => (
                       <Link
                         key={category}
-                        href={`/shop?category=${encodeURIComponent(category)}#products`}
+                        href={`/?category=${encodeURIComponent(category)}#products`}
                         onClick={() => setOpen(false)}
                         className="rounded-full border border-[var(--border-warm)] px-2.5 py-1 text-xs font-medium text-[var(--foreground)]"
                       >

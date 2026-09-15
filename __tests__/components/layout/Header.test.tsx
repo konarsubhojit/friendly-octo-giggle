@@ -451,7 +451,7 @@ describe('Header', () => {
     expect(screen.queryByText('Home')).toBeNull()
   })
 
-  it('mobile nav Shop link navigates to /shop', () => {
+  it('mobile nav Shop link navigates to /', () => {
     vi.mocked(useSession).mockReturnValue({
       data: null,
       status: 'unauthenticated',
@@ -463,7 +463,7 @@ describe('Header', () => {
     })
     const shopLinks = screen.getAllByText('Shop')
     const shopLink = shopLinks.find(
-      (el) => el.closest('a')?.getAttribute('href') === '/shop'
+      (el) => el.closest('a')?.getAttribute('href') === '/'
     )
     expect(shopLink).toBeTruthy()
   })

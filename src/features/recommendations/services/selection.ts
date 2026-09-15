@@ -382,7 +382,7 @@ export const getCartRail = async (
 }
 
 /**
- * Personalised rail for the `/shop` landing page.
+ * Personalised rail for the homepage (`/`) shop listing.
  *
  * Anchors are the shopper's own order and wishlist products, unioned with the
  * recently-viewed seeds the browser supplied. Seeds are never persisted, so a

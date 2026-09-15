@@ -46,7 +46,7 @@ const loadOwnAnchors = async (userId: string): Promise<string[]> => {
 }
 
 /**
- * Personalised rail for the `/shop` landing page.
+ * Personalised rail for the homepage (`/`) shop listing.
  *
  * Guests are answered from bestsellers before any per-user read runs, so no
  * profile is created, persisted, or cached for them — the guarantee holds by
