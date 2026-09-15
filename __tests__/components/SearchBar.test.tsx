@@ -183,7 +183,7 @@ describe('SearchBar', () => {
     const bagsLink = await screen.findByRole('link', { name: 'Bags' })
     expect(bagsLink).toHaveAttribute(
       'href',
-      expect.stringContaining('/shop?category=Bags')
+      expect.stringContaining('/?category=Bags')
     )
 
     // Clicking the link closes the panel

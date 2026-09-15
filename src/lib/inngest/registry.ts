@@ -37,22 +37,36 @@ import { activityRetentionFunction } from '@/lib/inngest/functions/activity-rete
 import { refreshExchangeRatesFunction } from '@/lib/inngest/functions/exchange-rates'
 import { expireStockReservationsFunction } from '@/lib/inngest/functions/stock-reservations'
 
-export const inngestFunctions = [
+export const eventFunctions = [
   processCheckoutRequestFunction,
   sendOrderConfirmationEmailFunction,
   sendOrderStatusEmailFunction,
   sendOrderRefundEmailFunction,
   sendReturnStatusEmailFunction,
   sendAuthEmailFunction,
-  activityRetentionFunction,
   indexOrderForSearchFunction,
   invalidateOrderCachesFunction,
-  retryFailedEmailsFunction,
   retrySingleEmailFunction,
-  scanAbandonedCartsFunction,
   sendAbandonedCartReminderFunction,
+  cartRecoveryScorer,
+] as const
+
+export const cronFunctions = [
+  activityRetentionFunction,
+  retryFailedEmailsFunction,
+  scanAbandonedCartsFunction,
   refreshExchangeRatesFunction,
   expireStockReservationsFunction,
   computeProductAffinityFunction,
-  cartRecoveryScorer,
 ] as const
+
+export const cronJobFlags = {
+  'activity-retention': 'enableActivityRetentionJob',
+  'retry-failed-emails': 'enableFailedEmailRetryJob',
+  'scan-abandoned-carts': 'enableAbandonedCartScanJob',
+  'refresh-exchange-rates': 'enableExchangeRateRefreshJob',
+  'expire-stock-reservations': 'enableStockReservationExpiryJob',
+  'compute-product-affinity': 'enableProductAffinityJob',
+} as const
+
+export const inngestFunctions = [...eventFunctions, ...cronFunctions] as const

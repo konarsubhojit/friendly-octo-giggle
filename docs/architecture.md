@@ -226,7 +226,7 @@ The current public read path prefers Server Components and direct DB access.
 
 Example pattern:
 
-1. A page such as `/shop` renders on the server.
+1. A page such as `/` (the storefront home/shop listing) renders on the server.
 2. It fetches categories and bestsellers directly from Drizzle.
 3. It optionally uses Upstash Search to resolve matching product IDs.
 4. It falls back to DB search when the search service is unavailable.
@@ -266,7 +266,7 @@ The AI assistant now runs through one shared orchestration layer in
 This preserves the feature’s ordered fallback chain:
 
 - catalog retrieval: cached Upstash Search → uncached Upstash Search → Drizzle SQL search
-- whole-assistant availability: when the AI provider is disabled, both chat routes return `503` and the conventional `/shop` search UI remains the discovery path
+- whole-assistant availability: when the AI provider is disabled, both chat routes return `503` and the conventional `/` search UI remains the discovery path
 
 ### Cart Model
 
@@ -391,10 +391,11 @@ Product search resolves through a single provider, selected by
 `src/lib/providers/resolution.ts` — see `docs/deployment.md`'s "Provider
 selection" and "Catalog-search migration" sections for the full precedence
 rules, every environment variable, and the Upstash Search → Algolia migration
-and rollback drill. `postgres` is the baseline (Drizzle/SQL `ILIKE` query,
-requires no external service); `upstash` and `algolia` provide indexed lookup
-with richer relevance/typo-tolerance/facets. Only one provider serves reads at
-a time; product writes fan out to whichever provider is currently selected.
+and rollback drill. `postgres` is the baseline (hybrid `ts_rank` + `pg_trgm`
+ranked query, requires no external service); `upstash` and `algolia` provide
+indexed lookup with richer relevance/typo-tolerance/facets. Only one provider
+serves reads at a time; product writes fan out to whichever provider is
+currently selected.
 
 Order search follows a similar hybrid strategy:
 
@@ -621,8 +622,11 @@ no separate cron endpoint to authenticate:
 - `compute-product-affinity` daily at 04:00 UTC (and on an explicit admin event)
 - `activity-retention` monthly on the first day at 04:00 UTC
 
-Every scheduled job is disabled unless its own Edge Config feature flag is
-explicitly set to `true`; there is no shared scheduled-jobs switch:
+Every scheduled job is registered only when its own Edge Config feature flag is
+explicitly set to `true`; there is no shared scheduled-jobs switch. A disabled
+job is not advertised by `/api/inngest`, does not appear in the Inngest
+dashboard, and cannot fire on its schedule. The next deploy or Inngest sync
+removes a function that was already synced before its flag was disabled:
 
 | Job                             | Feature flag                      |
 | ------------------------------- | --------------------------------- |
@@ -701,7 +705,7 @@ The storefront runs on the Cache Components model. A production build reports
 117 routes: 23 fully static (`○`), 21 partially prerendered (`◐`), and 73
 dynamic (`ƒ`).
 
-- `/shop` — static shell plus a cached bestsellers rail; the `searchParams`-driven catalog grid streams into a `Suspense` hole.
+- `/` — static shell plus a cached bestsellers rail; the `searchParams`-driven catalog grid streams into a `Suspense` hole.
 - `/products/[id]` — cached product read with `cacheLife('product')` and `cacheTag(productTag(id))`; the AI feature flag and `?v=` variant preselection stream separately. The top 20 products by sales volume are prerendered at build time via `generateStaticParams`, and the rest are generated on demand.
 - Cart, orders, wishlist, account, and every `/admin` surface read session state outside any cached scope, so no personalized markup can enter the shell.
 - User- and admin-specific APIs stay dynamic route handlers.

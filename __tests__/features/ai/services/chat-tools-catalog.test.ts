@@ -6,6 +6,11 @@ const findMinimalByIdsMock = vi.hoisted(() => vi.fn())
 const findByIdMock = vi.hoisted(() => vi.fn())
 const productsFindManyMock = vi.hoisted(() => vi.fn())
 const productsFindFirstMock = vi.hoisted(() => vi.fn())
+const searchRankedProductsMock = vi.hoisted(() => vi.fn())
+
+vi.mock('@/lib/search/postgres-ranking', () => ({
+  searchRankedProducts: searchRankedProductsMock,
+}))
 
 vi.mock('@/lib/search', () => ({
   searchProductIdsCached: searchProductIdsCachedMock,
@@ -59,6 +64,7 @@ describe('chat-tools-catalog', () => {
       },
     ])
     findByIdMock.mockResolvedValue(null)
+    searchRankedProductsMock.mockResolvedValue([])
     productsFindManyMock.mockResolvedValue([])
     productsFindFirstMock.mockResolvedValue({
       id: 'prod-1',
@@ -125,6 +131,49 @@ describe('chat-tools-catalog', () => {
     expect(output).toContain('[Travel Bag](/products/prod-1)')
     expect(output).not.toContain('prod-2')
     expect(output).not.toMatch(/\b\d+\s*(units|left|in stock)\b/i)
+  })
+
+  it('falls back to the shared ranked query and preserves its order', async () => {
+    searchProductIdsCachedMock.mockResolvedValue(null)
+    searchProductIdsMock.mockResolvedValue(null)
+    searchRankedProductsMock.mockResolvedValue([
+      { id: 'prod-2' },
+      { id: 'prod-1' },
+    ])
+    findMinimalByIdsMock.mockResolvedValue([
+      {
+        id: 'prod-1',
+        name: 'Travel Bag',
+        category: 'bags',
+        description: 'A durable travel bag',
+        price: 1999,
+        stock: 9,
+      },
+      {
+        id: 'prod-2',
+        name: 'Weekend Backpack',
+        category: 'bags',
+        description: 'A roomy backpack',
+        price: 2499,
+        stock: 4,
+      },
+    ])
+
+    const output = await dispatchToolCall(
+      'search_catalog',
+      { query: 'travle bag', category: 'bags', limit: 6 },
+      toolContext
+    )
+
+    expect(searchRankedProductsMock).toHaveBeenCalledWith('travle bag', {
+      limit: 6,
+      category: 'bags',
+    })
+    expect(findMinimalByIdsMock).toHaveBeenCalledWith(
+      ['prod-2', 'prod-1'],
+      'bags'
+    )
+    expect(output.indexOf('prod-2')).toBeLessThan(output.indexOf('prod-1'))
   })
 
   it('falls back to direct product lookup details when requested', async () => {
