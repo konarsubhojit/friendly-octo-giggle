@@ -183,23 +183,23 @@ describe('schema', () => {
       )
 
     expect(migrationPath).toBeDefined()
-      if (!migrationPath) {
-        throw new Error('Product search migration was not found')
-      }
+    if (!migrationPath) {
+      throw new Error('Product search migration was not found')
+    }
 
-      const migrationSql = readFileSync(migrationPath, 'utf8')
+    const migrationSql = readFileSync(migrationPath, 'utf8')
     expect(migrationSql).toContain('CREATE EXTENSION IF NOT EXISTS pg_trgm')
     expect(migrationSql).toContain(
       'ALTER TABLE "Product" ADD COLUMN "search_vector" "tsvector" GENERATED ALWAYS AS'
     )
     expect(migrationSql).toContain(
-      'setweight(to_tsvector(\'english\', coalesce("name", \'\')), \'A\')'
+      "setweight(to_tsvector('english', coalesce(\"name\", '')), 'A')"
     )
     expect(migrationSql).toContain(
-      'setweight(to_tsvector(\'english\', coalesce("description", \'\')), \'B\')'
+      "setweight(to_tsvector('english', coalesce(\"description\", '')), 'B')"
     )
     expect(migrationSql).toContain(
-      'setweight(to_tsvector(\'english\', coalesce("category", \'\')), \'C\')'
+      "setweight(to_tsvector('english', coalesce(\"category\", '')), 'C')"
     )
     expect(migrationSql).toContain(
       'CREATE INDEX "idx_products_search_vector" ON "Product" USING gin ("search_vector")'
