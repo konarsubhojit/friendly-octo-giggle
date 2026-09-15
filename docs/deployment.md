@@ -192,8 +192,11 @@ adopt the same way.
 
 Catalog search reads use one selected provider while product writes may safely
 continue when optional indexing fails. `postgres` is the baseline and queries
-the product database with the existing `ILIKE` fallback; it does not provide
-hosted typo tolerance, facets, highlighting, or suggestions. `algolia` uses
+the product database with a hybrid ranked query — `ts_rank` over the weighted
+`search_vector` generated column plus `pg_trgm` `similarity` on the product
+name (see `src/lib/search/postgres-ranking.ts`). That gives it real relevance
+ranking and typo tolerance, but no facets, highlighting, or suggestions.
+`algolia` uses
 `ALGOLIA_APP_ID`, `ALGOLIA_ADMIN_API_KEY`, and an environment-specific
 `ALGOLIA_PRODUCTS_INDEX`; the admin key is server-only. The optional
 `ALGOLIA_SEARCH_API_KEY` is not used by the application because searches are

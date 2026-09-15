@@ -1,8 +1,9 @@
-import { and, desc, eq, ilike, isNull, or } from 'drizzle-orm'
+import { and, desc, ilike, isNull, or } from 'drizzle-orm'
 import { z } from 'zod'
 import { db, drizzleDb } from '@/lib/db'
 import { products } from '@/lib/schema'
 import { searchProductIds, searchProductIdsCached } from '@/lib/search'
+import { searchRankedProducts } from '@/lib/search/postgres-ranking'
 import { convertPriceToINR, type CurrencyCode } from '@/lib/currency'
 import {
   getVariantMinPrice,
@@ -119,28 +120,32 @@ const searchCatalogFallback = async (params: {
   category?: string
   limit: number
 }): Promise<CatalogResultProduct[]> => {
-  const likeQuery = `%${escapeLikeValue(params.query)}%`
-  const rows = await drizzleDb.query.products.findMany({
-    where: and(
-      isNull(products.deletedAt),
-      params.category ? eq(products.category, params.category) : undefined,
-      or(
-        ilike(products.name, likeQuery),
-        ilike(products.description, likeQuery)
-      )
-    ),
-    with: {
-      variants: {
-        where: (variant, { isNull: isVariantNull }) =>
-          isVariantNull(variant.deletedAt),
-        columns: { price: true, stock: true },
-      },
-    },
-    orderBy: [desc(products.createdAt)],
+  // Converged onto the same hybrid ranked query the Postgres catalog search
+  // adapter uses, so the AI chat path and the storefront path cannot drift.
+  // The only remaining difference is projection: this path needs
+  // variant-derived price and stock, so it re-reads the ranked ids through
+  // db.products.findMinimalByIds and restores the ranked order.
+  const ranked = await searchRankedProducts(params.query, {
     limit: params.limit,
+    category: params.category,
   })
 
-  return rows.map(toCatalogResultProduct)
+  if (ranked.length === 0) return []
+
+  const rankedIds = ranked.map((row) => row.id)
+  const rows = await db.products.findMinimalByIds(rankedIds, params.category)
+
+  return orderProductsByIdList(
+    rankedIds,
+    rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      category: row.category,
+      description: row.description,
+      minPrice: row.price,
+      stockLabel: toStockLabel(row.stock),
+    }))
+  ).slice(0, params.limit)
 }
 
 const resolveCatalogSearchResults = async (params: {

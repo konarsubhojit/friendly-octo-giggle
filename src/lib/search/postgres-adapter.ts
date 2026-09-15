@@ -1,4 +1,4 @@
-import { db } from '@/lib/db'
+import { searchRankedProducts } from './postgres-ranking'
 import type {
   CatalogSearchCapabilities,
   CatalogSearchClient,
@@ -8,8 +8,10 @@ import type {
 
 const capabilities: CatalogSearchCapabilities = {
   provider: 'postgres',
-  typoTolerance: false,
+  // similarity() from pg_trgm backs the ranked query, so typo tolerance is real.
+  typoTolerance: true,
   facets: false,
+  // ts_headline could provide this, but it is not implemented.
   highlighting: false,
   suggestions: false,
   rankingModes: ['relevance'],
@@ -40,22 +42,20 @@ export class PostgresCatalogSearchClient implements CatalogSearchClient {
     query: string,
     options: { readonly limit?: number; readonly category?: string } = {}
   ): Promise<ProductSearchResult[]> {
-    const products = await db.products.findAllMinimal({
-      search: query,
-      category: options.category?.trim() || undefined,
-      limit: options.limit ?? 20,
-      offset: 0,
+    const rows = await searchRankedProducts(query, {
+      limit: options.limit,
+      category: options.category,
     })
 
-    return products.map((product) => ({
-      id: product.id,
-      score: 1,
+    return rows.map((row) => ({
+      id: row.id,
+      score: row.score,
       content: {
-        name: product.name,
-        description: product.description,
-        category: product.category,
+        name: row.name,
+        description: row.description,
+        category: row.category,
       },
-      metadata: { image: product.image },
+      metadata: { image: row.image },
     }))
   }
 

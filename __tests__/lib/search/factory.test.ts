@@ -36,7 +36,7 @@ describe('catalog search provider factory', () => {
     expect(isSearchAvailable()).toBe(true)
     expect(getSearchCapabilities()).toMatchObject({
       provider: 'postgres',
-      typoTolerance: false,
+      typoTolerance: true,
     })
   })
 
