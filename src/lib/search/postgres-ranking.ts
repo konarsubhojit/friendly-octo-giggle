@@ -25,7 +25,9 @@
  * `websearch_to_tsquery` (not `plainto_tsquery`) is used deliberately: it
  * supports quoted phrases and `-exclusion` and never raises a syntax error on
  * malformed input, so an arbitrary shopper query can be passed straight
- * through.
+ * through. Caveat: because the trigram branch is OR'd in, a `-term` exclusion
+ * is honoured by the full-text branch but can still be re-admitted by a close
+ * name match — exclusion is a ranking hint here, not a hard filter.
  *
  * Case folding: `pg_trgm` lowercases while extracting trigrams, so
  * `similarity(name, $q)` is already case-insensitive and — unlike

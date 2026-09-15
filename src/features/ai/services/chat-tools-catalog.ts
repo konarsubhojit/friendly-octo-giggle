@@ -124,7 +124,10 @@ const searchCatalogFallback = async (params: {
   // adapter uses, so the AI chat path and the storefront path cannot drift.
   // The only remaining difference is projection: this path needs
   // variant-derived price and stock, so it re-reads the ranked ids through
-  // db.products.findMinimalByIds and restores the ranked order.
+  // db.products.findMinimalByIds and restores the ranked order. When the
+  // selected provider is already `postgres` and it returned no matches this
+  // repeats that provider's query; the extra round-trip is kept because the
+  // fallback must stay provider-agnostic for Upstash/Algolia outages.
   const ranked = await searchRankedProducts(params.query, {
     limit: params.limit,
     category: params.category,
