@@ -3180,9 +3180,10 @@
           "name": "idx_products_name_trgm",
           "columns": [
             {
-              "expression": "lower(\"name\") gin_trgm_ops",
+              "expression": "name",
               "asc": true,
-              "isExpression": true,
+              "isExpression": false,
+              "opclass": "gin_trgm_ops",
               "nulls": "last"
             }
           ],
@@ -3195,9 +3196,10 @@
           "name": "idx_products_description_trgm",
           "columns": [
             {
-              "expression": "lower(\"description\") gin_trgm_ops",
+              "expression": "description",
               "asc": true,
-              "isExpression": true,
+              "isExpression": false,
+              "opclass": "gin_trgm_ops",
               "nulls": "last"
             }
           ],

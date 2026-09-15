@@ -330,13 +330,10 @@ export const products = pgTable(
     index('Product_createdAt_idx').on(t.createdAt),
     index('Product_deletedAt_idx').on(t.deletedAt),
     index('idx_products_search_vector').using('gin', t.searchVector),
-    index('idx_products_name_trgm').using(
-      'gin',
-      sql`lower(${t.name}) gin_trgm_ops`
-    ),
+    index('idx_products_name_trgm').using('gin', t.name.op('gin_trgm_ops')),
     index('idx_products_description_trgm').using(
       'gin',
-      sql`lower(${t.description}) gin_trgm_ops`
+      t.description.op('gin_trgm_ops')
     ),
   ]
 )

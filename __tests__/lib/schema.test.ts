@@ -205,10 +205,10 @@ describe('schema', () => {
       'CREATE INDEX "idx_products_search_vector" ON "Product" USING gin ("search_vector")'
     )
     expect(migrationSql).toContain(
-      'CREATE INDEX "idx_products_name_trgm" ON "Product" USING gin (lower("name") gin_trgm_ops)'
+      'CREATE INDEX "idx_products_name_trgm" ON "Product" USING gin ("name" gin_trgm_ops)'
     )
     expect(migrationSql).toContain(
-      'CREATE INDEX "idx_products_description_trgm" ON "Product" USING gin (lower("description") gin_trgm_ops)'
+      'CREATE INDEX "idx_products_description_trgm" ON "Product" USING gin ("description" gin_trgm_ops)'
     )
     expect(migrationSql).not.toMatch(/\bDROP\b/i)
     expect(migrationSql).not.toContain('unaccent')
