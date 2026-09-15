@@ -215,6 +215,36 @@ describe('schema', () => {
     expect(migrationSql).not.toContain('btree_gin')
   })
 
+  it('adds unaccent in a separate migration with indexable expressions', () => {
+    const migrationPath = readdirSync(join(process.cwd(), 'drizzle'))
+      .filter((file) => file.endsWith('.sql'))
+      .map((file) => join(process.cwd(), 'drizzle', file))
+      .find((file) => readFileSync(file, 'utf8').includes('immutable_unaccent'))
+
+    expect(migrationPath).toBeDefined()
+    if (!migrationPath) {
+      throw new Error('Product unaccent migration was not found')
+    }
+
+    const migrationSql = readFileSync(migrationPath, 'utf8')
+    expect(migrationSql).toContain('CREATE EXTENSION IF NOT EXISTS unaccent')
+    expect(migrationSql).toContain('CREATE FUNCTION public.immutable_unaccent')
+    expect(migrationSql).toContain('IMMUTABLE PARALLEL SAFE STRICT')
+    expect(migrationSql).toContain(
+      "public.unaccent('public.unaccent'::regdictionary, $1)"
+    )
+    expect(migrationSql).toContain(
+      'CREATE FUNCTION public.catalog_search_vector(text, text, text)'
+    )
+    expect(migrationSql).toContain(
+      'CREATE INDEX "idx_products_unaccent_search_vector"'
+    )
+    expect(migrationSql).toContain(
+      'CREATE INDEX "idx_products_name_unaccent_trgm"'
+    )
+    expect(migrationSql).not.toMatch(/ALTER TABLE|DROP (?:INDEX|COLUMN)/)
+  })
+
   it('users table has all expected columns', () => {
     const cols = Object.keys(users)
     expect(cols).toContain('name')
