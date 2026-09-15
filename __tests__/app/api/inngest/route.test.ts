@@ -1,7 +1,7 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
 
-const { mockGetFeatureFlags, mockInvokedServeOptions, mockServe } =
-  vi.hoisted(() => {
+const { mockGetFeatureFlags, mockInvokedServeOptions, mockServe } = vi.hoisted(
+  () => {
     const mockGetFeatureFlags = vi.fn()
     const mockHandler = vi.fn(() => Promise.resolve(new Response()))
     const mockInvokedServeOptions = vi.fn()
@@ -19,7 +19,8 @@ const { mockGetFeatureFlags, mockInvokedServeOptions, mockServe } =
       mockInvokedServeOptions,
       mockServe,
     }
-  })
+  }
+)
 
 vi.mock('inngest/next', () => ({
   serve: mockServe,
