@@ -151,7 +151,7 @@ describe('ProductGrid (extended)', () => {
       submitForm()
 
       expect(mockRouterPush).toHaveBeenCalledWith(
-        '/shop?q=daisies&category=Flowers&sort=price_asc&minPrice=10&maxPrice=90&inStock=true&minRating=4&variant=multiple#products',
+        '/?q=daisies&category=Flowers&sort=price_asc&minPrice=10&maxPrice=90&inStock=true&minRating=4&variant=multiple#products',
         { scroll: false }
       )
     })
@@ -185,7 +185,7 @@ describe('ProductGrid (extended)', () => {
 
       submitForm()
 
-      expect(mockRouterPush).toHaveBeenCalledWith('/shop#products', {
+      expect(mockRouterPush).toHaveBeenCalledWith('/#products', {
         scroll: false,
       })
     })
@@ -202,7 +202,7 @@ describe('ProductGrid (extended)', () => {
 
       submitForm()
 
-      expect(mockRouterPush).toHaveBeenCalledWith('/shop#products', {
+      expect(mockRouterPush).toHaveBeenCalledWith('/#products', {
         scroll: false,
       })
     })
@@ -444,7 +444,7 @@ describe('ProductGrid (extended)', () => {
       fireEvent.click(screen.getByRole('button', { name: 'rose' }))
 
       expect(mockRouterPush).toHaveBeenCalledWith(
-        '/shop?q=rose&category=Flowers#products',
+        '/?q=rose&category=Flowers#products',
         { scroll: false }
       )
     })
@@ -454,7 +454,7 @@ describe('ProductGrid (extended)', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'rose' }))
 
-      expect(mockRouterPush).toHaveBeenCalledWith('/shop?q=rose#products', {
+      expect(mockRouterPush).toHaveBeenCalledWith('/?q=rose#products', {
         scroll: false,
       })
     })

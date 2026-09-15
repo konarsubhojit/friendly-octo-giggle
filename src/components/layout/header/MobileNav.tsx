@@ -37,7 +37,7 @@ export function MobileNav({
           <ProductSearch onNavigate={closeMobileNav} />
         </div>
         <Link
-          href="/shop"
+          href="/"
           onClick={closeMobileNav}
           className="flex items-center gap-3 px-4 py-3 text-[var(--text-secondary)] hover:bg-[var(--accent-blush)] rounded-xl font-medium transition-colors"
         >

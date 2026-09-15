@@ -9,7 +9,7 @@ import type { RecommendationResult } from '@/features/recommendations/validation
 const TITLE = 'Picked for you'
 
 /**
- * The personalised `/shop` rail.
+ * The personalised homepage (`/`) shop rail.
  *
  * A Client Component out of necessity rather than preference: its recently
  * viewed seeds live in `localStorage` and are simply not available on the

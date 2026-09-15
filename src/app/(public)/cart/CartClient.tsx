@@ -178,7 +178,7 @@ export default function CartClient({ initialCart }: CartClientProps) {
               title="Your cart is empty"
               message="Add some products to get started!"
               ctaText="Browse Products"
-              ctaHref="/shop"
+              ctaHref="/"
               className="py-0"
             />
           </Card>
@@ -188,7 +188,7 @@ export default function CartClient({ initialCart }: CartClientProps) {
               <Card className="overflow-hidden">{cartItemGroups}</Card>
 
               <Link
-                href="/shop"
+                href="/"
                 className="inline-flex items-center gap-2 mt-4 text-sm text-[var(--text-secondary)] hover:text-[var(--accent-rose)] transition-colors font-medium"
               >
                 <svg

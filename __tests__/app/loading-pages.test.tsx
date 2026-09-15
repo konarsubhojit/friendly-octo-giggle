@@ -2,12 +2,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
-vi.mock('@/components/skeletons/HeaderSkeleton', () => ({
-  default: () => <div data-testid="header-skeleton">HeaderSkeleton</div>,
-}))
-vi.mock('@/components/skeletons/HeroSkeleton', () => ({
-  default: () => <div data-testid="hero-skeleton">HeroSkeleton</div>,
-}))
 vi.mock('@/components/skeletons/ProductCardSkeleton', () => ({
   default: () => (
     <div data-testid="product-card-skeleton">ProductCardSkeleton</div>
@@ -21,17 +15,20 @@ describe('app/loading.tsx – Root Loading', () => {
     expect(container).toBeTruthy()
   })
 
-  it('renders HeroSkeleton only (no product card skeletons)', async () => {
-    const { default: Loading } = await import('@/app/(public)/loading')
-    render(<Loading />)
-    expect(screen.getByTestId('hero-skeleton')).toBeInTheDocument()
-    expect(screen.queryAllByTestId('product-card-skeleton')).toHaveLength(0)
-  })
-
-  it('does not render a footer skeleton', async () => {
+  it('uses pt-8 spacing (not pt-28)', async () => {
     const { default: Loading } = await import('@/app/(public)/loading')
     const { container } = render(<Loading />)
-    expect(container.querySelector('footer')).toBeNull()
+    const section = container.querySelector('section')
+    expect(section?.className).toContain('pt-8')
+    expect(section?.className).not.toContain('pt-28')
+  })
+
+  it('contains animate-pulse elements', async () => {
+    const { default: Loading } = await import('@/app/(public)/loading')
+    const { container } = render(<Loading />)
+    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(
+      0
+    )
   })
 })
 
@@ -129,30 +126,6 @@ describe('app/wishlist/loading.tsx – Wishlist Loading', () => {
     const { default: WishlistLoading } =
       await import('@/app/(public)/wishlist/loading')
     const { container } = render(<WishlistLoading />)
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(
-      0
-    )
-  })
-})
-
-describe('app/shop/loading.tsx – Shop Loading', () => {
-  it('renders without crashing', async () => {
-    const { default: ShopLoading } = await import('@/app/(public)/shop/loading')
-    const { container } = render(<ShopLoading />)
-    expect(container).toBeTruthy()
-  })
-
-  it('uses pt-8 spacing (not pt-28)', async () => {
-    const { default: ShopLoading } = await import('@/app/(public)/shop/loading')
-    const { container } = render(<ShopLoading />)
-    const section = container.querySelector('section')
-    expect(section?.className).toContain('pt-8')
-    expect(section?.className).not.toContain('pt-28')
-  })
-
-  it('contains animate-pulse elements', async () => {
-    const { default: ShopLoading } = await import('@/app/(public)/shop/loading')
-    const { container } = render(<ShopLoading />)
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(
       0
     )

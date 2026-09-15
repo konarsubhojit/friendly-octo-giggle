@@ -541,7 +541,7 @@ const ProductGrid = ({
     return () => observer.disconnect()
   }, [loadMore])
 
-  const resetHref: Route = '/shop#products'
+  const resetHref: Route = '/#products'
 
   const applySearchState = () => {
     const params = buildSearchParams({
@@ -556,7 +556,7 @@ const ProductGrid = ({
     })
 
     const query = params.toString()
-    router.push(query ? `/shop?${query}#products` : resetHref, {
+    router.push(query ? `/?${query}#products` : resetHref, {
       scroll: false,
     })
   }
@@ -593,8 +593,8 @@ const ProductGrid = ({
                   key={cat}
                   href={
                     cat === DEFAULT_CATEGORY
-                      ? '/shop#products'
-                      : `/shop?category=${encodeURIComponent(cat)}#products`
+                      ? '/#products'
+                      : `/?category=${encodeURIComponent(cat)}#products`
                   }
                   aria-current={isActive || undefined}
                   className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
@@ -821,7 +821,7 @@ const ProductGrid = ({
                           if (selectedCategory !== DEFAULT_CATEGORY) {
                             params.set('category', selectedCategory)
                           }
-                          router.push(`/shop?${params.toString()}#products`, {
+                          router.push(`/?${params.toString()}#products`, {
                             scroll: false,
                           })
                         }}
