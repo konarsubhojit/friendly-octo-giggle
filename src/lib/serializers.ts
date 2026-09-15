@@ -10,6 +10,8 @@ import {
 type DbOrder = InferSelectModel<typeof orders>
 type DbOrderItem = InferSelectModel<typeof orderItems>
 type DbProduct = InferSelectModel<typeof products>
+type SerializableProduct = Omit<DbProduct, 'searchVector'> &
+  Partial<Pick<DbProduct, 'searchVector'>>
 type DbProductVariant = InferSelectModel<typeof productVariants>
 type DbProductOptionValue = InferSelectModel<typeof productOptionValues>
 
@@ -20,7 +22,7 @@ interface VariantOptionValueLink {
 
 type OrderWithItems = DbOrder & {
   items: (DbOrderItem & {
-    product: DbProduct
+    product: SerializableProduct
     variant: DbProductVariant | null
   })[]
 }
@@ -30,12 +32,16 @@ const toISOString = (value: Date | string): string => {
   return value.toISOString()
 }
 
-export const serializeProduct = <T extends DbProduct>(product: T) => ({
-  ...product,
-  createdAt: toISOString(product.createdAt),
-  updatedAt: toISOString(product.updatedAt),
-  deletedAt: product.deletedAt ? toISOString(product.deletedAt) : null,
-})
+export const serializeProduct = <T extends SerializableProduct>(product: T) => {
+  const { searchVector: _searchVector, ...serializableProduct } = product
+
+  return {
+    ...serializableProduct,
+    createdAt: toISOString(product.createdAt),
+    updatedAt: toISOString(product.updatedAt),
+    deletedAt: product.deletedAt ? toISOString(product.deletedAt) : null,
+  }
+}
 
 /**
  * Flatten variant option-value join records into a flat `ProductOptionValue[]`.

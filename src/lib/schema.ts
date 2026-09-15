@@ -14,6 +14,7 @@ import {
   uniqueIndex,
   check,
   primaryKey,
+  customType,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core'
 import { relations, sql } from 'drizzle-orm'
@@ -38,6 +39,12 @@ const money = (name: string) =>
     scale: MONEY_DECIMAL_PLACES,
     mode: 'number',
   })
+
+const tsvector = customType<{ data: string }>({
+  dataType() {
+    return 'tsvector'
+  },
+})
 
 // ─── Enums ───────────────────────────────────────────────
 
@@ -309,6 +316,11 @@ export const products = pgTable(
     image: text('image').notNull(),
     images: json('images').$type<string[]>().default([]).notNull(),
     category: text('category').notNull(),
+    searchVector: tsvector('search_vector').generatedAlwaysAs(
+      sql`setweight(to_tsvector('english', coalesce("name", '')), 'A') ||
+        setweight(to_tsvector('english', coalesce("description", '')), 'B') ||
+        setweight(to_tsvector('english', coalesce("category", '')), 'C')`
+    ),
     deletedAt: timestamp('deletedAt', { mode: 'date' }),
     createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
     updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull(),
@@ -317,6 +329,12 @@ export const products = pgTable(
     index('Product_category_idx').on(t.category),
     index('Product_createdAt_idx').on(t.createdAt),
     index('Product_deletedAt_idx').on(t.deletedAt),
+    index('idx_products_search_vector').using('gin', t.searchVector),
+    index('idx_products_name_trgm').using('gin', t.name.op('gin_trgm_ops')),
+    index('idx_products_description_trgm').using(
+      'gin',
+      t.description.op('gin_trgm_ops')
+    ),
   ]
 )
 

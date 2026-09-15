@@ -1,3 +1,5 @@
+import { readFileSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import {
   users,
@@ -74,6 +76,7 @@ describe('schema', () => {
     expect(cols).toContain('id')
     expect(cols).toContain('name')
     expect(cols).toContain('category')
+    expect(cols).toContain('searchVector')
   })
 
   it('orders table has expected columns', () => {
@@ -169,6 +172,47 @@ describe('schema', () => {
     expect(cols).toContain('deletedAt')
     expect(cols).toContain('createdAt')
     expect(cols).toContain('updatedAt')
+  })
+
+  it('product search migration adds only pg_trgm, search vector, and indexes', () => {
+    const migrationPath = readdirSync(join(process.cwd(), 'drizzle'))
+      .filter((file) => file.endsWith('.sql'))
+      .map((file) => join(process.cwd(), 'drizzle', file))
+      .find((file) =>
+        readFileSync(file, 'utf8').includes('idx_products_search_vector')
+      )
+
+    expect(migrationPath).toBeDefined()
+    if (!migrationPath) {
+      throw new Error('Product search migration was not found')
+    }
+
+    const migrationSql = readFileSync(migrationPath, 'utf8')
+    expect(migrationSql).toContain('CREATE EXTENSION IF NOT EXISTS pg_trgm')
+    expect(migrationSql).toContain(
+      'ALTER TABLE "Product" ADD COLUMN "search_vector" "tsvector" GENERATED ALWAYS AS'
+    )
+    expect(migrationSql).toContain(
+      "setweight(to_tsvector('english', coalesce(\"name\", '')), 'A')"
+    )
+    expect(migrationSql).toContain(
+      "setweight(to_tsvector('english', coalesce(\"description\", '')), 'B')"
+    )
+    expect(migrationSql).toContain(
+      "setweight(to_tsvector('english', coalesce(\"category\", '')), 'C')"
+    )
+    expect(migrationSql).toContain(
+      'CREATE INDEX "idx_products_search_vector" ON "Product" USING gin ("search_vector")'
+    )
+    expect(migrationSql).toContain(
+      'CREATE INDEX "idx_products_name_trgm" ON "Product" USING gin ("name" gin_trgm_ops)'
+    )
+    expect(migrationSql).toContain(
+      'CREATE INDEX "idx_products_description_trgm" ON "Product" USING gin ("description" gin_trgm_ops)'
+    )
+    expect(migrationSql).not.toMatch(/\bDROP\b/i)
+    expect(migrationSql).not.toContain('unaccent')
+    expect(migrationSql).not.toContain('btree_gin')
   })
 
   it('users table has all expected columns', () => {
