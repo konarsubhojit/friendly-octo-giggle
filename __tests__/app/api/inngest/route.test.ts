@@ -22,10 +22,7 @@ vi.mock('@/lib/edge-config', async (importOriginal) => ({
 import * as route from '@/app/api/inngest/route'
 import { inngest } from '@/lib/inngest/client'
 import { DEFAULT_FEATURE_FLAGS } from '@/lib/edge-config'
-import {
-  cronJobFlags,
-  eventFunctions,
-} from '@/lib/inngest/registry'
+import { cronJobFlags, eventFunctions } from '@/lib/inngest/registry'
 
 type RegisteredFunction = {
   readonly opts: {
