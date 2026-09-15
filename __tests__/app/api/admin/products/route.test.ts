@@ -125,6 +125,7 @@ describe('Admin Products API', () => {
           deletedAt: null,
           createdAt: new Date('2024-01-01'),
           updatedAt: new Date('2024-01-01'),
+          searchVector: "'product':1A",
           variants: [],
         },
       ]
@@ -145,6 +146,7 @@ describe('Admin Products API', () => {
       expect(data.data).toHaveProperty('hasMore')
       expect(data.data).toHaveProperty('nextCursor')
       expect(data.data.totalCount).toBe(1)
+      expect(data.data.products[0]).not.toHaveProperty('searchVector')
     })
 
     it('serializes variant fields (sku, image, images, dates) in response', async () => {

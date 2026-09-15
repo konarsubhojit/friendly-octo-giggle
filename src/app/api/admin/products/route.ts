@@ -136,20 +136,24 @@ export const GET = async (request: NextRequest) => {
         : null
       const totalCount = Number(totalRows[0]?.value ?? 0)
 
-      const serialized = pageItems.map((p) => ({
-        ...p,
-        deletedAt: null,
-        createdAt: p.createdAt.toISOString(),
-        updatedAt: p.updatedAt.toISOString(),
-        variants: p.variants.map((v) => ({
-          ...v,
-          sku: v.sku ?? null,
-          image: v.image ?? null,
-          images: v.images ?? [],
-          createdAt: v.createdAt.toISOString(),
-          updatedAt: v.updatedAt.toISOString(),
-        })),
-      }))
+      const serialized = pageItems.map((p) => {
+        const { searchVector: _searchVector, ...product } = p
+
+        return {
+          ...product,
+          deletedAt: null,
+          createdAt: p.createdAt.toISOString(),
+          updatedAt: p.updatedAt.toISOString(),
+          variants: p.variants.map((v) => ({
+            ...v,
+            sku: v.sku ?? null,
+            image: v.image ?? null,
+            images: v.images ?? [],
+            createdAt: v.createdAt.toISOString(),
+            updatedAt: v.updatedAt.toISOString(),
+          })),
+        }
+      })
 
       return {
         products: serialized,
