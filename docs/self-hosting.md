@@ -81,8 +81,8 @@ Vercel serverless functions
 └──────────────────────────────────────────────────────────┘
 ```
 
-| Component | Detail                                                                                             |
-| --------- | -------------------------------------------------------------------------------------------------- |
+| Component | Detail |
+| --- | --- |
 | Host      | Oracle Cloud Ampere A1 (arm64; use arm64-compatible images), 2 OCPU, 12 GB RAM; hostname `oci-new` |
 | Database  | Native PostgreSQL 18, loopback-only `127.0.0.1:5432`                                               |
 | Pooler    | `edoburu/pgbouncer:latest` in Docker with `network_mode: host`, transaction pooling                |
@@ -163,10 +163,11 @@ replacement.
 `SHOW CONFIG;` on the PgBouncer admin console verifies
 `max_prepared_statements = 200`. This non-default image setting emulates
 protocol-level prepared statements, so Drizzle's named statements work with
-transaction pooling. `MAX_CLIENT_CONN` and `DEFAULT_POOL_SIZE` are currently
-unset, inheriting PgBouncer defaults of 100 and 20 respectively. Those values
-are reasonable starting points for this 2 OCPU / 12 GB host, but set them
-explicitly in the Compose file before tuning so the deployed limit is clear.
+transaction pooling. The host leaves `MAX_CLIENT_CONN` and
+`DEFAULT_POOL_SIZE` unset; `SHOW CONFIG;` reports their effective values as 100
+and 20 respectively. Those values are reasonable starting points for this 2
+OCPU / 12 GB host, but set them explicitly in the Compose file before tuning so
+the deployed limit is clear.
 
 Client-to-PgBouncer traffic uses TLS, but PgBouncer-to-Postgres traffic is
 plaintext over loopback (`DB_HOST: 127.0.0.1`). That is safe while Postgres
