@@ -479,6 +479,9 @@ service selects it with:
 Environment=BACKUP_ENV_FILE=/etc/octo-backup.env
 ```
 
+That selected file sets `BACKUP_PREFIX=octo`; without it, the script's `pg`
+default would write octo backups into the wetalk prefix.
+
 This indirection is safety-critical. The shared script runs `set -a` and
 self-sources `BACKUP_ENV_FILE` after systemd has applied `EnvironmentFile=`.
 Setting octo's `DATABASE_URL` only in the unit would therefore allow the
@@ -590,7 +593,10 @@ loopback-only listener and `pg_stat_statements`; install Docker; write
 `/etc/docker/daemon.json` if published ports will be used (gotcha 1); obtain
 the certificate for `db.kiyon.store`; restore PgBouncer's compose file and
 `.env`; restore the TLS key's `70:70` ownership and `0600` mode; bring up
-PgBouncer; download, decrypt, and validate the newest OCI dump off-host before
-restoring it through `127.0.0.1:5432`; install the fail2ban filter and jail;
-restore and verify the persistent firewall rules; and verify enforcement from
-an external host (gotcha 2).
+PgBouncer; select the newest `octo/**/*.dump.age` object written by `oci-new`,
+then download, decrypt, and validate it off-host before restoring it through
+`127.0.0.1:5432`; install the fail2ban filter and jail; restore and verify the
+persistent firewall rules; verify enforcement from an external host (gotcha
+2); restore both backup scripts, their `0600` environment files, and their
+systemd service/timer units; then enable both timers and verify their 00:05 and
+00:45 UTC schedules remain non-overlapping.
