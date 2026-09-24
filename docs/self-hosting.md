@@ -140,8 +140,9 @@ not add `ports:`. The deployed host currently uses
 `edoburu/pgbouncer:latest`; pin it to a tag or digest on the next maintenance
 pass: protocol-level prepared-statement emulation requires PgBouncer 1.21 or
 newer, so a silent rollback below that version would break Drizzle's named
-statements in transaction pooling without a configuration change. The
-reconstruction intentionally has no health check because the host file has
+statements in transaction pooling without a configuration change.
+
+The reconstruction intentionally has no health check because the host file has
 none; do not add one without validating it on the host. `POSTGRES_PASSWORD`
 comes from `~/docker/.env`, which is never committed.
 
