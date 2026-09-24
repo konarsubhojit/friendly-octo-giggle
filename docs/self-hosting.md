@@ -83,7 +83,7 @@ Vercel serverless functions
 
 | Component | Detail                                                                              |
 | --------- | ----------------------------------------------------------------------------------- |
-| Host      | OCI VM, hostname `oci-new`                                                          |
+| Host      | Oracle Cloud Ampere A1 (arm64; use arm64-compatible images), 2 OCPU, 12 GB RAM; hostname `oci-new` |
 | Database  | Native PostgreSQL 18, loopback-only `127.0.0.1:5432`                                |
 | Pooler    | `edoburu/pgbouncer:latest` in Docker with `network_mode: host`, transaction pooling |
 | TLS       | Let's Encrypt certificate for `db.kiyon.store`, terminated at PgBouncer             |
@@ -122,41 +122,57 @@ services:
       POOL_MODE: transaction
       AUTH_TYPE: scram-sha-256
       ADMIN_USERS: octo
+      LISTEN_ADDR: 0.0.0.0
+      LISTEN_PORT: '6432'
       CLIENT_TLS_SSLMODE: require
-      CLIENT_TLS_CERT_FILE: /etc/letsencrypt/live/db.kiyon.store/fullchain.pem
-      CLIENT_TLS_KEY_FILE: /etc/letsencrypt/live/db.kiyon.store/privkey.pem
+      CLIENT_TLS_CERT_FILE: /etc/pgbouncer/tls/db.kiyon.store.crt
+      CLIENT_TLS_KEY_FILE: /etc/pgbouncer/tls/db.kiyon.store.key
     volumes:
-      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /etc/pgbouncer/tls:/etc/pgbouncer/tls:ro
     logging:
       driver: syslog
       options:
         tag: pgbouncer
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -p 5432 -U octo']
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
 ```
 
 `network_mode: host` exposes PgBouncer's native `6432` listener directly; do
-not add `ports:`. The image writes `/etc/pgbouncer/userlist.txt` at startup.
-Keep the current recommendation to pin `edoburu/pgbouncer:latest` to a specific
-tag or digest on the next maintenance pass. `POSTGRES_PASSWORD` comes from
-`~/docker/.env`, which is never committed.
+not add `ports:`. The image writes `/etc/pgbouncer/userlist.txt` at startup. Pin
+`edoburu/pgbouncer:latest` to a tag or digest: protocol-level prepared-statement
+emulation requires PgBouncer 1.21 or newer, so a silent rollback below that
+version would break Drizzle's named statements in transaction pooling without a
+configuration change. `POSTGRES_PASSWORD` comes from `~/docker/.env`, which is
+never committed.
 
-The bind-mounted TLS server key must be mode `0600` and owned by uid/gid
-`70:70`, the `pgbouncer` user inside this container image. Host-user ownership
-causes PgBouncer to fail at startup. Apply the ownership and mode to the key
-file mounted at `CLIENT_TLS_KEY_FILE` before starting the container:
+TLS material is copied into `/etc/pgbouncer/tls/`, rather than mounted from
+`/etc/letsencrypt`. The copied, bind-mounted server key must be mode `0600` and
+owned by uid/gid `70:70`, the `pgbouncer` user inside this container image.
+Host-user ownership causes PgBouncer to fail at startup. Apply the ownership and
+mode to `/etc/pgbouncer/tls/db.kiyon.store.key` before starting the container:
 
 ```bash
-sudo chown 70:70 <mounted-server-key>
-sudo chmod 0600 <mounted-server-key>
+sudo chown 70:70 /etc/pgbouncer/tls/db.kiyon.store.key
+sudo chmod 0600 /etc/pgbouncer/tls/db.kiyon.store.key
 ```
 
-Re-copying a bind-mounted key resets it to the host user's ownership, so repeat
-both commands after every copy or replacement.
+Copying a renewed key into `/etc/pgbouncer/tls/` resets it to the host user's
+ownership, so repeat both commands after every certbot renewal copy or
+replacement.
+
+`SHOW CONFIG;` on the PgBouncer admin console verifies
+`max_prepared_statements = 200`. This non-default image setting emulates
+protocol-level prepared statements, so Drizzle's named statements work with
+transaction pooling. `MAX_CLIENT_CONN` and `DEFAULT_POOL_SIZE` are currently
+unset, inheriting PgBouncer defaults of 100 and 20 respectively. Those values
+are reasonable starting points for this 2 OCPU / 12 GB host, but set them
+explicitly in the Compose file before tuning so the deployed limit is clear.
+
+Client-to-PgBouncer traffic uses TLS, but PgBouncer-to-Postgres traffic is
+plaintext over loopback (`DB_HOST: 127.0.0.1`). That is safe while Postgres
+remains loopback-only; it is not end-to-end encryption. `ADMIN_USERS: octo` is
+also a hardening concern: it gives the application's role access to the
+PgBouncer admin console, including `PAUSE`, `RELOAD`, and `SHUTDOWN`, and the
+same role is present in Vercel's `DATABASE_URL`. Use a dedicated admin user;
+this has not yet been changed.
 
 ### Native PostgreSQL
 
@@ -450,7 +466,36 @@ sudo grep 'authentication failed' /var/log/syslog | tail
 ```
 
 `cl_waiting > 0` or `maxwait` above roughly 1s means clients are queuing; raise
-`DEFAULT_POOL_SIZE`. Read logs from syslog, not `docker compose logs`.
+`DEFAULT_POOL_SIZE`. It currently inherits the implicit value of 20, so set it
+explicitly in the Compose file before raising it. Read logs from syslog, not
+`docker compose logs`.
+
+### Performance tuning: verify before changing
+
+All values here are conventional starting points to verify, not measured
+recommendations for this workload. Check:
+
+```bash
+sudo -u postgres psql -c 'SHOW shared_buffers;'
+```
+
+If `shared_buffers` is still the 128 MB packaged default, it is likely the
+largest single available tuning opportunity on this 12 GB host. About 3 GB for
+`shared_buffers`, 8 GB for `effective_cache_size`, and 512 MB for
+`maintenance_work_mem` are starting values to validate against actual load and
+memory pressure. With only 2 OCPUs, keep `max_parallel_workers_per_gather` low:
+parallel plans can cost more than they save under concurrency.
+
+Consider `auto_explain` with `log_min_duration` aligned to the application's
+2500 ms slow-query warning threshold documented in
+[`docs/troubleshooting.md`](./troubleshooting.md). `pg_stat_statements` is
+already configured; do not duplicate it here. Product search already uses
+`pg_trgm` and `unaccent` through `idx_products_name_unaccent_trgm`,
+`idx_products_unaccent_search_vector`, and the generated `search_vector`
+column in `src/lib/schema.ts`, so they are not new recommendations. As a
+possible future option only, `pg_partman` could replace the
+`AdminAuditLog` retention job's bulk `DELETE` with partition dropping; it is
+not planned or decided.
 
 ### Backups
 
@@ -466,6 +511,11 @@ four prefix-sensitive sites:
 2. the `grep -oE` pattern used to select an earlier object's size
 3. `oci os object put --name`
 4. the `uploading …` status message
+
+Unlike the wetalk source script, which lives in a separate repository, the
+octo variant is not version-controlled in any repository. It exists only on
+the host at mode `0750`, so this is a known rebuild risk: the rebuild procedure
+cannot restore it from an upstream source without a separately retained copy.
 
 The existing `grep -oE` pattern must change from single quotes to double
 quotes when `${PREFIX}` is introduced. Otherwise the variable does not expand.
@@ -493,6 +543,11 @@ under `octo/` without an error.
 overridden, set `BACKUP_BUCKET` in the systemd unit instead. The octo
 `DATABASE_URL` must point to `127.0.0.1:5432`, never port `6432`; `pg_dump`
 cannot run through PgBouncer's transaction pooling.
+
+Do not leave the literal `<password>` placeholder in `/etc/octo-backup.env`.
+When sourced, the shell interprets `<` as input redirection and produces
+`line 1: password: No such file or directory`. Single-quote the
+`DATABASE_URL` value in that file so its URL syntax is preserved.
 
 Both jobs create a custom-format dump and age-encrypt it before it leaves the
 host. Object keys use `<prefix>/%Y/%m/%d/%H%M%SZ.dump.age`. The age private key
