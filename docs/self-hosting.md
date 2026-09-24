@@ -548,10 +548,11 @@ overridden, set `BACKUP_BUCKET` in the systemd unit instead. The octo
 `DATABASE_URL` must point to `127.0.0.1:5432`, never port `6432`; `pg_dump`
 cannot run through PgBouncer's transaction pooling.
 
-Do not leave the literal `<password>` placeholder in `/etc/octo-backup.env`.
-When sourced, the shell interprets `<` as input redirection and produces
-`line 1: password: No such file or directory`. Single-quote the
-`DATABASE_URL` value in that file so its URL syntax is preserved.
+Replace the literal `<password>` placeholder in `/etc/octo-backup.env` with the
+actual secret. When sourced, a literal `<password>` makes the shell interpret
+`<` as input redirection and produces `line 1: password: No such file or
+directory`. Single-quote the `DATABASE_URL` value in that file so its URL
+syntax is preserved.
 
 Both jobs create a custom-format dump and age-encrypt it before it leaves the
 host. Object keys use `<prefix>/%Y/%m/%d/%H%M%SZ.dump.age`. The age private key
