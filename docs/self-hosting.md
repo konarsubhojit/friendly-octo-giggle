@@ -81,8 +81,8 @@ Vercel serverless functions
 └──────────────────────────────────────────────────────────┘
 ```
 
-| Component | Detail |
-| --- | --- |
+| Component | Detail                                                                                             |
+| --------- | -------------------------------------------------------------------------------------------------- |
 | Host      | Oracle Cloud Ampere A1 (arm64; use arm64-compatible images), 2 OCPU, 12 GB RAM; hostname `oci-new` |
 | Database  | Native PostgreSQL 18, loopback-only `127.0.0.1:5432`                                               |
 | Pooler    | `edoburu/pgbouncer:latest` in Docker with `network_mode: host`, transaction pooling                |
