@@ -81,16 +81,16 @@ Vercel serverless functions
 └──────────────────────────────────────────────────────────┘
 ```
 
-| Component | Detail                                                                              |
-| --------- | ----------------------------------------------------------------------------------- |
+| Component | Detail                                                                                             |
+| --------- | -------------------------------------------------------------------------------------------------- |
 | Host      | Oracle Cloud Ampere A1 (arm64; use arm64-compatible images), 2 OCPU, 12 GB RAM; hostname `oci-new` |
-| Database  | Native PostgreSQL 18, loopback-only `127.0.0.1:5432`                                |
-| Pooler    | `edoburu/pgbouncer:latest` in Docker with `network_mode: host`, transaction pooling |
-| TLS       | Let's Encrypt certificate for `db.kiyon.store`, terminated at PgBouncer             |
-| Client    | Vercel → `db.kiyon.store:6432`, `sslmode=verify-full`                               |
-| Intrusion | fail2ban, using `iptables-multiport` on the `INPUT` chain                           |
-| Backups   | Two age-encrypted systemd jobs upload to OCI Object Storage                         |
-| Roles     | `octo`, `postgres`, and `wetalk`                                                    |
+| Database  | Native PostgreSQL 18, loopback-only `127.0.0.1:5432`                                               |
+| Pooler    | `edoburu/pgbouncer:latest` in Docker with `network_mode: host`, transaction pooling                |
+| TLS       | Let's Encrypt certificate for `db.kiyon.store`, terminated at PgBouncer                            |
+| Client    | Vercel → `db.kiyon.store:6432`, `sslmode=verify-full`                                              |
+| Intrusion | fail2ban, using `iptables-multiport` on the `INPUT` chain                                          |
+| Backups   | Two age-encrypted systemd jobs upload to OCI Object Storage                                        |
+| Roles     | `octo`, `postgres`, and `wetalk`                                                                   |
 
 Only port `6432` needs to be open to the internet. Postgres is never publicly
 reachable; it is reached through loopback on the VM, while PgBouncer reaches it
