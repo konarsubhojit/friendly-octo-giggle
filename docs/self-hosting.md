@@ -48,6 +48,9 @@ catches contract regressions even when the opt-in variables are unset (for
 example, in a fork's pull request, which does not get the `provider-matrix`
 job's services).
 
+The CI service intentionally remains `postgres:16-alpine`; it is test tooling,
+not a description of `oci-new`, which runs native PostgreSQL 18.
+
 To run the same suites locally: start disposable containers for Postgres,
 Redis, and MinIO (see `docs/kamatera-deployment.md` for compose examples),
 export the `*_TEST_*` variables to point at them, run `npm run db:migrate`
@@ -63,9 +66,9 @@ Vercel serverless functions
         │  postgres://…@db.kiyon.store:6432/octo?sslmode=verify-full
         ▼  (public internet, TLS terminated at PgBouncer)
 ┌──────────────────────────────────────────────────────────┐
-│ OCI VM  (hostname: store)                                │
+│ OCI VM  (hostname: oci-new)                              │
 │                                                          │
-│ fail2ban ── bans via iptables chain DOCKER-USER           │
+│ fail2ban ── bans via iptables INPUT chain                 │
 │                                                          │
 │ ┌────────────────────────┐    ┌────────────────────────┐ │
 │ │ pgbouncer (Docker)     │───▶│ native PostgreSQL 18   │ │
@@ -74,19 +77,19 @@ Vercel serverless functions
 │ │ transaction pooling    │    └────────────────────────┘ │
 │ └────────────────────────┘                               │
 │                                                          │
-│ systemd timer ── pg_dump -Fc ──▶ OCI Object Storage      │
+│ systemd timers ── pg_dump -Fc + age ──▶ OCI Object Storage│
 └──────────────────────────────────────────────────────────┘
 ```
 
 | Component | Detail                                                                              |
 | --------- | ----------------------------------------------------------------------------------- |
-| Host      | OCI VM, hostname `store`                                                            |
+| Host      | OCI VM, hostname `oci-new`                                                          |
 | Database  | Native PostgreSQL 18, loopback-only `127.0.0.1:5432`                                |
 | Pooler    | `edoburu/pgbouncer:latest` in Docker with `network_mode: host`, transaction pooling |
 | TLS       | Let's Encrypt certificate for `db.kiyon.store`, terminated at PgBouncer             |
 | Client    | Vercel → `db.kiyon.store:6432`, `sslmode=verify-full`                               |
-| Intrusion | fail2ban, banning through the `DOCKER-USER` iptables chain                          |
-| Backups   | **None currently.** Install the systemd/OCI Object Storage pattern below.           |
+| Intrusion | fail2ban, using `iptables-multiport` on the `INPUT` chain                           |
+| Backups   | Two age-encrypted systemd jobs upload to OCI Object Storage                         |
 | Roles     | `octo`, `postgres`, and `wetalk`                                                    |
 
 Only port `6432` needs to be open to the internet. Postgres is never publicly
@@ -142,6 +145,19 @@ Keep the current recommendation to pin `edoburu/pgbouncer:latest` to a specific
 tag or digest on the next maintenance pass. `POSTGRES_PASSWORD` comes from
 `~/docker/.env`, which is never committed.
 
+The bind-mounted TLS server key must be mode `0600` and owned by uid/gid
+`70:70`, the `pgbouncer` user inside this container image. Host-user ownership
+causes PgBouncer to fail at startup. Apply the ownership and mode to the key
+file mounted at `CLIENT_TLS_KEY_FILE` before starting the container:
+
+```bash
+sudo chown 70:70 <mounted-server-key>
+sudo chmod 0600 <mounted-server-key>
+```
+
+Re-copying a bind-mounted key resets it to the host user's ownership, so repeat
+both commands after every copy or replacement.
+
 ### Native PostgreSQL
 
 The cluster is configured at `/etc/postgresql/18/main/`, not in Docker. Keep
@@ -193,8 +209,7 @@ logpath   = /var/log/syslog
 maxretry  = 5
 findtime  = 600
 bantime   = 3600
-banaction = iptables-allports
-chain     = DOCKER-USER
+banaction = iptables-multiport
 ignoreip  = 127.0.0.1/8 172.16.0.0/12 10.0.0.0/8
 ```
 
@@ -204,6 +219,35 @@ Validate the filter, then reload:
 sudo fail2ban-regex /var/log/syslog /etc/fail2ban/filter.d/pgbouncer.conf
 sudo systemctl restart fail2ban
 ```
+
+### Firewall persistence
+
+The persisted firewall must be checked whenever the live rules change.
+`/etc/iptables/rules.v4` can predate the `6432` `ACCEPT` rule, in which case a
+reboot silently closes the public PgBouncer port.
+
+Do not persist fail2ban's transient chains. `netfilter-persistent save` writes
+live `f2b-*` chain declarations and `INPUT` jump rules into `rules.v4`; those
+rules are restored before fail2ban starts and can leave duplicate jumps or a
+jump to a chain that fail2ban does not consider its own. Save in this exact
+order:
+
+```bash
+sudo fail2ban-client unban --all
+sudo netfilter-persistent save
+sudo sed -i '/f2b-/d' /etc/iptables/rules.v4
+sudo sh -c 'iptables-restore --test < /etc/iptables/rules.v4'
+sudo sed -i '/f2b-/d' /etc/iptables/rules.v6
+sudo sh -c 'ip6tables-restore --test < /etc/iptables/rules.v6'
+```
+
+Inspect both files to confirm the intended permanent rules, including the
+IPv4 `6432` `ACCEPT` rule. Do **not** run `netfilter-persistent save` again
+after removing the `f2b-*` lines, or it will reintroduce the live fail2ban
+state. The redirect must be opened by a root shell as shown; `sudo
+iptables-restore --test < /etc/iptables/rules.v4` still opens the file as the
+invoking user and fails with permission denied. Apply the same persistence
+check and root-shell redirect to `rules.v6`.
 
 ---
 
@@ -230,14 +274,15 @@ ps aux | grep -c '[d]ocker-proxy'          # expect 0 with published ports
 sudo grep 'authentication failed' /var/log/syslog | tail
 ```
 
-### 2. fail2ban must use `chain = DOCKER-USER`
+### 2. fail2ban uses `iptables-multiport` on `INPUT`
 
 **Symptom.** The jail reports banned IPs, but the attacker keeps connecting.
 
-**Cause.** Docker-related traffic does not necessarily traverse `INPUT`; the
-`DOCKER-USER` chain is the verified enforcement point on this VM.
+**Cause.** A jail action or chain copied from a different Docker networking
+setup may not match this host's host-networked PgBouncer traffic.
 
-**Fix.** Keep `banaction = iptables-allports` and `chain = DOCKER-USER`.
+**Fix.** Use the stock `iptables-multiport` action. On `oci-new` it inserts the
+jail jump in `INPUT`; do not override it to use `DOCKER-USER`.
 
 **Testing traps.** fail2ban ignores localhost (`Ignore 127.0.0.1 by
 ignoreself rule`), so failed-auth tests must come from an external host. Also,
@@ -248,12 +293,17 @@ zero active bans. Its absence is not evidence of breakage.
 
 ```bash
 sudo fail2ban-client status pgbouncer
+sudo fail2ban-client get pgbouncer actions
 sudo iptables -L f2b-pgbouncer -n
-sudo iptables -L DOCKER-USER -n
+sudo iptables -L INPUT -n
+sudo nft list ruleset
 ```
 
-From a banned host the connection is dropped (hangs until timeout) or refused,
-depending on the fail2ban blocktype.
+The observed action name is `iptables-multiport`. A test ban installed a
+`REJECT` rule at position 1 of `f2b-pgbouncer`, reached from `INPUT`. The host
+uses the `iptables-nft` compatibility layer, but `nft list ruleset` shows no
+native `f2b-table`; inspect fail2ban rules with `iptables -L`, not by expecting
+a native nftables table.
 
 ### 3. PgBouncer must log to syslog, not `json-file`
 
@@ -404,148 +454,82 @@ sudo grep 'authentication failed' /var/log/syslog | tail
 
 ### Backups
 
-**No backups currently exist.** The prior proposed cron job was never installed:
-there is no `~/backups/`, `backup.log`, or cron entry. Do not recreate it. It
-put dumps on the same disk as the database, which does not protect against VM
-or disk loss. Use off-VM OCI Object Storage instead.
+`oci-new` runs two systemd timer/service pairs. `wetalk-backup` writes under
+`pg/` at 00:05 UTC, and `octo-backup` writes under `octo/` at 00:45 UTC. The
+offset is intentional: the two `pg_dump` processes must never overlap.
 
-Install this adaptation of the proven `studious-robot` pattern as
-`/usr/local/bin/<script>` (replace every angle-bracket placeholder before
-installing):
+`/usr/local/bin/octo-backup.sh` is a copy of the wetalk backup script with
+`PREFIX="${BACKUP_PREFIX:-pg}"` replacing the hardcoded `pg/` prefix at all
+four prefix-sensitive sites:
 
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-umask 077
-PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+1. `oci os object list --prefix`
+2. the `grep -oE` pattern used to select an earlier object's size
+3. `oci os object put --name`
+4. the `uploading …` status message
 
-readonly BUCKET="<oci-bucket>"
-readonly OCI="<oci-cli-path>"
-readonly MIN_SIZE=1048576
-readonly MIN_PREVIOUS_SIZE_PERCENT=75
-readonly PREFIX="pg"
-export OCI_CLI_AUTH=instance_principal
+The existing `grep -oE` pattern must change from single quotes to double
+quotes when `${PREFIX}` is introduced. Otherwise the variable does not expand.
+That failure is silent: the previous-object lookup misses, the shrink guard
+degrades to the static `MIN_SIZE` floor, and only a warning is emitted.
 
-workdir="$(mktemp -d)"
-dump="$workdir/backup.dump"
-trap 'rm -rf "$workdir"' EXIT
-stamp="$(date -u +%Y/%m/%d/%H%M%SZ)"
-key="$PREFIX/$stamp.dump"
-
-sudo -u postgres pg_dump -d octo -Fc -f "$dump"
-size="$(stat -c '%s' "$dump")"
-if (( size < MIN_SIZE )); then
-  echo "Backup is ${size} bytes, below MIN_SIZE ${MIN_SIZE}" >&2
-  exit 1
-fi
-
-previous_key="$("$OCI" os object list --bucket-name "$BUCKET" --prefix "$PREFIX/" \
-  --query 'data | sort_by(@, &name) | [-1].name' --raw-output 2>/dev/null || true)"
-if [[ -n "$previous_key" && "$previous_key" != "null" ]]; then
-  previous_size="$("$OCI" os object head --bucket-name "$BUCKET" --name "$previous_key" \
-    --query '"content-length"' --raw-output 2>/dev/null || true)"
-  if [[ "$previous_size" =~ ^[0-9]+$ ]]; then
-    minimum_previous_size=$((previous_size * MIN_PREVIOUS_SIZE_PERCENT / 100))
-    if (( size < minimum_previous_size )); then
-      echo "Backup is ${size} bytes, below ${MIN_PREVIOUS_SIZE_PERCENT}% of previous ${previous_size}" >&2
-      exit 1
-    fi
-  else
-    echo "Warning: cannot read previous object size; relying on MIN_SIZE" >&2
-  fi
-fi
-
-"$OCI" os object put \
-  --bucket-name "$BUCKET" --name "$key" --file "$dump" --content-md5 --force
-echo "Uploaded $key (${size} bytes)"
-```
-
-Use the instance principal; do not store OCI credentials on the VM. The
-`mktemp` staging directory, `trap`, and `umask 077` keep the transient dump
-private and guarantee cleanup. Smoke-test the installed script with no ambient
-environment:
-
-```bash
-sudo -i env -i /usr/local/bin/<script>
-```
-
-Install a systemd timer, not cron. Cron sends stderr to an unread root mail
-spool; systemd provides journald logs, `systemctl status`, a visible failure
-state, and `OnFailure=` hooks.
-
-`/etc/systemd/system/wetalk-backup.service`:
+The octo job reads `/etc/octo-backup.env`, which must remain mode `0600`. The
+service selects it with:
 
 ```ini
-[Unit]
-Description=Upload PostgreSQL backup to OCI Object Storage
-OnFailure=wetalk-backup-failure.service
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/<script>
-ExecStartPost=/usr/bin/curl --fail --retry 3 https://hc-ping.com/<healthchecks-success-uuid>
+Environment=BACKUP_ENV_FILE=/etc/octo-backup.env
 ```
 
-`/etc/systemd/system/wetalk-backup.timer`:
+That selected file sets `BACKUP_PREFIX=octo`; without it, the script's `pg`
+default would write octo backups into the wetalk prefix.
 
-```ini
-[Unit]
-Description=Nightly PostgreSQL backup
+This indirection is safety-critical. The shared script runs `set -a` and
+self-sources `BACKUP_ENV_FILE` after systemd has applied `EnvironmentFile=`.
+Setting octo's `DATABASE_URL` only in the unit would therefore allow the
+wetalk environment to overwrite it silently, backing up the wrong database
+under `octo/` without an error.
 
-[Timer]
-OnCalendar=*-*-* 03:15:00 UTC
-Persistent=true
-RandomizedDelaySec=30m
-Unit=wetalk-backup.service
+`BUCKET` is assigned before the selected environment file is sourced, so
+`BACKUP_BUCKET` in `/etc/octo-backup.env` has no effect. If the bucket must be
+overridden, set `BACKUP_BUCKET` in the systemd unit instead. The octo
+`DATABASE_URL` must point to `127.0.0.1:5432`, never port `6432`; `pg_dump`
+cannot run through PgBouncer's transaction pooling.
 
-[Install]
-WantedBy=timers.target
-```
+Both jobs create a custom-format dump and age-encrypt it before it leaves the
+host. Object keys use `<prefix>/%Y/%m/%d/%H%M%SZ.dump.age`. The age private key
+must never exist on the VM, and the script fails closed when
+`BACKUP_AGE_RECIPIENT` is unset.
 
-`/etc/systemd/system/wetalk-backup-failure.service`:
+Octo uses `MIN_SIZE=60000`, based on a roughly 246 KB dump through the actual
+backup path. An ad hoc dump as `postgres` measured 128757 bytes, while the same
+database dumped through the backup path measured 246187 bytes because
+visibility is role-dependent. Establish and update the guard by measuring
+through the backup path, not with an ad hoc privileged dump.
 
-```ini
-[Unit]
-Description=Notify Healthchecks.io that the PostgreSQL backup failed
+The observed encrypted objects
+`octo/2026/09/24/141736Z.dump.age` and
+`octo/2026/09/24/154011Z.dump.age` are both 246435 bytes, with server-side MD5
+confirmed. The second run exercised the shrink guard against a real previous
+`.age` object.
 
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/curl --fail --retry 3 https://hc-ping.com/<healthchecks-failure-uuid>/fail
-```
+### Old-host cutover
 
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now wetalk-backup.timer
-systemctl list-timers wetalk-backup.timer
-systemctl status wetalk-backup.service
-journalctl -u wetalk-backup.service
-```
+Until the old `oci` instance is terminated, two hosts write incompatible
+formats under `octo/`. The old host creates a second, **unencrypted**
+`octo/<stamp>.dump` at approximately 01:03 UTC each day, while `oci-new`
+creates dated `.dump.age` objects.
+
+Do not set an Object Storage lifecycle rule on `octo/` until `oci-new` is the
+sole writer. After the old instance is terminated, delete its plaintext
+`.dump` objects from Object Storage.
 
 ### Verifying a backup restores
 
-> **This has not been done yet. Do it.** An unverified backup is not a backup.
+#### Not yet verified
 
-Download an object first rather than piping it to `pg_restore`, so its archive
-contents can be verified before touching a database. Restore against native
-Postgres directly (gotcha 5).
-
-```bash
-OCI_CLI_AUTH=instance_principal <oci-cli-path> os object get \
-  --bucket-name <oci-bucket> --name pg/YYYY/MM/DD/HHMMSSZ.dump \
-  --file /tmp/octo-restore-test.dump
-pg_restore -l /tmp/octo-restore-test.dump
-
-sudo -u postgres psql -d postgres -c 'CREATE DATABASE octo_restore_test;'
-pg_restore -h 127.0.0.1 -p 5432 -U octo -d octo_restore_test --no-owner \
-  /tmp/octo-restore-test.dump
-psql -h 127.0.0.1 -p 5432 -U octo -d octo_restore_test \
-  -c 'SELECT count(*) FROM "Product";'
-sudo -u postgres psql -d postgres -c 'DROP DATABASE octo_restore_test;'
-rm -f /tmp/octo-restore-test.dump
-```
-
-For an existing database, reset `public` first as described in gotcha 6. This
-restore procedure has not yet been exercised.
+No age-encrypted dump has been downloaded, decrypted, and restored off-host
+for either database. That test must gate termination of the old `oci` instance.
+The realistic recovery scenario is the loss of the VM, so a procedure exercised
+only on that VM has not tested the failure case the backups exist to cover.
 
 ### Credential rotation
 
@@ -608,6 +592,11 @@ Rebuilding from scratch: install native PostgreSQL 18; configure its
 loopback-only listener and `pg_stat_statements`; install Docker; write
 `/etc/docker/daemon.json` if published ports will be used (gotcha 1); obtain
 the certificate for `db.kiyon.store`; restore PgBouncer's compose file and
-`.env`; bring up PgBouncer; download and validate the newest OCI dump, then
-restore it through `127.0.0.1:5432`; install the fail2ban filter and jail; and
-verify enforcement from an external host (gotcha 2).
+`.env`; restore the TLS key's `70:70` ownership and `0600` mode; bring up
+PgBouncer; select the newest `octo/**/*.dump.age` object written by `oci-new`,
+then download, decrypt, and validate it off-host before restoring it through
+`127.0.0.1:5432`; install the fail2ban filter and jail; restore and verify the
+persistent firewall rules; verify enforcement from an external host (gotcha
+2); restore both backup scripts, their `0600` environment files, and their
+systemd service/timer units; then enable both timers and verify their 00:05 and
+00:45 UTC schedules remain non-overlapping.
