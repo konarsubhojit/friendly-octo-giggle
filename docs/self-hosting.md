@@ -136,12 +136,14 @@ services:
 ```
 
 `network_mode: host` exposes PgBouncer's native `6432` listener directly; do
-not add `ports:`. The image writes `/etc/pgbouncer/userlist.txt` at startup. Pin
-`edoburu/pgbouncer:latest` to a tag or digest: protocol-level prepared-statement
-emulation requires PgBouncer 1.21 or newer, so a silent rollback below that
-version would break Drizzle's named statements in transaction pooling without a
-configuration change. `POSTGRES_PASSWORD` comes from `~/docker/.env`, which is
-never committed.
+not add `ports:`. The deployed host currently uses
+`edoburu/pgbouncer:latest`; pin it to a tag or digest on the next maintenance
+pass: protocol-level prepared-statement emulation requires PgBouncer 1.21 or
+newer, so a silent rollback below that version would break Drizzle's named
+statements in transaction pooling without a configuration change. The
+reconstruction intentionally has no health check because the host file has
+none; do not add one without validating it on the host. `POSTGRES_PASSWORD`
+comes from `~/docker/.env`, which is never committed.
 
 TLS material is copied into `/etc/pgbouncer/tls/`, rather than mounted from
 `/etc/letsencrypt`. The copied, bind-mounted server key must be mode `0600` and
