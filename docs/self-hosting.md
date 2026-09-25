@@ -85,12 +85,12 @@ Vercel serverless functions
 | --------- | -------------------------------------------------------------------------------------------------- |
 | Host      | Oracle Cloud Ampere A1 (arm64; use arm64-compatible images), 2 OCPU, 12 GB RAM; hostname `oci-new` |
 | Database  | Native PostgreSQL 18, loopback-only `127.0.0.1:5432`                                               |
-| Pooler    | `edoburu/pgbouncer:latest` in Docker with `network_mode: host`, transaction pooling                |
+| Pooler    | `edoburu/pgbouncer:v1.25.2-p0` in Docker with `network_mode: host`, transaction pooling            |
 | TLS       | Let's Encrypt certificate for `db.kiyon.store`, terminated at PgBouncer                            |
 | Client    | Vercel → `db.kiyon.store:6432`, `sslmode=verify-full`                                              |
 | Intrusion | fail2ban, using `iptables-multiport` on the `INPUT` chain                                          |
 | Backups   | Two age-encrypted systemd jobs upload to OCI Object Storage                                        |
-| Roles     | `octo`, `postgres`, and `wetalk`                                                                   |
+| Roles     | `octo`, `pgbadmin`, `postgres`, and `wetalk`                                                       |
 
 Only port `6432` needs to be open to the internet. Postgres is never publicly
 reachable; it is reached through loopback on the VM, while PgBouncer reaches it
@@ -110,7 +110,7 @@ Reconstruction — adjust to taste, then validate with
 ```yaml
 services:
   pgbouncer:
-    image: edoburu/pgbouncer:latest
+    image: edoburu/pgbouncer:v1.25.2-p0
     restart: unless-stopped
     network_mode: host
     environment:
@@ -121,7 +121,13 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       POOL_MODE: transaction
       AUTH_TYPE: scram-sha-256
-      ADMIN_USERS: octo
+      ADMIN_USERS: pgbadmin
+      AUTH_FILE: /etc/pgbouncer/conf/userlist.txt
+      MAX_PREPARED_STATEMENTS: '200'
+      MAX_CLIENT_CONN: '200'
+      DEFAULT_POOL_SIZE: '20'
+      RESERVE_POOL_SIZE: '5'
+      RESERVE_POOL_TIMEOUT: '3'
       LISTEN_ADDR: 0.0.0.0
       LISTEN_PORT: '6432'
       CLIENT_TLS_SSLMODE: require
@@ -129,6 +135,7 @@ services:
       CLIENT_TLS_KEY_FILE: /etc/pgbouncer/tls/db.kiyon.store.key
     volumes:
       - /etc/pgbouncer/tls:/etc/pgbouncer/tls:ro
+      - /etc/pgbouncer/conf:/etc/pgbouncer/conf:ro
     logging:
       driver: syslog
       options:
@@ -136,11 +143,11 @@ services:
 ```
 
 `network_mode: host` exposes PgBouncer's native `6432` listener directly; do
-not add `ports:`. The deployed host currently uses
-`edoburu/pgbouncer:latest`; pin it to a tag or digest on the next maintenance
-pass: protocol-level prepared-statement emulation requires PgBouncer 1.21 or
-newer, so a silent rollback below that version would break Drizzle's named
-statements in transaction pooling without a configuration change.
+not add `ports:`. The deployed host pins `edoburu/pgbouncer:v1.25.2-p0`, not
+`latest`. The image tags use `v<pgbouncer-version>-p<image-patch>`; the `-pN`
+suffix is the image build revision and is independent of the PgBouncer version.
+A bare `1.25.2` tag does not exist and fails to pull with `not found`. Digest
+pinning is stricter if reproducibility matters more than readable Compose.
 
 The reconstruction intentionally has no health check because the host file has
 none; do not add one without validating it on the host. `POSTGRES_PASSWORD`
@@ -162,38 +169,74 @@ ownership, so repeat both commands after every certbot renewal copy or
 replacement.
 
 `SHOW CONFIG;` on the PgBouncer admin console verifies
-`max_prepared_statements = 200`. This non-default image setting emulates
-protocol-level prepared statements, so Drizzle's named statements work with
-transaction pooling. The host leaves `MAX_CLIENT_CONN` and
-`DEFAULT_POOL_SIZE` unset; `SHOW CONFIG;` reports their effective values as 100
-and 20 respectively. Those values are reasonable starting points for this 2
-OCPU / 12 GB host, but set them explicitly in the Compose file before tuning so
-the deployed limit is clear.
+`max_prepared_statements = 200`. That value is PgBouncer's own default since
+1.24, not an `edoburu` image default; the entrypoint emits
+`max_prepared_statements` only when `MAX_PREPARED_STATEMENTS` is set. Keep it
+explicit anyway: rolling back below PgBouncer 1.24 silently reverts the default
+to `0` and breaks Drizzle's named statements in transaction pooling.
 
-Client-to-PgBouncer traffic uses TLS, but PgBouncer-to-Postgres traffic is
-plaintext over loopback (`DB_HOST: 127.0.0.1`). That is safe while Postgres
-remains loopback-only; it is not end-to-end encryption. `ADMIN_USERS: octo` is
-also a hardening concern: it gives the application's role access to the
-PgBouncer admin console, including `PAUSE`, `RELOAD`, and `SHUTDOWN`, and the
-same role is present in Vercel's `DATABASE_URL`. Use a dedicated admin user;
-this has not yet been changed.
+Pool sizing is also explicit: `MAX_CLIENT_CONN: '200'`,
+`DEFAULT_POOL_SIZE: '20'`, `RESERVE_POOL_SIZE: '5'`, and
+`RESERVE_POOL_TIMEOUT: '3'`. Startup logged
+`max_client_conn: 200, max expected fd use: 252` with a soft fd limit of 1024
+and hard limit of 524288. Recheck that fd headroom before raising
+`MAX_CLIENT_CONN` again.
+
+Client-to-PgBouncer traffic uses TLS, and PgBouncer startup logs show the
+PgBouncer-to-Postgres loopback hop negotiating TLS as well. Keep Postgres
+loopback-only regardless; port `5432` must not become public.
+
+`ADMIN_USERS` is split from the application role: `pgbadmin` reaches the
+PgBouncer admin console, while `octo` remains only the application user. The
+image-generated userlist contains a single entry from `DB_USER`/`DB_PASSWORD`,
+so `ADMIN_USERS: pgbadmin` alone creates an admin that cannot authenticate. The
+entrypoint honours `AUTH_FILE` (`_AUTH_FILE="${AUTH_FILE:-$PG_CONFIG_DIR/userlist.txt}"`),
+so mount `/etc/pgbouncer/conf/userlist.txt` and keep both `pgbadmin` and
+`octo` in that file. The entrypoint appends missing users only when the file is
+writable; appending to the deployed `:ro` mount fails at startup. The userlist
+stores plaintext passwords, not SCRAM verifiers; protect it like the TLS key
+with mode `0600` and owner `70:70`. The generated ini is written only when
+absent, so it lives in the container writable layer: `--force-recreate`
+regenerates it, while a plain restart does not.
+
+Expected admin split verification:
+
+```bash
+psql "postgres://pgbadmin:<password>@127.0.0.1:6432/pgbouncer?sslmode=require" -c 'SHOW POOLS;'
+psql "postgres://octo:<password>@127.0.0.1:6432/octo?sslmode=require" -c 'SELECT 1;'
+psql "postgres://octo:<password>@127.0.0.1:6432/pgbouncer?sslmode=require" -c 'SHOW POOLS;' # expect FATAL: not allowed
+```
 
 ### Native PostgreSQL
 
 The cluster is configured at `/etc/postgresql/18/main/`, not in Docker. Keep
 `listen_addresses = '127.0.0.1'` in `postgresql.conf` so only local processes
-can connect to port 5432. Set preload libraries in that same file:
+can connect to port 5432. `/etc/postgresql/18/main/postgresql.conf` includes
+`include_dir = 'conf.d'`, so drop-ins there override the main file. The deployed
+tuning lives in `/etc/postgresql/18/main/conf.d/10-tuning.conf`:
 
 ```conf
-shared_preload_libraries = 'pg_stat_statements'
+shared_buffers = '3GB'
+effective_cache_size = '8GB'
+work_mem = '32MB'
+maintenance_work_mem = '512MB'
+random_page_cost = 1.1
+wal_buffers = '16MB'
+shared_preload_libraries = 'pg_stat_statements,auto_explain'
 ```
 
 Then restart native Postgres once:
 
 ```bash
 sudo systemctl restart postgresql
+systemctl status postgresql
+systemctl status postgresql@18-main
 sudo -u postgres psql -c 'SHOW shared_preload_libraries;'
 ```
+
+`postgresql.service` is the wrapper unit and normally shows `active (exited)`.
+The real cluster unit is `postgresql@18-main.service`; debug that unit if the
+restart fails.
 
 This restart resets `pg_stat_statements`; do not restart it merely to recreate
 PgBouncer credentials.
@@ -305,9 +348,14 @@ setup may not match this host's host-networked PgBouncer traffic.
 jail jump in `INPUT`; do not override it to use `DOCKER-USER`.
 
 **Testing traps.** fail2ban ignores localhost (`Ignore 127.0.0.1 by
-ignoreself rule`), so failed-auth tests must come from an external host. Also,
-with `actionstart_on_demand`, `f2b-pgbouncer` does not exist while there are
-zero active bans. Its absence is not evidence of breakage.
+ignoreself rule`), so a direct `127.0.0.1` failed-auth test is ignored. But
+connecting from the VM to `db.kiyon.store` exits and returns through the public
+IP `<vm-public-ip>`, which is not covered by `ignoreip`; a
+`SASL authentication failed` from that address counts toward `maxretry = 5`.
+Prefer local checks against `127.0.0.1:6432` with `sslmode=require`.
+`verify-full` needs the certificate hostname (gotcha 8). Also, with
+`actionstart_on_demand`, `f2b-pgbouncer` does not exist while there are zero
+active bans. Its absence is not evidence of breakage.
 
 **Verification.** Trigger failed logins from an external cloud VM, then:
 
@@ -396,21 +444,27 @@ trusted CA bundle.
 
 **Cause.** The certificate is issued for `db.kiyon.store`.
 
-**Fix.** Use the hostname even from the VM.
+**Fix.** Use the hostname for `verify-full`, or use `127.0.0.1:6432` with
+`sslmode=require` for local PgBouncer checks.
 
 ### 9. `shared_preload_libraries` requires a PostgreSQL restart
 
-**Symptom.** `pg_stat_statements` exists but stays empty.
+**Symptom.** `pg_stat_statements` exists but stays empty forever. On this host
+`CREATE EXTENSION` returned `NOTICE: extension "pg_stat_statements" already
+exists, skipping` while the view stayed at zero rows.
 
-**Cause.** Creating the extension does not preload its library.
+**Cause.** Creating the extension does not preload its library. A pre-existing
+extension plus empty `shared_preload_libraries` is the trap: extension presence
+proves only that the SQL objects exist, not that the collector is loaded.
 
-**Fix.** Set `shared_preload_libraries = 'pg_stat_statements'` in
-`/etc/postgresql/18/main/postgresql.conf`, then restart native Postgres.
+**Fix.** Set `shared_preload_libraries` in the active PostgreSQL config or
+drop-in, then restart native Postgres.
 
 **Verification.**
 
 ```bash
 sudo -u postgres psql -c 'SHOW shared_preload_libraries;'
+sudo -u postgres psql -d octo -c 'SELECT count(*) FROM pg_stat_statements;'
 ```
 
 ### 10. DNS must remain DNS-only
@@ -464,36 +518,60 @@ All commands run on the VM unless stated otherwise.
 ### Pool health and logs
 
 ```bash
-psql "postgres://octo:<password>@db.kiyon.store:6432/pgbouncer?sslmode=verify-full&sslrootcert=system" -c 'SHOW POOLS;'
+psql "postgres://pgbadmin:<password>@127.0.0.1:6432/pgbouncer?sslmode=require" -c 'SHOW POOLS;'
 sudo grep pgbouncer /var/log/syslog | tail -100
 sudo grep 'authentication failed' /var/log/syslog | tail
 ```
 
 `cl_waiting > 0` or `maxwait` above roughly 1s means clients are queuing; raise
-`DEFAULT_POOL_SIZE`. It currently inherits the implicit value of 20, so set it
-explicitly in the Compose file before raising it. Read logs from syslog, not
-`docker compose logs`.
+`DEFAULT_POOL_SIZE` from its current explicit value of `20`. Recheck
+`max expected fd use` in startup logs against the soft fd limit before raising
+`MAX_CLIENT_CONN`. Read logs from syslog, not `docker compose logs`.
 
 ### Performance tuning: verify before changing
 
-All values here are conventional starting points to verify, not measured
-recommendations for this workload. Check:
+These values are now applied in
+`/etc/postgresql/18/main/conf.d/10-tuning.conf`, but they remain conventional
+starting points rather than measured recommendations for this workload. Verify
+them before changing:
 
 ```bash
 sudo -u postgres psql -c 'SHOW shared_buffers;'
+sudo -u postgres psql -c 'SHOW effective_cache_size;'
+sudo -u postgres psql -c 'SHOW work_mem;'
+sudo -u postgres psql -c 'SHOW maintenance_work_mem;'
+sudo -u postgres psql -c 'SHOW random_page_cost;'
+sudo -u postgres psql -c 'SHOW wal_buffers;'
+sudo -u postgres psql -c 'SHOW shared_preload_libraries;'
 ```
 
-If `shared_buffers` is still the 128 MB packaged default, it is likely the
-largest single available tuning opportunity on this 12 GB host. About 3 GB for
-`shared_buffers`, 8 GB for `effective_cache_size`, and 512 MB for
-`maintenance_work_mem` are starting values to validate against actual load and
-memory pressure. With only 2 OCPUs, keep `max_parallel_workers_per_gather` low:
-parallel plans can cost more than they save under concurrency.
+Expected applied values: `shared_buffers = 3GB`,
+`effective_cache_size = 8GB`, `work_mem = 32MB`,
+`maintenance_work_mem = 512MB`, `random_page_cost = 1.1`,
+`wal_buffers = 16MB`, and `shared_preload_libraries` includes both
+`pg_stat_statements` and `auto_explain`. With only 2 OCPUs, keep
+`max_parallel_workers_per_gather` low: parallel plans can cost more than they
+save under concurrency.
+
+`pg_stat_statements` is live and collecting in both `octo` and `wetalk`.
+Capture a baseline with total time as the sort key:
+
+```sql
+SELECT queryid, calls, total_exec_time, mean_exec_time, rows, query
+FROM pg_stat_statements
+ORDER BY total_exec_time DESC
+LIMIT 20;
+```
+
+Sort by `total_exec_time`, not `mean_exec_time`: one rare slow query is not the
+same capacity problem as a cheap query executed constantly. The observed
+workload is entirely sub-millisecond so far (top query about 0.5 ms), making the
+current output a baseline for future regression rather than an optimization
+target.
 
 Consider `auto_explain` with `log_min_duration` aligned to the application's
 2500 ms slow-query warning threshold documented in
-[`docs/troubleshooting.md`](./troubleshooting.md). `pg_stat_statements` is
-already configured; do not duplicate it here. Product search already uses
+[`docs/troubleshooting.md`](./troubleshooting.md). Product search already uses
 `pg_trgm` and `unaccent` through `idx_products_name_unaccent_trgm`,
 `idx_products_unaccent_search_vector`, and the generated `search_vector`
 column in `src/lib/schema.ts`, so they are not new recommendations. As a
@@ -504,8 +582,13 @@ not planned or decided.
 ### Backups
 
 `oci-new` runs two systemd timer/service pairs. `wetalk-backup` writes under
-`pg/` at 00:05 UTC, and `octo-backup` writes under `octo/` at 00:45 UTC. The
-offset is intentional: the two `pg_dump` processes must never overlap.
+`pg/` on a 00:05 UTC timer with `RandomizedDelaySec=20m`, and `octo-backup`
+writes under `octo/` on a 00:45 UTC timer with `RandomizedDelaySec=15m`. Both
+timers set `Persistent=true`. The actual start windows are therefore
+00:05–00:25 and 00:45–01:00. Overlap is structurally impossible: the earliest
+octo start is 20 minutes after the latest wetalk start, and observed runs take
+about 5 seconds. Keep that property; the two `pg_dump` processes must never
+overlap.
 
 `/usr/local/bin/octo-backup.sh` is a copy of the wetalk backup script with
 `PREFIX="${BACKUP_PREFIX:-pg}"` replacing the hardcoded `pg/` prefix at all
@@ -547,6 +630,26 @@ under `octo/` without an error.
 overridden, set `BACKUP_BUCKET` in the systemd unit instead. The octo
 `DATABASE_URL` must point to `127.0.0.1:5432`, never port `6432`; `pg_dump`
 cannot run through PgBouncer's transaction pooling.
+
+`octo-backup.service` originally had no healthcheck, while
+`wetalk-backup.service` already sent an `ExecStartPost` curl to
+`BACKUP_HEALTHCHECKS_URL`. The production database was therefore backing up
+without a dead-man's switch. The fix is a `systemctl edit` drop-in, but the
+variable source matters: `Environment=BACKUP_ENV_FILE=/etc/octo-backup.env`
+only tells the script what to source internally. `ExecStartPost` runs outside
+the script and does not see `BACKUP_HEALTHCHECKS_URL` unless the unit also has:
+
+```ini
+EnvironmentFile=/etc/octo-backup.env
+```
+
+The first attempt logged
+`Referenced but unset environment variable evaluates to an empty string:
+BACKUP_HEALTHCHECKS_URL`; the `[ -z ... ] ||` guard swallowed that failure and
+the unit still reported success. Adding `EnvironmentFile=/etc/octo-backup.env`
+also injects `DATABASE_URL` into the unit environment, visible to root through
+`systemctl show`. `wetalk` already sources `EnvironmentFile=-/etc/robot-signal/env`,
+matching the cross-deployment note below.
 
 Replace the literal `<password>` placeholder in `/etc/octo-backup.env` with the
 actual secret. When sourced, a literal `<password>` makes the shell interpret
@@ -624,8 +727,8 @@ SQL
 Update each enumerated consumer before verification:
 
 ```bash
-# Update PgBouncer's POSTGRES_PASSWORD in ~/docker/.env, then regenerate
-# /etc/pgbouncer/userlist.txt without restarting PostgreSQL.
+# Update PgBouncer's POSTGRES_PASSWORD in ~/docker/.env and in the mounted
+# /etc/pgbouncer/conf/userlist.txt, then force-recreate without restarting PostgreSQL.
 docker compose -f ~/docker/docker-compose.db.yml up -d --force-recreate pgbouncer
 
 # Update octo's DATABASE_URL in Vercel, then redeploy the application.
@@ -636,8 +739,9 @@ psql "postgres://octo:<password>@db.kiyon.store:6432/octo?sslmode=verify-full&ss
 history -c && history -r
 ```
 
-PgBouncer must be force-recreated to regenerate `userlist.txt`. Postgres needs
-no restart, avoiding an unnecessary `pg_stat_statements` reset.
+PgBouncer must be force-recreated so the generated ini picks up the current
+environment and mounted userlist. Postgres needs no restart, avoiding an
+unnecessary `pg_stat_statements` reset.
 
 ### Restart / rebuild
 
@@ -649,14 +753,16 @@ docker compose -f docker-compose.db.yml ps
 ```
 
 Rebuilding from scratch: install native PostgreSQL 18; configure its
-loopback-only listener and `pg_stat_statements`; install Docker; write
-`/etc/docker/daemon.json` if published ports will be used (gotcha 1); obtain
-the certificate for `db.kiyon.store`; restore PgBouncer's compose file and
-`.env`; restore the TLS key's `70:70` ownership and `0600` mode; bring up
-PgBouncer; select the newest `octo/**/*.dump.age` object written by `oci-new`,
-then download, decrypt, and validate it off-host before restoring it through
+loopback-only listener and `/etc/postgresql/18/main/conf.d/10-tuning.conf`;
+install Docker; write `/etc/docker/daemon.json` if published ports will be used
+(gotcha 1); obtain the certificate for `db.kiyon.store`; restore PgBouncer's
+compose file, `.env`, and mounted `/etc/pgbouncer/conf/userlist.txt`; restore
+the TLS key and userlist `70:70` ownership and `0600` mode; bring up PgBouncer;
+select the newest `octo/**/*.dump.age` object written by `oci-new`, then
+download, decrypt, and validate it off-host before restoring it through
 `127.0.0.1:5432`; install the fail2ban filter and jail; restore and verify the
-persistent firewall rules; verify enforcement from an external host (gotcha
-2); restore both backup scripts, their `0600` environment files, and their
-systemd service/timer units; then enable both timers and verify their 00:05 and
-00:45 UTC schedules remain non-overlapping.
+persistent firewall rules; verify enforcement from an external host (gotcha 2);
+restore both backup scripts, their `0600` environment files, the octo
+healthcheck drop-in, and their systemd service/timer units; then enable both
+timers and verify their 00:05–00:25 and 00:45–01:00 UTC windows remain
+non-overlapping.
