@@ -194,7 +194,9 @@ entrypoint honours `AUTH_FILE` (`_AUTH_FILE="${AUTH_FILE:-$PG_CONFIG_DIR/userlis
 so mount `/etc/pgbouncer/conf/userlist.txt` and keep both `pgbadmin` and
 `octo` in that file. The entrypoint appends missing users only when the file is
 writable; appending to the deployed `:ro` mount fails at startup. The userlist
-stores plaintext passwords, not SCRAM verifiers; protect it like the TLS key
+stores plaintext passwords, not SCRAM verifiers; generate a separate `pgbadmin`
+password, store it only in the mounted userlist and the maintainer's password
+vault, and never reuse `POSTGRES_PASSWORD`. Protect the file like the TLS key
 with mode `0600` and owner `70:70`. The generated ini is written only when
 absent, so it lives in the container writable layer: `--force-recreate`
 regenerates it, while a plain restart does not.
@@ -648,8 +650,11 @@ The first attempt logged
 BACKUP_HEALTHCHECKS_URL`; the `[ -z ... ] ||` guard swallowed that failure and
 the unit still reported success. Adding `EnvironmentFile=/etc/octo-backup.env`
 also injects `DATABASE_URL` into the unit environment, visible to root through
-`systemctl show`. `wetalk` already sources `EnvironmentFile=-/etc/robot-signal/env`,
-matching the cross-deployment note below.
+`systemctl show`. That is an accepted root-only exposure on this single-admin
+host because root can already read the same `0600` environment file and the
+backup script; do not loosen the file mode or move the URL into the unit body.
+`wetalk` already sources `EnvironmentFile=-/etc/robot-signal/env`, matching the
+cross-deployment note below.
 
 Replace the literal `<password>` placeholder in `/etc/octo-backup.env` with the
 actual secret. When sourced, a literal `<password>` makes the shell interpret
