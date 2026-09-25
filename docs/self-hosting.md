@@ -204,6 +204,19 @@ TLS key with mode `0600` and owner `70:70`. The generated ini is written only
 when absent, so it lives in the container writable layer: `--force-recreate`
 regenerates it, while a plain restart does not.
 
+Plaintext userlist bootstrap:
+
+```bash
+sudo install -d -o 70 -g 70 -m 0700 /etc/pgbouncer/conf
+sudo tee /etc/pgbouncer/conf/userlist.txt >/dev/null <<'EOF'
+"octo" "<password>"
+"pgbadmin" "<password>"
+EOF
+sudo chown 70:70 /etc/pgbouncer/conf/userlist.txt
+sudo chmod 0600 /etc/pgbouncer/conf/userlist.txt
+sudo awk '{print $1}' /etc/pgbouncer/conf/userlist.txt # expect "octo", "pgbadmin"
+```
+
 Expected admin split verification:
 
 ```bash
@@ -655,7 +668,9 @@ the unit still reported success. Adding `EnvironmentFile=/etc/octo-backup.env`
 also injects `DATABASE_URL` into the unit environment, visible to root through
 `systemctl show`. That is an accepted root-only exposure on this single-admin
 host because root can already read the same `0600` environment file and the
-backup script; do not loosen the file mode or move the URL into the unit body.
+backup script; it is not acceptable on a multi-admin host where root access is
+shared among operators who should not all see database credentials. Do not
+loosen the file mode or move the URL into the unit body.
 `wetalk` already sources `EnvironmentFile=-/etc/robot-signal/env`, matching the
 cross-deployment note below.
 
