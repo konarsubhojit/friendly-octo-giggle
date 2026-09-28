@@ -13,8 +13,9 @@ drop-in:
 ```bash
 sudo install -D -o root -g root -m 0750 deploy/backup/octo-backup.sh \
   /usr/local/bin/octo-backup.sh
-sudo install -o root -g root -m 0600 deploy/backup/octo-backup.env.example \
-  /etc/octo-backup.env
+sudo test -e /etc/octo-backup.env || \
+  sudo install -o root -g root -m 0600 deploy/backup/octo-backup.env.example \
+    /etc/octo-backup.env
 sudo install -D -o root -g root -m 0644 deploy/backup/octo-backup.service \
   /etc/systemd/system/octo-backup.service
 sudo install -D -o root -g root -m 0644 deploy/backup/octo-backup.timer \

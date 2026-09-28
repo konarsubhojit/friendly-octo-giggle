@@ -2,6 +2,7 @@
 Description=Encrypted Octo PostgreSQL backup to OCI Object Storage
 Wants=network-online.target
 After=network-online.target postgresql.service
+# The older `oci` host lacks this failure notification; see the self-hosting runbook.
 OnFailure=wetalk-backup-failure.service
 
 [Service]

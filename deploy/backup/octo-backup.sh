@@ -20,14 +20,11 @@ set -a
 # shellcheck disable=SC1090
 . "$BACKUP_ENV_FILE"
 set +a
+: "${BACKUP_PREFIX:?backup aborted: BACKUP_PREFIX must be set}"
+PREFIX="$BACKUP_PREFIX"
 # Public key of the backup recipient. The matching *private* key must never
 # live on this VM: a compromised instance should be able to write backups it
 # cannot read back.
-#
-# The repo unit has OnFailure=wetalk-backup-failure.service. The older `oci`
-# host does not; see docs/self-hosting.md#backups for that live-host drift.
-: "${BACKUP_PREFIX:?backup aborted: BACKUP_PREFIX must be set}"
-PREFIX="$BACKUP_PREFIX"
 BACKUP_AGE_RECIPIENT="${BACKUP_AGE_RECIPIENT:-}"
 if [[ -z "$BACKUP_AGE_RECIPIENT" ]]; then
   echo "backup aborted: BACKUP_AGE_RECIPIENT is unset — refusing to upload a plaintext dump" >&2
@@ -125,8 +122,8 @@ if (( MIN_PREVIOUS_SIZE_PERCENT > 0 )); then
     exit 1
   fi
 fi
-MD5=$(md5sum "$ENC" | cut -d' ' -f1)
 CONTENT_MD5=$(openssl dgst -md5 -binary "$ENC" | base64 -w0)
+MD5=$(printf '%s' "$CONTENT_MD5" | base64 -d | od -An -vtx1 | tr -d ' \n')
 echo "uploading ${PREFIX}/${STAMP}.dump.age (${ENC_SIZE} bytes encrypted, ${SIZE} plaintext, md5 ${MD5})"
 if ! "$OCI_BIN" os object put -bn "$BUCKET" \
   --name "${PREFIX}/${STAMP}.dump.age" --file "$ENC" --content-md5 "$CONTENT_MD5" \
