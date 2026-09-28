@@ -13,9 +13,10 @@ drop-in:
 ```bash
 sudo install -D -o root -g root -m 0750 deploy/backup/octo-backup.sh \
   /usr/local/bin/octo-backup.sh
-sudo test -e /etc/octo-backup.env || \
-  sudo install -o root -g root -m 0600 deploy/backup/octo-backup.env.example \
+if ! sudo test -e /etc/octo-backup.env; then
+  sudo install -D -o root -g root -m 0600 deploy/backup/octo-backup.env.example \
     /etc/octo-backup.env
+fi
 sudo install -D -o root -g root -m 0644 deploy/backup/octo-backup.service \
   /etc/systemd/system/octo-backup.service
 sudo install -D -o root -g root -m 0644 deploy/backup/octo-backup.timer \
@@ -30,10 +31,15 @@ with mode `0600`. `DATABASE_URL` **must be single-quoted**. An unquoted
 `<password>` placeholder is parsed as shell input redirection and fails with
 `line 1: password: No such file or directory`.
 
-The script requires `pg_dump`, `pg_restore`, `age`, `shred`, `openssl`, and the
-OCI CLI at `/opt/oci-cli/bin/oci` (or set `OCI_BIN` in the systemd unit for a
-different location). The database URL must connect directly to PostgreSQL on
+The script requires `pg_dump`, `pg_restore`, `age`, `curl`, `openssl`, GNU
+coreutils (`base64`, `mktemp`, `od`, `shred`, and `stat`), and the OCI CLI at
+`/opt/oci-cli/bin/oci` (or set `OCI_BIN` in the systemd unit for a different
+location). The database URL must connect directly to PostgreSQL on
 `127.0.0.1:5432`, not through PgBouncer.
+
+`octo-backup.service` notifies `wetalk-backup-failure.service` through
+`OnFailure=`. That notification unit is managed separately and must exist on
+the host before enabling this backup service.
 
 Reload systemd and enable the daily timer:
 
