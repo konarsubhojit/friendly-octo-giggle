@@ -603,29 +603,18 @@ not planned or decided.
 `pg/` on a 00:05 UTC timer with `RandomizedDelaySec=20m`, and `octo-backup`
 writes under `octo/` on a 00:45 UTC timer with `RandomizedDelaySec=15m`. Both
 timers set `Persistent=true`. The actual start windows are therefore
-00:05–00:25 and 00:45–01:00. Overlap is structurally impossible: the earliest
-octo start is 20 minutes after the latest wetalk start, and observed runs take
-about 5 seconds. Keep that property; the two `pg_dump` processes must never
-overlap.
+00:05–00:25 and 00:45–01:00. These nominal windows do not guarantee
+non-overlap: `Persistent=true` catch-up after a reboot can start a run outside
+its window (observed at 01:03 UTC on Sep 26). Do not infer a non-overlap
+guarantee between `octo-backup` and `wetalk-backup` from their timer windows
+alone; observed runs take about 5 seconds, but the `pg_dump` processes must
+never overlap.
 
-`/usr/local/bin/octo-backup.sh` is a copy of the wetalk backup script with
-`PREFIX="${BACKUP_PREFIX:-pg}"` replacing the hardcoded `pg/` prefix at all
-four prefix-sensitive sites:
-
-1. `oci os object list --prefix`
-2. the `grep -oE` pattern used to select an earlier object's size
-3. `oci os object put --name`
-4. the `uploading …` status message
-
-Unlike the wetalk source script, which lives in a separate repository, the
-octo variant is not version-controlled in any repository. It exists only on
-the host at mode `0750`, so this is a known rebuild risk: the rebuild procedure
-cannot restore it from an upstream source without a separately retained copy.
-
-The existing `grep -oE` pattern must change from single quotes to double
-quotes when `${PREFIX}` is introduced. Otherwise the variable does not expand.
-That failure is silent: the previous-object lookup misses, the shrink guard
-degrades to the static `MIN_SIZE` floor, and only a warning is emitted.
+The octo script and systemd files are now version-controlled under
+[`deploy/backup/`](../deploy/backup/); see its README for installation and
+rebuild steps. The script requires explicit `BACKUP_PREFIX` and
+`BACKUP_ENV_FILE` values and aborts if either is unset, rather than silently
+falling back to wetalk's prefix or environment.
 
 The octo job reads `/etc/octo-backup.env`, which must remain mode `0600`. The
 service selects it with:
@@ -634,8 +623,8 @@ service selects it with:
 Environment=BACKUP_ENV_FILE=/etc/octo-backup.env
 ```
 
-That selected file sets `BACKUP_PREFIX=octo`; without it, the script's `pg`
-default would write octo backups into the wetalk prefix.
+That selected file sets `BACKUP_PREFIX=octo`; without it, the script aborts
+rather than writing octo backups into the wetalk prefix.
 
 This indirection is safety-critical. The shared script runs `set -a` and
 self-sources `BACKUP_ENV_FILE` after systemd has applied `EnvironmentFile=`.
@@ -649,13 +638,10 @@ overridden, set `BACKUP_BUCKET` in the systemd unit instead. The octo
 `DATABASE_URL` must point to `127.0.0.1:5432`, never port `6432`; `pg_dump`
 cannot run through PgBouncer's transaction pooling.
 
-`octo-backup.service` originally had no healthcheck, while
-`wetalk-backup.service` already sent an `ExecStartPost` curl to
-`BACKUP_HEALTHCHECKS_URL`. The production database was therefore backing up
-without a dead-man's switch. The fix is a `systemctl edit` drop-in, but the
-variable source matters: `Environment=BACKUP_ENV_FILE=/etc/octo-backup.env`
-only tells the script what to source internally. `ExecStartPost` runs outside
-the script and does not see `BACKUP_HEALTHCHECKS_URL` unless the unit also has:
+`octo-backup.service` uses a systemd drop-in to load `/etc/octo-backup.env` as
+an `EnvironmentFile=`. `Environment=BACKUP_ENV_FILE=/etc/octo-backup.env` only
+tells the script what to source internally. `ExecStartPost` runs outside the
+script and does not see `BACKUP_HEALTHCHECKS_URL` unless the unit also has:
 
 ```ini
 EnvironmentFile=/etc/octo-backup.env
@@ -685,11 +671,10 @@ host. Object keys use `<prefix>/%Y/%m/%d/%H%M%SZ.dump.age`. The age private key
 must never exist on the VM, and the script fails closed when
 `BACKUP_AGE_RECIPIENT` is unset.
 
-Octo uses `MIN_SIZE=60000`, based on a roughly 246 KB dump through the actual
-backup path. An ad hoc dump as `postgres` measured 128757 bytes, while the same
-database dumped through the backup path measured 246187 bytes because
-visibility is role-dependent. Establish and update the guard by measuring
-through the backup path, not with an ad hoc privileged dump.
+Octo uses `MIN_SIZE=249281`, the current measured plaintext dump size. Re-measure
+this threshold through the actual backup path whenever the database changes.
+An ad hoc dump as `postgres` reads only about 128 KB because visibility is
+role-dependent; it is not a valid measurement for this guard.
 
 The observed encrypted objects
 `octo/2026/09/24/141736Z.dump.age` and
@@ -697,12 +682,58 @@ The observed encrypted objects
 confirmed. The second run exercised the shrink guard against a real previous
 `.age` object.
 
+### Healthcheck reports down but the backup succeeded
+
+The Healthchecks.io check was configured on a cron schedule anchored at 01:00
+UTC with 1 hour of grace, while `octo-backup.timer` fires at 00:45 UTC with
+`RandomizedDelaySec=15m` (a 00:45–01:00 start window). When a run pinged at
+00:46, Healthchecks recorded it and then computed the next expected ping as
+01:00 the same day. No second ping arrived because that day's backup had
+already run, so grace expired and the check flipped down at exactly 02:00.
+
+The real ping log showed:
+
+```text
+Sep 27  00:46  OK   ← backup pinged
+Sep 27  02:00       Status: up ➔ down
+Sep 28  00:53  OK   ← backup pinged
+Sep 28  02:00       Status: up ➔ down
+```
+
+A fixed down time each day identifies a cron anchor, not a period-based check:
+a period-based check would drift relative to the last ping. Runs after the
+01:00 anchor did not trigger a down (Sep 24 at 01:02 and Sep 26 at 01:03).
+
+Before investigating database or network failures, eliminate the cheap
+possibilities:
+
+1. `systemctl status octo-backup.service` showing `inactive (dead)` with
+   `status=0/SUCCESS` is the normal resting state of a successful
+   `Type=oneshot` service started by a timer, not a failure.
+2. `systemctl show octo-backup.service -p EnvironmentFiles` confirms whether
+   the healthcheck drop-in and its environment file survived reboots.
+3. A manual `curl` returning `200` proves egress and URL validity, but not that
+   the URL belongs to octo rather than being copied from wetalk. Compare the
+   UUIDs in `/etc/octo-backup.env` and `/etc/robot-signal/env` directly.
+4. `ExecStartPost` uses `curl -fsS`; HTTP 404/500 exits non-zero and systemd
+   marks the unit failed. A successful unit therefore proves the ping returned
+   2xx and Healthchecks received it.
+
+Configure octo's Healthchecks check with a cron schedule of `45 0 * * *` UTC
+and 1 hour grace, anchored on the **earliest** possible backup start rather
+than the latest. Alternatively, use Period = 1 day and Grace = 2 hours to
+remove cron-anchor sensitivity. Wetalk has the same latent bug: its timer
+starts at 00:05 with `RandomizedDelaySec=20m`, so its cron schedule must be
+`5 0 * * *` UTC.
+
 ### Old-host cutover
 
 Until the old `oci` instance is terminated, two hosts write incompatible
 formats under `octo/`. The old host creates a second, **unencrypted**
 `octo/<stamp>.dump` at approximately 01:03 UTC each day, while `oci-new`
-creates dated `.dump.age` objects.
+creates dated `.dump.age` objects. `Persistent=true` catch-up can also put an
+octo backup at 01:03 (observed Sep 26), colliding with the old host's plaintext
+write and making bucket inspection ambiguous during cutover.
 
 Do not set an Object Storage lifecycle rule on `octo/` until `oci-new` is the
 sole writer. After the old instance is terminated, delete its plaintext
@@ -787,5 +818,6 @@ download, decrypt, and validate it off-host before restoring it through
 persistent firewall rules; verify enforcement from an external host (gotcha 2);
 restore both backup scripts, their `0600` environment files, the octo
 healthcheck drop-in, and their systemd service/timer units; then enable both
-timers and verify their 00:05–00:25 and 00:45–01:00 UTC windows remain
-non-overlapping.
+timers and verify actual start times. `Persistent=true` catch-up may run
+outside the nominal 00:05–00:25 and 00:45–01:00 UTC windows, so the timer
+windows alone do not guarantee non-overlap.
