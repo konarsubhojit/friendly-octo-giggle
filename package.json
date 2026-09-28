@@ -83,7 +83,7 @@
     "postcss": "^8.5.23",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "react-hot-toast": "^2.6.0",
+    "react-hot-toast": "^2.6.1",
     "react-redux": "^9.3.0",
     "redis": "^6.2.1",
     "tailwindcss": "^4.3.2",
