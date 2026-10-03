@@ -1,0 +1,16 @@
+[Unit]
+Description=Encrypted Octo PostgreSQL backup to OCI Object Storage
+Wants=network-online.target
+After=network-online.target postgresql.service
+# The older `oci` host lacks this failure notification; see the self-hosting runbook.
+OnFailure=wetalk-backup-failure.service
+
+[Service]
+Type=oneshot
+User=root
+ProtectHome=true
+Environment=BACKUP_ENV_FILE=/etc/octo-backup.env
+ExecStart=/usr/local/bin/octo-backup.sh
+
+[Install]
+WantedBy=multi-user.target

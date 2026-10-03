@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily Octo PostgreSQL backup
+
+[Timer]
+OnCalendar=*-*-* 00:45:00 UTC
+RandomizedDelaySec=15m
+Persistent=true
+Unit=octo-backup.service
+
+[Install]
+WantedBy=timers.target
