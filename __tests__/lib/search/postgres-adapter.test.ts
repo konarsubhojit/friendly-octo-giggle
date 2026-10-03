@@ -72,12 +72,14 @@ describe('PostgresCatalogSearchClient.searchProducts', () => {
   })
 
   it('ranks with websearch_to_tsquery and trigram similarity', async () => {
-    await client.searchProducts('travel bag')
+    await client.searchProducts('cafe bag')
 
     const score = render(captured.fields.score as SQL)
     expect(score).toContain('ts_rank')
     expect(score).toContain("websearch_to_tsquery('english'")
     expect(score).toContain('similarity')
+    expect(score).toContain('public.immutable_unaccent')
+    expect(score).toContain('public.catalog_search_vector')
     expect(render(captured.orderBy[0])).toContain('ts_rank')
   })
 
@@ -87,6 +89,7 @@ describe('PostgresCatalogSearchClient.searchProducts', () => {
     const where = render(captured.where)
     expect(where).toContain('"deletedAt" is null')
     expect(where).toContain('@@ websearch_to_tsquery')
+    expect(where).toContain('public.catalog_search_vector')
     expect(where).toContain(`>= ${TRIGRAM_MIN_SIMILARITY}`)
     expect(where).not.toContain('"category" =')
   })

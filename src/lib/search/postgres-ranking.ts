@@ -3,10 +3,12 @@
  *
  * Two signals are combined into a single score:
  *
- *   ts_rank(search_vector, websearch_to_tsquery('english', $q)) * TS_RANK_WEIGHT
- *     + similarity(name, $q)                                    * NAME_SIMILARITY_WEIGHT
+ *   ts_rank(catalog_search_vector(...), websearch_to_tsquery('english', $q))
+ *                                                               * TS_RANK_WEIGHT
+ *     + similarity(immutable_unaccent(name), immutable_unaccent($q))
+ *                                                               * NAME_SIMILARITY_WEIGHT
  *
- * `ts_rank` runs over the weighted `search_vector` generated column
+ * `ts_rank` runs over the indexed, weighted `catalog_search_vector` expression
  * (name = A, description = B, category = C), so a word that matches the name
  * already outranks the same word matched in a description. `similarity` from
  * `pg_trgm` is what makes typo tolerance real: "travle bag" never matches an
@@ -29,16 +31,11 @@
  * is honoured by the full-text branch but can still be re-admitted by a close
  * name match — exclusion is a ranking hint here, not a hard filter.
  *
- * Case folding: `pg_trgm` lowercases while extracting trigrams, so
- * `similarity(name, $q)` is already case-insensitive and — unlike
- * `similarity(lower(name), $q)` — can still use `idx_products_name_trgm`.
- *
- * Accent folding (`unaccent`, so "cafe" matches "café") is deliberately NOT
- * part of this module. `unaccent` is not `IMMUTABLE`, which blocks its use in
- * both the `search_vector` generated column and a trigram expression index;
- * doing it properly needs a custom text-search configuration plus a rebuild of
- * the generated column. That is tracked as a separate follow-up so it does not
- * block hybrid ranking.
+ * `immutable_unaccent` folds accents before both full-text parsing and trigram
+ * comparison, so "cafe" matches "café". The phase-2 migration wraps the
+ * extension's stable function in immutable, schema-qualified functions,
+ * allowing PostgreSQL to use expression indexes without rewriting the phase-1
+ * generated column.
  *
  * Consumers of the ordering: `searchCatalog` in `src/lib/search-discovery.ts`
  * ranks by provider result *order* (`relevanceOrder`), not by the score field,
@@ -83,20 +80,26 @@ export type RankedProductRow = {
  * Exported so every Postgres-backed catalog search path shares one definition.
  */
 export const buildCatalogRelevance = (query: string) => {
-  const tsQuery = sql`websearch_to_tsquery('english', ${query})`
+  const normalizedQuery = sql`public.immutable_unaccent(${query})`
+  const tsQuery = sql`websearch_to_tsquery('english', ${normalizedQuery})`
+  const searchVector = sql`public.catalog_search_vector(
+    ${products.name}, ${products.description}, ${products.category}
+  )`
 
   const score = sql<number>`(
-    ts_rank(${products.searchVector}, ${tsQuery}) * ${rawNumber(TS_RANK_WEIGHT)}
-    + similarity(${products.name}, ${query}) * ${rawNumber(NAME_SIMILARITY_WEIGHT)}
+    ts_rank(${searchVector}, ${tsQuery}) * ${rawNumber(TS_RANK_WEIGHT)}
+    + similarity(public.immutable_unaccent(${products.name}), ${normalizedQuery})
+      * ${rawNumber(NAME_SIMILARITY_WEIGHT)}
   )`
 
   const matches = or(
-    sql`${products.searchVector} @@ ${tsQuery}`,
-    // `%` is index-backed (idx_products_name_trgm); the explicit comparison
-    // pins the threshold independently of the session GUC.
+    sql`${searchVector} @@ ${tsQuery}`,
+    // `%` is index-backed (idx_products_name_unaccent_trgm); the explicit
+    // comparison pins the threshold independently of the session GUC.
     and(
-      sql`${products.name} % ${query}`,
-      sql`similarity(${products.name}, ${query}) >= ${rawNumber(TRIGRAM_MIN_SIMILARITY)}`
+      sql`public.immutable_unaccent(${products.name}) % ${normalizedQuery}`,
+      sql`similarity(public.immutable_unaccent(${products.name}), ${normalizedQuery})
+        >= ${rawNumber(TRIGRAM_MIN_SIMILARITY)}`
     ) as SQL
   ) as SQL
 

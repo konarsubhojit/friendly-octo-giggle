@@ -331,6 +331,14 @@ export const products = pgTable(
     index('Product_deletedAt_idx').on(t.deletedAt),
     index('idx_products_search_vector').using('gin', t.searchVector),
     index('idx_products_name_trgm').using('gin', t.name.op('gin_trgm_ops')),
+    index('idx_products_unaccent_search_vector').using(
+      'gin',
+      sql`public.catalog_search_vector(${t.name}, ${t.description}, ${t.category})`
+    ),
+    index('idx_products_name_unaccent_trgm').using(
+      'gin',
+      sql`public.immutable_unaccent(${t.name}) gin_trgm_ops`
+    ),
     index('idx_products_description_trgm').using(
       'gin',
       t.description.op('gin_trgm_ops')

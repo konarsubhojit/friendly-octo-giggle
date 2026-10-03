@@ -40,6 +40,7 @@ Welcome to the comprehensive documentation for the e-commerce platform built wit
 ### Operations
 
 - **[Self-Hosting Runbook](./self-hosting.md#operations-runbook)** - Pool health, fail2ban, backups
+- **[Backup healthcheck reports down](./self-hosting.md#healthcheck-reports-down-but-the-backup-succeeded)** - Diagnose cron-anchor failures
 - **[Oracle Ampere Operations](./oracle-ampere-deployment.md#8-operations)** - Container logs, health, and backups on A1
 - **[Troubleshooting](./troubleshooting.md)** - Common issues and solutions
 - **[Monitoring](./troubleshooting.md#monitoring)** - Performance monitoring and logging

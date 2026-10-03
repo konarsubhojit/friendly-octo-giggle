@@ -56,6 +56,8 @@ function renderModal(
 describe('ProductFormModal', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:preview')
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
     // Mock the /api/categories fetch used by the component
     vi.stubGlobal(
       'fetch',
