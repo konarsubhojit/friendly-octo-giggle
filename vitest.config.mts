@@ -1,23 +1,123 @@
 import { defineConfig } from 'vitest/config'
+import { parseCLI } from 'vitest/node'
 import react from '@vitejs/plugin-react'
+import babel from '@rolldown/plugin-babel'
 import tsconfigPaths from 'vite-tsconfig-paths'
+import { resolve } from 'node:path'
+import ts from 'typescript'
+import { normalizePath } from 'vite'
+
+const rootDirectory = import.meta.dirname
+const configFile = ts.readConfigFile(
+  resolve(rootDirectory, 'tsconfig.json'),
+  ts.sys.readFile
+)
+const { options: compilerOptions } = ts.parseJsonConfigFileContent(
+  configFile.config,
+  ts.sys,
+  rootDirectory
+)
+
+const hasDirective = (source: ts.SourceFile, directive: string): boolean => {
+  for (const statement of source.statements) {
+    if (
+      !ts.isExpressionStatement(statement) ||
+      !ts.isStringLiteral(statement.expression)
+    ) {
+      return false
+    }
+    if (statement.expression.text === directive) return true
+  }
+  return false
+}
+
+const getRuntimeImports = (source: ts.SourceFile): string[] =>
+  ts
+    .preProcessFile(
+      ts.transpileModule(source.text, { compilerOptions }).outputText,
+      true
+    )
+    .importedFiles.map((dependency) => dependency.fileName)
+
+const getClientModules = (): string[] => {
+  const sources = new Map(
+    ts.sys
+      .readDirectory(resolve(rootDirectory, 'src'), [
+        '.ts',
+        '.tsx',
+        '.js',
+        '.jsx',
+      ])
+      .map((fileName): [string, ts.SourceFile] => [
+        normalizePath(fileName),
+        ts.createSourceFile(
+          fileName,
+          ts.sys.readFile(fileName) ?? '',
+          ts.ScriptTarget.Latest
+        ),
+      ])
+  )
+  const pending = [...sources]
+    .filter(([, source]) => hasDirective(source, 'use client'))
+    .map(([fileName]) => fileName)
+  const clientModules = new Set<string>()
+  const visited = new Set<string>()
+  const resolutionCache = ts.createModuleResolutionCache(
+    rootDirectory,
+    normalizePath,
+    compilerOptions
+  )
+  while (pending.length > 0) {
+    const fileName = pending.pop()
+    if (!fileName || visited.has(fileName)) continue
+    visited.add(fileName)
+    const source = sources.get(fileName)
+    if (
+      !source ||
+      source.isDeclarationFile ||
+      hasDirective(source, 'use server')
+    ) {
+      continue
+    }
+    const imports = getRuntimeImports(source)
+    if (imports.includes('server-only')) continue
+    clientModules.add(fileName)
+    for (const moduleName of imports) {
+      const dependency = ts.resolveModuleName(
+        moduleName,
+        fileName,
+        compilerOptions,
+        ts.sys,
+        resolutionCache
+      ).resolvedModule
+      if (dependency) pending.push(normalizePath(dependency.resolvedFileName))
+    }
+  }
+  return [...clientModules]
+}
+
+export const clientModuleFiles = getClientModules()
+const coverageOptions = parseCLI(['vitest', ...process.argv.slice(2)], {
+  allowUnknownOptions: true,
+}).options.coverage
+const reactCompilerEnabled = !coverageOptions?.enabled
 
 export default defineConfig({
   plugins: [
     tsconfigPaths(),
-    // Run components through the React Compiler in unit tests too, so the code
-    // the suite exercises is the code the production build ships
-    // (`reactCompiler: true` in next.config.ts). Without this, Vitest would
-    // test the uncompiled sources and a compiler-introduced regression could
-    // pass 3 500+ green tests unnoticed.
-    react({
-      babel: { plugins: [['babel-plugin-react-compiler', {}]] },
-    }),
+    react(),
+    // Source coverage must not count generated memo-cache branches.
+    reactCompilerEnabled &&
+      babel({
+        include: clientModuleFiles,
+        plugins: [['babel-plugin-react-compiler', {}]],
+      }),
   ],
   test: {
     environment: 'node',
     pool: 'threads',
     globals: true,
+    provide: { reactCompilerEnabled },
     // Worker count and per-file concurrency are deliberately left to Vitest,
     // which sizes them from the host's available parallelism. The previous
     // fixed `maxWorkers: 16` / `maxConcurrency: 120` were tuned for a wide
