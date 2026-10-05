@@ -89,7 +89,7 @@
     "tailwindcss": "^4.3.2",
     "web-push": "^3.6.7",
     "zenput": "^1.1.2",
-    "zod": "4.4.3"
+    "zod": "4.6.5"
   },
   "overrides": {
     "@vercel/node": {
