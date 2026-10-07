@@ -12,6 +12,7 @@ Welcome to the comprehensive documentation for the e-commerce platform built wit
 ### Architecture & Design
 
 - **[System Architecture](./architecture.md)** - Technical design, data flow, and system components
+- **[Architecture Review and Optimization Plan](./architecture-review.md)** - Evidence-backed risks and prioritized follow-up changes
 - **[Database Schema](./architecture.md#database-schema)** - Entity relationships and data models
 - **[Caching Strategy](./architecture.md#caching-strategy)** - Redis caching implementation
 
