@@ -61,7 +61,7 @@
     "@upstash/search-ui": "^0.1.5",
     "@vercel/analytics": "^2.0.1",
     "@vercel/blob": "^2.8.0",
-    "@vercel/edge-config": "^1.4.3",
+    "@vercel/edge-config": "^1.5.1",
     "@vercel/functions": "^3.9.8",
     "@vercel/speed-insights": "^2.0.0",
     "algoliasearch": "^5.59.0",
