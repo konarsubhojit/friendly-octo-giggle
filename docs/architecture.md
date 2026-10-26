@@ -12,6 +12,7 @@
 8. [Async Work, Email, and Scheduled Jobs](#8-async-work-email-and-scheduled-jobs)
 9. [Security, Configuration, and Deployment](#9-security-configuration-and-deployment)
 10. [Performance Characteristics](#10-performance-characteristics)
+11. [Architecture Review and Optimization Plan](./architecture-review.md)
 
 ---
 
@@ -94,22 +95,22 @@ Redis, MinIO, all on one VM).
 
 | Technology    | Version | Purpose                                                          |
 | ------------- | ------- | ---------------------------------------------------------------- |
-| React         | 19.2.4  | Rendering, client interactivity, server components               |
-| Next.js       | 16.1.6  | App Router, route handlers, Cache Components, image optimization |
-| TypeScript    | 5.9.3   | Static typing across app, services, and tests                    |
-| Tailwind CSS  | 4.1.18  | Styling system and design tokens                                 |
-| Redux Toolkit | 2.11.2  | Shared client state for cart, orders, admin, wishlist            |
+| React         | 19.3.0  | Rendering, client interactivity, server components               |
+| Next.js       | ^16.3.8 | App Router, route handlers, Cache Components, image optimization |
+| TypeScript    | 6.0.3   | Static typing across app, services, and tests                    |
+| Tailwind CSS  | ^4.3.2  | Styling system and design tokens                                 |
+| Redux Toolkit | ^2.12.0 | Shared client state for cart, orders, admin, wishlist            |
 
 ### Backend and Domain Services
 
 | Technology      | Version       | Purpose                                                   |
 | --------------- | ------------- | --------------------------------------------------------- |
-| NextAuth        | 5.0.0-beta.30 | Authentication and session management                     |
-| Drizzle ORM     | 0.45.1        | Type-safe PostgreSQL access                               |
-| pg              | 8.23.0        | Default PostgreSQL connection pools for standard URLs     |
-| Neon Serverless | 1.1.0         | Optional Neon-optimized adapter for Vercel-style runtimes |
-| Zod             | 4.3.6         | Runtime validation for inputs and env                     |
-| Pino            | 10.3.1        | Structured logging and event tracing                      |
+| NextAuth        | 5.0.0-beta.32 | Authentication and session management                     |
+| Drizzle ORM     | ^0.45.2       | Type-safe PostgreSQL access                               |
+| pg              | ^8.23.0       | Default PostgreSQL connection pools for standard URLs     |
+| Neon Serverless | ^1.1.0        | Optional Neon-optimized adapter for Vercel-style runtimes |
+| Zod             | 4.4.3         | Runtime validation for inputs and env                     |
+| Pino            | ^10.3.1       | Structured logging and event tracing                      |
 
 ### Edge and Supporting Services
 
@@ -305,7 +306,7 @@ source of stale-data bugs, so the boundary is explicit:
 
 | Layer                            | Owns                                                                                                          | Does **not** own                                                      |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| Cache Components (`"use cache"`) | Render output for the prerendered public shell, invalidated by tag                                            | Cross-instance data reuse for route handlers                          |
+| Cache Components (`"use cache"`) | Render output for cached server work, invalidated by tag                                                      | Application data caching for route handlers                           |
 | Redis (`getCachedData`)          | Cart, orders, admin lists, sales, exchange rates, share/pincode lookups, and the payloads of public read APIs | Anything inside a `"use cache"` scope — a nested Redis read is banned |
 | PostgreSQL                       | The correctness floor: every cached path degrades to a direct query                                           | —                                                                     |
 
@@ -315,10 +316,14 @@ systems, so tag revalidation could clear one copy while the other keeps
 serving superseded data. Cached scopes therefore call the database directly
 (`db.products.findById(id, false)`, `db.products.findBestsellers({ withCache: false })`).
 
-In a serverless deployment the two layers also differ in durability: the Cache
-Components store is per-instance and does not survive a deployment, whereas
-Redis is shared across instances. Redis remains the mechanism for cross-instance
-reuse; Cache Components is what puts catalog markup into the initial HTML.
+Cache Components storage and invalidation are deployment-dependent. In a
+self-hosted deployment with `CACHE_PROVIDER=redis`, `next.config.ts` wires the
+custom handler in `src/lib/cache-handler.ts` to shared Redis so tag
+revalidation propagates across instances. Otherwise Next.js uses its default
+handler; do not assume that handler has the same sharing or durability
+properties as the application's Redis cache. The two layers remain separate
+application responsibilities: Cache Components stores rendered server output,
+while `getCachedData` stores application data.
 
 The AI assistant adds two more Redis-backed keys that are intentionally scoped by
 identity rather than by route:
@@ -751,3 +756,5 @@ The current architecture is a replica-aware, serverless-first Next.js commerce a
 
 For deployment details, see [docs/deployment.md](./deployment.md).
 For setup guidance, see [docs/getting-started.md](./getting-started.md).
+For evidence-backed risks and the prioritized follow-up plan, see the
+[Architecture Review and Optimization Plan](./architecture-review.md).
