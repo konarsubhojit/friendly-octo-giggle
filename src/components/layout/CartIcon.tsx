@@ -1,22 +1,49 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useSelector, useDispatch } from 'react-redux'
 import { fetchCart, selectCartItemCount } from '@/features/cart/store/cartSlice'
+import { getPendingCartItemCount } from '@/features/cart/services/pending-cart'
 import type { AppDispatch } from '@/lib/store'
 import { FloralCartIcon } from '@/components/ui/DecorativeElements'
+
+const PENDING_CART_UPDATED_EVENT = 'pending-cart-updated'
 
 export default function CartIcon() {
   const { status } = useSession()
   const dispatch = useDispatch<AppDispatch>()
-  const itemCount = useSelector(selectCartItemCount)
+  const authenticatedItemCount = useSelector(selectCartItemCount)
+  const [guestItemCount, setGuestItemCount] = useState(0)
 
   useEffect(() => {
-    if (status !== 'authenticated') return
-    dispatch(fetchCart())
+    if (status === 'authenticated') {
+      dispatch(fetchCart())
+      return
+    }
+
+    if (status === 'loading') return
+
+    const refreshGuestCount = () => {
+      setGuestItemCount(getPendingCartItemCount())
+    }
+
+    refreshGuestCount()
+    globalThis.window.addEventListener(PENDING_CART_UPDATED_EVENT, refreshGuestCount)
+    globalThis.window.addEventListener('storage', refreshGuestCount)
+
+    return () => {
+      globalThis.window.removeEventListener(
+        PENDING_CART_UPDATED_EVENT,
+        refreshGuestCount
+      )
+      globalThis.window.removeEventListener('storage', refreshGuestCount)
+    }
   }, [dispatch, status])
+
+  const itemCount =
+    status === 'authenticated' ? authenticatedItemCount : guestItemCount
 
   return (
     <Link
