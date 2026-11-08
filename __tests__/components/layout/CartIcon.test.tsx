@@ -95,6 +95,13 @@ describe('CartIcon', () => {
         updatedAt: '',
       },
     })
+mockUseSession.mockReturnValue({
+  data: {
+    user: { id: 'user-1', role: 'CUSTOMER' },
+    expires: '2099-01-01T00:00:00.000Z',
+  },
+  status: 'authenticated',
+})
     render(
       <Provider store={store}>
         <CartIcon />

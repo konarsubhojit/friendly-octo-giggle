@@ -13,6 +13,7 @@ export interface PendingCartItem {
 }
 
 const PENDING_CART_KEY = 'pending_cart_items'
+const PENDING_CART_UPDATED_EVENT = 'pending-cart-updated'
 
 function isValidPendingCartItem(item: unknown): item is PendingCartItem {
   if (typeof item !== 'object' || item === null) return false
@@ -28,6 +29,11 @@ function isValidPendingCartItem(item: unknown): item is PendingCartItem {
   )
 }
 
+function notifyPendingCartUpdated(): void {
+  if (globalThis.window === undefined) return
+  globalThis.window.dispatchEvent(new Event(PENDING_CART_UPDATED_EVENT))
+}
+
 export function getPendingCartItems(): PendingCartItem[] {
   if (globalThis.window === undefined) return []
   try {
@@ -35,11 +41,14 @@ export function getPendingCartItems(): PendingCartItem[] {
     if (!raw) return []
     const parsed: unknown = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
-    // Filter out legacy entries that don't have a valid variantId
     return parsed.filter(isValidPendingCartItem)
   } catch {
     return []
   }
+}
+
+export function getPendingCartItemCount(): number {
+  return getPendingCartItems().reduce((total, item) => total + item.quantity, 0)
 }
 
 export function addPendingCartItem(item: PendingCartItem): void {
@@ -62,11 +71,13 @@ export function addPendingCartItem(item: PendingCartItem): void {
   }
 
   localStorage.setItem(PENDING_CART_KEY, JSON.stringify(updated))
+  notifyPendingCartUpdated()
 }
 
 export function clearPendingCartItems(): void {
   if (globalThis.window === undefined) return
   localStorage.removeItem(PENDING_CART_KEY)
+  notifyPendingCartUpdated()
 }
 
 export function hasPendingCartItems(): boolean {
