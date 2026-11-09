@@ -24,7 +24,7 @@ export default function PublicLayout({
       <main id="main-content" className="relative">
         {children}
       </main>
-      <StorefrontAssistantLauncher />
+      {/*<StorefrontAssistantLauncher />*/}
     </>
   )
 }

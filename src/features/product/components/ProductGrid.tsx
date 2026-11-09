@@ -239,18 +239,18 @@ const ProductImageArea = memo(
   ({ product, eagerLoad }: ProductImageAreaProps) => {
     return (
       <div className="bg-theme-image relative aspect-square w-full overflow-hidden">
-        <Image
-          src={product.image}
-          alt={product.name}
-          fill
-          className="object-contain p-4 transition-transform duration-500 group-hover:scale-108"
-          sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw"
-          priority={eagerLoad}
-          loading={eagerLoad ? undefined : 'lazy'}
-          decoding="async"
-          placeholder="blur"
-          blurDataURL={PRODUCT_CARD_BLUR_DATA_URL}
-        />
+  <Image
+    src={product.image}
+    alt={product.name}
+    fill
+    className="object-cover transition-transform duration-500 group-hover:scale-105"
+    sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw"
+    priority={eagerLoad}
+    loading={eagerLoad ? undefined : 'lazy'}
+    decoding="async"
+    placeholder="blur"
+    blurDataURL={PRODUCT_CARD_BLUR_DATA_URL}
+  />
         <WishlistButton productId={product.id} productName={product.name} />
         <div className="absolute bottom-3 left-3">
           <StockBadge stock={product.stock} />

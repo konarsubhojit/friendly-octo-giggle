@@ -150,7 +150,6 @@ export default function StorefrontAssistant() {
     return (
       <button
         type="button"
-hidden
         onClick={() => setIsOpen(true)}
         className="fixed bottom-4 right-4 z-[120] flex items-center gap-3 rounded-full bg-gradient-to-r from-[var(--accent-warm)] to-[var(--accent-rose)] px-4 py-3 text-sm font-semibold text-white shadow-warm-lg transition-transform hover:scale-[1.02] focus-warm"
         aria-label="Open storefront assistant"
