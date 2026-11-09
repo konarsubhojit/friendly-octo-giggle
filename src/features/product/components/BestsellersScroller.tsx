@@ -75,7 +75,7 @@ export function BestsellersScroller({ bestsellers }: BestsellersScrollerProps) {
                   src={product.image}
                   alt={product.name}
                   fill
-                  className="object-contain p-3 group-hover:scale-105 transition-transform duration-300"
+                  className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
                   sizes="(max-width: 640px) 192px, 208px"
                   priority={index < 3}
                   loading={index < 3 ? undefined : 'lazy'}
