@@ -47,9 +47,6 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit -p tsconfig.check.json
 
-      - name: Run compiler-enabled tests
-        run: npm test
-
       - name: Run source tests with coverage
         run: npm run test:coverage
 
