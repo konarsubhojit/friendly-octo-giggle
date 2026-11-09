@@ -238,13 +238,14 @@ const highlightMatches = (text: string, query: string) => {
 const ProductImageArea = memo(
   ({ product, eagerLoad }: ProductImageAreaProps) => {
     return (
-      <div className="bg-theme-image relative aspect-square w-full overflow-hidden">
+      <div className="relative aspect-square w-full overflow-hidden bg-theme-image">
   <Image
     src={product.image}
     alt={product.name}
     fill
-    className="object-cover transition-transform duration-500 group-hover:scale-105"
-    sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw"
+    className="absolute inset-0 h-full w-full"
+    style={{ objectFit: 'cover', objectPosition: 'center' }}
+    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1536px) 33vw, 25vw"
     priority={eagerLoad}
     loading={eagerLoad ? undefined : 'lazy'}
     decoding="async"
